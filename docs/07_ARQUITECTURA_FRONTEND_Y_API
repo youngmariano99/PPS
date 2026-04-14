@@ -1,29 +1,36 @@
-# 06_ARQUITECTURA_FRONTEND_Y_API: Estructura React/Framer y Contratos
+# 07_ARQUITECTURA_FRONTEND_Y_API: Estructura React/Framer y Contratos
 
 ## 1. Objetivo del Documento
 Definir la arquitectura estricta del directorio `/front`. El objetivo es mantener una separación absoluta entre la Interfaz de Usuario (UI) y la lógica de conexión con el Backend (Spring Boot). Esto garantiza que el código sea 100% modular, permitiendo migrar o reutilizar componentes fácilmente en entornos como Framer.
 
 ## 2. Estructura de Carpetas Obligatoria (`/front/src`)
-La IA DEBE respetar esta jerarquía al generar cualquier código para el frontend. Ningún archivo debe crearse fuera de su dominio lógico.
+La IA DEBE respetar esta jerarquía al generar cualquier código para el frontend.
 
 ```text
 /front
   /src
-    ├── /api          -> CONTRATOS API: Solo funciones puras que hacen `fetch` a Spring Boot. (Ej: postulacionesApi.js)
-    ├── /components   -> UI REUTILIZABLE: Botones, Tarjetas, Modales puros (sin lógica de negocio).
-    ├── /hooks        -> LÓGICA DE ESTADO: Custom hooks (Ej: useProveedoresCercanos.js).
-    ├── /layouts      -> ENVOLTORIOS: Plantillas base (PublicLayout, DashboardLayout, MarketplaceLayout).
-    ├── /pages        -> VISTAS: Ensamblaje de layouts y componentes (Ej: BuscadorMapa.jsx, MiPerfil.jsx).
-    └── /utils        -> HERRAMIENTAS GLOBALES: Configuración de Supabase, formateadores de fecha, etc.
+    ├── /api          -> CONTRATOS API: Funciones puras que hacen fetch a Spring Boot.
+    ├── /components   
+    │     ├── /framer -> CODE COMPONENTS: Componentes listos para copiar y pegar en Framer.
+    │     └── /ui     -> UI REUTILIZABLE: Componentes atómicos (Botones, Inputs).
+    ├── /hooks        -> LÓGICA DE ESTADO: Custom hooks para manejo de datos.
+    ├── /utils        -> HERRAMIENTAS GLOBALES: Configuración de Supabase, apiBase.js.
+```
 
-Regla de Oro Front-End (Anti-Spaghetti):
-Está ESTRICTAMENTE PROHIBIDO escribir una función fetch() o axios.get() directamente dentro de un archivo de /pages o /components. Toda llamada a la red debe existir exclusivamente dentro de la carpeta /api y ser importada.
+## 3. Estándar de Componentes para Framer
+Cada componente diseñado para Framer debe cumplir con:
+*   **Exportación por Defecto**: `export default function NombreComponente(props)`.
+*   **Property Controls**: Uso de `addPropertyControls` para exponer variables de diseño y configuración (ej. `apiUrl`, `colores`).
+*   **Branding Inyectado**: Uso obligatorio de la paleta definida en `08_BRANDING_FRONT.md`.
+    *   Primario: `#7c3aed` (Violeta).
+    *   Fondo Card: `#ffffff`.
+    *   Texto Título: `#000000`.
+*   **Self-Contained**: Aunque los utilitarios estén en `/front/src/utils`, el componente de Framer debe ser fácil de portar, incluyendo las importaciones necesarias.
 
-3. Configuración Base de Red (/utils/apiBase.js)
-Dado que usamos Supabase Auth, todas las peticiones protegidas a Spring Boot deben inyectar automáticamente el JWT (Bearer Token).
-La IA debe usar esta función base para todos los contratos:
+## 4. Configuración Base de Red (/utils/apiBase.js)
+Todas las peticiones protegidas a Spring Boot deben inyectar automáticamente el JWT de Supabase.
 
-// Archivo: /front/src/utils/apiBase.js
+```javascript
 import { supabase } from './supabaseClient';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1'; // Ajustar según entorno
@@ -45,128 +52,14 @@ export async function fetchConAuth(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+    throw new Error(errorData.mensaje || `Error HTTP: ${response.status}`);
   }
 
   return response.json();
 }
+```
 
-Aquí tienes el documento número 6 completamente estructurado en Markdown.
-
-Este archivo es la "columna vertebral" de tu frontend. Le va a enseñar a la IA exactamente cómo organizar la carpeta front, en qué archivo va cada pedazo de código (para que no te mezcle diseño con llamadas a la base de datos) y cómo debe escribir los contratos de la API para que luego puedas llevarlos a Framer sin dolor de cabeza.
-
-Copia y guarda este bloque como 06_ARQUITECTURA_FRONTEND_Y_API.md dentro de /docs:
-
-Markdown
-# 06_ARQUITECTURA_FRONTEND_Y_API: Estructura React/Framer y Contratos
-
-## 1. Objetivo del Documento
-Definir la arquitectura estricta del directorio `/front`. El objetivo es mantener una separación absoluta entre la Interfaz de Usuario (UI) y la lógica de conexión con el Backend (Spring Boot). Esto garantiza que el código sea 100% modular, permitiendo migrar o reutilizar componentes fácilmente en entornos como Framer.
-
-## 2. Estructura de Carpetas Obligatoria (`/front/src`)
-La IA DEBE respetar esta jerarquía al generar cualquier código para el frontend. Ningún archivo debe crearse fuera de su dominio lógico.
-
-```text
-/front
-  /src
-    ├── /api          -> CONTRATOS API: Solo funciones puras que hacen `fetch` a Spring Boot. (Ej: postulacionesApi.js)
-    ├── /components   -> UI REUTILIZABLE: Botones, Tarjetas, Modales puros (sin lógica de negocio).
-    ├── /hooks        -> LÓGICA DE ESTADO: Custom hooks (Ej: useProveedoresCercanos.js).
-    ├── /layouts      -> ENVOLTORIOS: Plantillas base (PublicLayout, DashboardLayout, MarketplaceLayout).
-    ├── /pages        -> VISTAS: Ensamblaje de layouts y componentes (Ej: BuscadorMapa.jsx, MiPerfil.jsx).
-    └── /utils        -> HERRAMIENTAS GLOBALES: Configuración de Supabase, formateadores de fecha, etc.
-Regla de Oro Front-End (Anti-Spaghetti):
-Está ESTRICTAMENTE PROHIBIDO escribir una función fetch() o axios.get() directamente dentro de un archivo de /pages o /components. Toda llamada a la red debe existir exclusivamente dentro de la carpeta /api y ser importada.
-
-3. Configuración Base de Red (/utils/apiBase.js)
-Dado que usamos Supabase Auth, todas las peticiones protegidas a Spring Boot deben inyectar automáticamente el JWT (Bearer Token).
-La IA debe usar esta función base para todos los contratos:
-
-JavaScript
-// Archivo: /front/src/utils/apiBase.js
-import { supabase } from './supabaseClient';
-
-const API_BASE_URL = 'http://localhost:8080/api/v1'; // Ajustar según entorno
-
-export async function fetchConAuth(endpoint, options = {}) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Error HTTP: ${response.status}`);
-  }
-
-  return response.json();
-}
-4. Estructura de un Contrato API (Carpeta /api)
-Cuando la IA desarrolle un nuevo endpoint en Spring Boot, DEBE crear su contraparte exacta en el frontend dentro de la carpeta /api, agrupado por módulo.
-
-Ejemplo de archivo generado por la IA (/front/src/api/proveedoresApi.js):
-
-import { fetchConAuth } from '../utils/apiBase';
-
-/**
- * Obtiene los proveedores dentro de un radio geográfico.
- * Endpoint Backend: GET /api/v1/proveedores/cercanos
- */
-export const getProveedoresCercanos = async (lat, lon, radioKm) => {
-  return await fetchConAuth(`/proveedores/cercanos?lat=${lat}&lon=${lon}&radio=${radioKm}`, {
-    method: 'GET'
-  });
-};
-
-5. Integración Lógica (Carpeta /hooks)
-Para consumir la API en React/Framer sin bloquear la UI, la IA debe generar Custom Hooks que manejen los estados de carga (loading) y error (error).
-
-Ejemplo de archivo generado por la IA (/front/src/hooks/useProveedores.js):
-
-import { useState, useEffect } from 'react';
-import { getProveedoresCercanos } from '../api/proveedoresApi';
-
-export const useProveedoresCercanos = (lat, lon, radioKm) => {
-  const [proveedores, setProveedores] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!lat || !lon) return;
-    
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
-        const data = await getProveedoresCercanos(lat, lon, radioKm);
-        setProveedores(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarDatos();
-  }, [lat, lon, radioKm]);
-
-  return { proveedores, loading, error };
-};
-
-6. Diccionario de Contratos API (A documentar por la IA)
-(Nota para la IA: A medida que construyas los endpoints en Java, DEBES listar aquí las rutas expuestas y el nombre del archivo en /api donde dejaste el contrato JS).
-
-Módulo: [Ej: Postulaciones]
-
-Ruta Spring Boot: [Ej: POST /api/v1/postulaciones]
-
-Contrato Front: [Ej: Creado en /front/src/api/postulacionesApi.js -> crearPostulacion(dto)]
-
+## 5. Sincronización Obligatoria
+Cuando la IA desarrolle un nuevo endpoint en Spring Boot:
+1.  Debe crear su contrato en `/front/src/api/`.
+2.  Debe crear un componente visual en `/front/src/components/framer/` siguiendo el branding oficial.

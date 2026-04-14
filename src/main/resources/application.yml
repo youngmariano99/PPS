@@ -8,12 +8,16 @@ spring:
     name: pps-backend
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://db.qlciljbuexklxjzxgitk.supabase.co:5432/postgres}
+    url: ${DB_URL:jdbc:postgresql://db.qlciljbuexklxjzxgitk.supabase.co:5432/postgres?prepareThreshold=0}
     username: ${DB_USER:postgres.qlciljbuexklxjzxgitk}
     password: ${DB_PASSWORD:BocaPasion11}
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
     hibernate:
       ddl-auto: update
     show-sql: true

@@ -4,22 +4,22 @@ server:
     context-path: /api/v1
 
 spring:
-  application:
-    name: pps-backend
-
   datasource:
-    url: ${DB_URL:jdbc:postgresql://aws-0-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0}
+    # Corregida la región a us-west-2
+    url: ${DB_URL:jdbc:postgresql://aws-0-us-west-2.pooler.supabase.com:6543/postgres}
     username: ${DB_USER:postgres.qlciljbuexklxjzxgitk}
     password: ${DB_PASSWORD:BocaPasion11}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # 'validate' chequea que tus clases en Java coincidan con las tablas de Supabase sin romper nada
+      ddl-auto: validate 
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # ¡Corregido al dialecto espacial para soportar mapas!
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
         format_sql: true
         jdbc:
           time_zone: UTC

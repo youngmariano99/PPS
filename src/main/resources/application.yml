@@ -5,7 +5,6 @@ server:
 
 spring:
   datasource:
-    # Corregida la región a us-west-2
     url: ${DB_URL:jdbc:postgresql://aws-0-us-west-2.pooler.supabase.com:6543/postgres}
     username: ${DB_USER:postgres.qlciljbuexklxjzxgitk}
     password: ${DB_PASSWORD:BocaPasion11}
@@ -13,12 +12,11 @@ spring:
 
   jpa:
     hibernate:
-      # 'validate' chequea que tus clases en Java coincidan con las tablas de Supabase sin romper nada
-      ddl-auto: validate 
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
-       dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         jdbc:
           time_zone: UTC

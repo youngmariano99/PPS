@@ -17,7 +17,8 @@ import java.util.List;
 
 /**
  * Configuración de seguridad de la aplicación.
- * Maneja la política de CORS a nivel de filtros de seguridad para soportar peticiones de Framer.
+ * Maneja la política de CORS a nivel de filtros de seguridad para soportar
+ * peticiones de Framer.
  */
 @Configuration
 @EnableWebSecurity
@@ -26,18 +27,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults()) // Utiliza el bean corsConfigurationSource
-            .csrf(AbstractHttpConfigurer::disable) // Deshabilitado para APIs REST con JWT
-            .authorizeHttpRequests(auth -> auth
-                // Permitir explícitamente todos los preflights de CORS (OPTIONS)
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Permitir acceso a Swagger y endpoints públicos de auth por ahora
-                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                // Por ahora permitimos todo para no bloquear el desarrollo, 
-                // pero bajo la supervisión del filtro CORS
-                .anyRequest().permitAll()
-            );
+                .cors(Customizer.withDefaults()) // Utiliza el bean corsConfigurationSource
+                .csrf(AbstractHttpConfigurer::disable) // Deshabilitado para APIs REST con JWT
+                .authorizeHttpRequests(auth -> auth
+                        // Permitir explícitamente todos los preflights de CORS (OPTIONS)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Permitir acceso a Swagger y endpoints públicos de auth por ahora
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // Por ahora permitimos todo para no bloquear el desarrollo,
+                        // pero bajo la supervisión del filtro CORS
+                        .anyRequest().permitAll());
 
         return http.build();
     }
@@ -49,20 +49,21 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Configuramos patrones permitidos (Framer y Localhost)
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://*.framer.app",
-                "https://*.framer.website",
-                "https://pps-front.onrender.com"
-        ));
-        
+
+        // 1. Permitimos TODOS los orígenes sin restricciones
+        configuration.setAllowedOrigins(Arrays.asList("*"));
+
+        // 2. Permitimos todos los métodos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // Cachear preflight por 1 hora
+
+        // 3. Permitimos todos los headers
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        // 4. ¡CRÍTICO! Debe ser FALSE si usamos "*" en Origins.
+        // Como usaremos JWT, no necesitamos habilitar credenciales (cookies).
+        configuration.setAllowCredentials(false);
+
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

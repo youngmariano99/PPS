@@ -13,10 +13,12 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins(
-                        "http://localhost:5173", // Vite (Entorno de desarrollo)
+                .allowedOriginPatterns(
+                        "http://localhost:5173",
                         "http://localhost:3000",
-                        "https://pps-front.onrender.com" // Placeholder para producción
+                        "https://*.framer.app",
+                        "https://*.framer.website",
+                        "https://pps-front.onrender.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

@@ -36,15 +36,22 @@ export default function FormularioPerfilProveedor(props) {
         setLoading(true)
         setError(null)
 
+        // Limpieza de URL para evitar dobles barras
+        const cleanApiUrl = apiUrl.replace(/\/+$/, "")
+        const fullUrl = `${cleanApiUrl}/perfiles/proveedor/${usuarioId}`
+        
+        console.log("🚀 Llamando a:", fullUrl)
+
         try {
             // Nota: El usuarioId en producción debería obtenerse del token JWT
-            const response = await fetch(`${apiUrl}/perfiles/proveedor/${usuarioId}`, {
+            const response = await fetch(fullUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(fields),
             })
 
             const data = await response.json()
+            console.log("📦 Respuesta:", data)
             if (!response.ok) throw new Error(data.mensaje || "Error al crear perfil")
 
             alert("¡Perfil de Proveedor creado! Ahora apareces en el mapa.")

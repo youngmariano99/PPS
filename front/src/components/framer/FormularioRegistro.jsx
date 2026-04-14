@@ -26,14 +26,21 @@ export default function FormularioRegistro(props) {
         setLoading(true)
         setError(null)
 
+        // Limpieza de URL para evitar dobles barras
+        const cleanApiUrl = apiUrl.replace(/\/+$/, "")
+        const fullUrl = `${cleanApiUrl}/auth/registro`
+        
+        console.log("🚀 Llamando a Registro:", fullUrl)
+
         try {
-            const response = await fetch(`${apiUrl}/auth/registro`, {
+            const response = await fetch(fullUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(fields),
             })
 
             const data = await response.json()
+            console.log("📦 Respuesta:", data)
             if (!response.ok) throw new Error(data.mensaje || "Error al crear cuenta")
 
             alert("¡Cuenta creada! Revisa tu email si la confirmación está activa, o inicia sesión directamente.")

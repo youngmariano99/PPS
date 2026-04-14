@@ -49,21 +49,41 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Brute force: permitir orígenes explícitos y comodines
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://overly-mindset-259417.framer.app",
+                "https://pps-front.onrender.com",
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "*"
+        ));
+        
+        // Patrones para subdominios
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+                "https://*.framer.app",
+                "https://*.framer.website",
+                "*"
+        ));
+        
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
+        
+        // Cabeceras permitidas
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization", 
+                "Content-Type", 
+                "X-Requested-With", 
+                "Accept", 
+                "Origin", 
+                "Access-Control-Request-Method", 
+                "Access-Control-Request-Headers",
+                "X-Framer-Preview",
+                "Cache-Control"
+        ));
 
-        // 1. Permitimos TODOS los orígenes sin restricciones
-        configuration.setAllowedOrigins(Arrays.asList("*"));
-
-        // 2. Permitimos todos los métodos
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-
-        // 3. Permitimos todos los headers
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-
-        // 4. ¡CRÍTICO! Debe ser FALSE si usamos "*" en Origins.
-        // Como usaremos JWT, no necesitamos habilitar credenciales (cookies).
+        // IMPORTANT: allowCredentials(false) permite el uso de "*" en los orígenes
         configuration.setAllowCredentials(false);
-
-        configuration.setMaxAge(3600L);
+        configuration.setMaxAge(3600L); 
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

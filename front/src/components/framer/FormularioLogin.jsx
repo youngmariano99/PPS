@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { addPropertyControls, ControlType } from "framer"
-import { createClient } from "@supabase/supabase-client"
+import { createClient } from "https://esm.sh/@supabase/supabase-js"
 
 /**
  * COMPONENTE DE LOGIN PARA FRAMER
@@ -27,15 +27,22 @@ export default function FormularioLogin(props) {
         setLoading(true)
         setError(null)
 
+        // Limpieza de URL para evitar dobles barras
+        const cleanApiUrl = apiUrl.replace(/\/+$/, "")
+        const fullUrl = `${cleanApiUrl}/auth/login`
+
+        console.log("🚀 Llamando a:", fullUrl)
+
         try {
-            // Paso 1: Llamada al backend de Spring Boot (Desplegado en Render)
-            const response = await fetch(`${apiUrl}/auth/login`, {
+            // Paso 1: Llamada al backend de Spring Boot
+            const response = await fetch(fullUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             })
 
             const data = await response.json()
+            console.log("📦 Respuesta:", data)
 
             if (!response.ok) throw new Error(data.mensaje || "Credenciales incorrectas")
 
@@ -45,7 +52,7 @@ export default function FormularioLogin(props) {
             if (sbError) throw sbError
 
             alert(`¡Hola ${data.nombre}! Ingreso exitoso.`)
-            
+
             // Aquí podrías disparar un evento de Framer para navegar a otra página
             if (props.onLoginSuccess) props.onLoginSuccess(data)
 
@@ -79,9 +86,9 @@ export default function FormularioLogin(props) {
                 <button
                     type="submit"
                     disabled={loading}
-                    style={{ 
-                        ...buttonStyle, 
-                        backgroundColor: btnColor, 
+                    style={{
+                        ...buttonStyle,
+                        backgroundColor: btnColor,
                         color: textColor,
                         borderRadius: `${borderRadius}px`
                     }}
@@ -95,10 +102,10 @@ export default function FormularioLogin(props) {
 
 // Controles para el panel de Framer
 addPropertyControls(FormularioLogin, {
-    apiUrl: { 
-        type: ControlType.String, 
-        title: "URL del Backend", 
-        defaultValue: "https://pps-backend.onrender.com/api/v1" 
+    apiUrl: {
+        type: ControlType.String,
+        title: "URL del Backend",
+        defaultValue: "https://pps-backend.onrender.com/api/v1"
     },
     btnText: { type: ControlType.String, title: "Texto", defaultValue: "Ingresar" },
     btnColor: { type: ControlType.Color, title: "Color Fondo", defaultValue: "#0070f3" },

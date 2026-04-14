@@ -36,9 +36,17 @@ export default function BuscadorMapa(props) {
     const buscarServicios = async (lat, lon, r) => {
         setLoading(true)
         setError(null)
+
+        // Limpieza de URL para evitar dobles barras
+        const cleanApiUrl = apiUrl.replace(/\/+$/, "")
+        const fullUrl = `${cleanApiUrl}/directorio/buscar?lat=${lat}&lon=${lon}&radioKm=${r}`
+        
+        console.log("🚀 Llamando a Buscador:", fullUrl)
+
         try {
-            const response = await fetch(`${apiUrl}/directorio/buscar?lat=${lat}&lon=${lon}&radioKm=${r}`)
+            const response = await fetch(fullUrl)
             const data = await response.json()
+            console.log("📦 Respuesta:", data)
             if (!response.ok) throw new Error("Error al buscar servicios")
             setPerfiles(data)
         } catch (err) {

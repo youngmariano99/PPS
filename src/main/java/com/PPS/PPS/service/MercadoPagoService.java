@@ -29,25 +29,47 @@ public class MercadoPagoService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * Crea un Preapproval en Mercado Pago.
-     * @param email Correo del usuario que paga.
-     * @param backUrl La URL del backend a la que MP debe retornar despues de procesar el pago.
-     * @return El init_point al que debe redirigir el frontend.
+     * Crea una Preferencia de Pago en Mercado Pago (Suscripcion Mensual simulada).
+     * @param usuarioId ID del usuario para tracking.
+     * @param email Correo del usuario.
+     * @param backUrl Endpoint al que retorna (éxito o pendiente).
+     * @param preapprovalId El ID de la "suscripcion" pendiente que usaremos como reference.
+     * @return El init_point.
      */
-    public String crearSuscripcionPreapproval(String email, String backUrl) {
-        log.info("Creando preapproval en Mercado Pago para: {}, planId: {}, backUrl: {}", email, planId, backUrl);
+    public String crearPreferenciaSuscripcion(String usuarioId, String email, String backUrl, String preapprovalId) {
+        log.info("Creando Preference en MP para usuario: {}, reference: {}", email, preapprovalId);
 
-        String url = "https://api.mercadopago.com/preapproval";
+        String url = "https://api.mercadopago.com/checkout/preferences";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + accessToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> body = new HashMap<>();
-        body.put("preapproval_plan_id", planId);
-        body.put("payer_email", email);
-        body.put("back_url", backUrl);
-        // MP inherits the reason from the plan. Overriding it may cause a 400 Bad Request.
+        
+        // 1. Items (Lo que se cobra)
+        Map<String, Object> item = new HashMap<>();
+        item.put("title", "Suscripción Premium PPS");
+        item.put("quantity", 1);
+        item.put("unit_price", 3000); // Precio hardcodeado temporal o lo puedes traer del plan
+        item.put("currency_id", "ARS");
+        body.put("items", java.util.List.of(item));
+
+        // 2. Payer (Comprador)
+        Map<String, Object> payer = new HashMap<>();
+        payer.put("email", email);
+        body.put("payer", payer);
+
+        // 3. Back URLs & Redirección Automática
+        Map<String, String> backUrls = new HashMap<>();
+        backUrls.put("success", backUrl);
+        backUrls.put("pending", backUrl);
+        backUrls.put("failure", backUrl);
+        body.put("back_urls", backUrls);
+        body.put("auto_return", "approved");
+
+        // 4. Referencia Externa (Crucial para el Webhook)
+        body.put("external_reference", preapprovalId);
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
@@ -59,14 +81,14 @@ public class MercadoPagoService {
                     MpPreapprovalResponseDto.class
             );
 
-            if (response.getBody() != null) {
+            if (response.getBody() != null && response.getBody().getInit_point() != null) {
                 return response.getBody().getInit_point();
             }
-            throw new RuntimeException("Respuesta vacía de Mercado Pago al crear suscripción");
+            throw new RuntimeException("Respuesta vacía al generar el link de pago");
 
         } catch (Exception e) {
-            log.error("Error al crear la suscripción en MP: {}", e.getMessage(), e);
-            throw new RuntimeException("Error en la integracion con Mercado Pago", e);
+            log.error("Error al crear la preferencia en MP: {}", e.getMessage(), e);
+            throw new RuntimeException("Error en la integracion con MP Checkout", e);
         }
     }
 

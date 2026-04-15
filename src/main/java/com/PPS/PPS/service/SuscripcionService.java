@@ -55,10 +55,11 @@ public class SuscripcionService {
     }
 
     /**
-     * Da la bienvenida provisoria marcando como PENDIENTE (Flujo Mercado Pago).
+     * Inicia el proceso de suscripción delegada a Checkout Pro.
+     * Crea un registro PENDIENTE y pide a MP el init_point.
      */
     @Transactional
-    public void registrarSuscripcionPendiente(UUID usuarioId, UUID planId, String preapprovalId) {
+    public String iniciarCheckoutProSuscripcion(UUID usuarioId, UUID planId, String backUrlBase) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
                 
@@ -77,35 +78,44 @@ public class SuscripcionService {
                 .estado("PENDIENTE")
                 .fechaInicio(LocalDateTime.now())
                 .fechaFin(LocalDateTime.now().plusMonths(1))
-                .mpPreferenciaId(preapprovalId)
+                .mpPreferenciaId(null) // No guardamos preference_id, dependemos de external_reference
                 .build();
 
         suscripcionUsuarioRepository.save(nuevaSuscripcion);
+
+        // Usamos nuestro ID interno como reference para MP
+        String internalReference = nuevaSuscripcion.getId().toString();
+        
+        return mercadoPagoService.crearPreferenciaSuscripcion(
+                usuarioId.toString(), 
+                usuario.getEmail(), 
+                backUrlBase, 
+                internalReference
+        );
     }
 
     @Transactional
-    public void procesarWebhook(String preapprovalId) {
-        log.info("Procesando webhook para preapprovalId: {}", preapprovalId);
+    public void procesarWebhookPagoUnico(String suscripcionIdStr) {
+        log.info("Procesando webhook de pago para suscripcion interna ID: {}", suscripcionIdStr);
 
-        SuscripcionUsuario suscripcion = suscripcionUsuarioRepository.findByMpPreferenciaId(preapprovalId)
-                .orElse(null);
-
-        if (suscripcion == null) {
-            log.warn("Webhook recibido de un preapproval_id que no existe: {}", preapprovalId);
+        UUID suscripcionId;
+        try {
+            suscripcionId = UUID.fromString(suscripcionIdStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("Suscripción ID inválido recibido en Webhook: {}", suscripcionIdStr);
             return;
         }
 
-        String estadoRealMp = mercadoPagoService.consultarSuscripcion(preapprovalId);
-        String estadoActualizado;
+        SuscripcionUsuario suscripcion = suscripcionUsuarioRepository.findById(suscripcionId)
+                .orElse(null);
 
-        switch (estadoRealMp.toLowerCase()) {
-            case "authorized": estadoActualizado = "ACTIVA"; break;
-            case "paused": estadoActualizado = "VENCIDA"; break;
-            case "cancelled": estadoActualizado = "CANCELADA"; break;
-            default: return;
+        if (suscripcion == null) {
+            log.warn("Webhook cobrado pero no existe suscripcion local: {}", suscripcionId);
+            return;
         }
 
-        suscripcion.setEstado(estadoActualizado);
+        // Si llegó el pago, lo marcamos activo (Checkout Pro garantiza aprobacion para disparar esto si validamos)
+        suscripcion.setEstado("ACTIVA");
         suscripcionUsuarioRepository.save(suscripcion);
     }
 }

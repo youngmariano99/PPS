@@ -34,8 +34,7 @@ public class DirectorioService {
     private final GeometryFactory geometryFactory;
 
     private static final Pattern VIDEO_PATTERN = Pattern.compile(
-        "^(https?://)?(www\\.)?(youtube\\.com|youtu\\.be|instagram\\.com|tiktok\\.com|drive\\.google\\.com)/.*$"
-    );
+            "^(https?://)?(www\\.)?(youtube\\.com|youtu\\.be|instagram\\.com|tiktok\\.com|drive\\.google\\.com)/.*$");
 
     @Transactional
     public PerfilProveedor crearPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
@@ -122,7 +121,7 @@ public class DirectorioService {
                 .orElse(false);
 
         int limiteFotos = esPremium ? 20 : 5;
-        
+
         if (dto.getFotosPortafolioUrls() != null && dto.getFotosPortafolioUrls().size() > limiteFotos) {
             throw new ValidacionNegocioException("Ha superado el límite de fotos permitido (" + limiteFotos + ").");
         }
@@ -181,7 +180,8 @@ public class DirectorioService {
                 .map(p -> PerfilRespuestaDto.builder()
                         .id(p.getId())
                         .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
-                        .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre() : p.getRubroPersonalizado())
+                        .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
+                                : p.getRubroPersonalizado())
                         .descripcion(p.getDescripcionProfesional())
                         .ciudad(p.getCiudad())
                         .latitud(p.getUbicacion().getY())
@@ -194,7 +194,8 @@ public class DirectorioService {
                 .map(e -> PerfilRespuestaDto.builder()
                         .id(e.getId())
                         .nombrePublico(e.getRazonSocial())
-                        .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre() : e.getRubroPersonalizado())
+                        .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre()
+                                : e.getRubroPersonalizado())
                         .descripcion(e.getDescripcionEmpresa())
                         .ciudad(e.getCiudad())
                         .latitud(e.getUbicacion().getY())

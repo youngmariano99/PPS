@@ -39,7 +39,9 @@ public class SuscripcionController {
         log.info("Iniciando creacion de suscripcion para usuarioId: {}, planId: {}",
                 request.getUsuarioId(), request.getPlanId());
 
-        String backUrlEndpoint = backendUrl + "/api/v1/suscripciones/success";
+        // Construir la URL de éxito pasando los datos necesarios como query params
+        String backUrlEndpoint = String.format("%s/api/v1/suscripciones/success?usuarioId=%s&planId=%s",
+                backendUrl, request.getUsuarioId(), request.getPlanId());
 
         // Obtener el Init Point de la API de Mercado Pago
         String initPoint = suscripcionService.iniciarCheckoutProSuscripcion(request.getUsuarioId(), request.getPlanId(),
@@ -51,13 +53,15 @@ public class SuscripcionController {
 
     @GetMapping("/success")
     public void success(
-            @RequestParam("preapproval_id") String preapprovalId,
-            @RequestParam("usuarioId") UUID usuarioId,
-            @RequestParam("planId") UUID planId,
+            @RequestParam(value = "preapproval_id", required = false) String preapprovalId,
+            @RequestParam(value = "payment_id", required = false) String paymentId,
+            @RequestParam(value = "usuarioId", required = false) UUID usuarioId,
+            @RequestParam(value = "planId", required = false) UUID planId,
             HttpServletResponse response) throws IOException {
-        log.info("Redirect de MP recibido. Redirigiendo a éxito.");
+        log.info("Redirect de MP recibido. Redirigiendo a éxito en Framer.");
 
-        // Redirigir al frontend para UX.
+        // Redirigir al frontend para UX. 
+        // Si tienes la página 'pago-exitoso' en Framer, irá ahí. Si no existe, irá a la home.
         String returnRedirect = frontendUrl + "/pago-exitoso";
         response.sendRedirect(returnRedirect);
     }
@@ -66,29 +70,27 @@ public class SuscripcionController {
     public ResponseEntity<Void> webhook(@RequestBody Map<String, Object> notification) {
         log.info("Webhook recibido desde Mercado Pago: {}", notification);
 
-        // Webhooks de pagos únicos envían type=payment o action=payment.created
+        // Notificaciones V2: vienen con action y data.id
         String type = (String) notification.get("type");
         String action = (String) notification.get("action");
         Map<String, Object> data = (Map<String, Object>) notification.get("data");
 
         if (("payment".equals(type) || "payment.created".equals(action)) && data != null) {
             String paymentId = String.valueOf(data.get("id"));
+            log.info("Procesando pago ID: {}", paymentId);
 
-            // Para ser 100% seguros tendríamos que hacer un GET a MP con este pago para
-            // leer su external_reference
-            // Pero por simplicidad del MVP (y porque es test), vamos a extraer
-            // external_reference del pago si está en la notificación V2
-            // Nota: MP V2 envía data.id, hay que consultar la API de pagos para el
-            // external_reference.
-            // Solución rápida: Asumimos que implementamos la recuperación de MP o que la
-            // notificación trae la info.
-            log.info("Pago acreditado ID: {}", paymentId);
+            com.PPS.PPS.dto.suscripcion.MpPaymentResponseDto pago = mercadoPagoService.consultarPago(paymentId);
 
-            // En Producción: Consultar
-            // MercadoPagoService.obtenerPreferenciaParaPago(paymentId) -> sacar
-            // external_reference.
-            // Para el alcance de la demo dejaremos el esqueleto listo para usar
-            // procesarWebhookPagoUnico(reference)
+            if (pago != null && "approved".equals(pago.getStatus())) {
+                String reference = pago.getExternalReference();
+                if (reference != null) {
+                    log.info("Pago aprobado para suscripcion interna: {}. Activando...", reference);
+                    suscripcionService.procesarWebhookPagoUnico(reference);
+                }
+            } else {
+                log.info("El pago {} no está aprobado o no se pudo consultar. Status: {}", 
+                        paymentId, (pago != null ? pago.getStatus() : "null"));
+            }
         }
 
         return ResponseEntity.ok().build();

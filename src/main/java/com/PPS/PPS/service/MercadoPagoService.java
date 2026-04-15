@@ -1,5 +1,6 @@
 package com.PPS.PPS.service;
 
+import com.PPS.PPS.dto.suscripcion.MpPaymentResponseDto;
 import com.PPS.PPS.dto.suscripcion.MpPreapprovalResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -126,6 +127,34 @@ public class MercadoPagoService {
         } catch (Exception e) {
             log.error("Error al consultar la suscripcion en MP: {}", e.getMessage(), e);
             return "error";
+        }
+    }
+
+    /**
+     * Consulta el detalle de un pago único para obtener la referencia externa.
+     * @param paymentId ID del pago.
+     * @return El DTO con el detalle del pago o null si falla.
+     */
+    public MpPaymentResponseDto consultarPago(String paymentId) {
+        log.info("Consultando pago id: {}", paymentId);
+        String url = "https://api.mercadopago.com/v1/payments/" + paymentId;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<MpPaymentResponseDto> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    MpPaymentResponseDto.class);
+
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Error al consultar pago {} en MP: {}", paymentId, e.getMessage());
+            return null;
         }
     }
 }

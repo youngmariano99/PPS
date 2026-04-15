@@ -40,8 +40,7 @@ public class AuthService {
         // 1. Llamada a Supabase para Signup
         Map<String, Object> body = Map.of(
                 "email", dto.getEmail(),
-                "password", dto.getPassword()
-        );
+                "password", dto.getPassword());
 
         Map<String, Object> respuestaSupabase = supabaseRestClient.post()
                 .uri("/signup")
@@ -51,7 +50,9 @@ public class AuthService {
                     String errorCuerpo = "Error al registrar en Supabase.";
                     try {
                         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                        Map<String, Object> errorMap = mapper.readValue(response.getBody(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                        Map<String, Object> errorMap = mapper.readValue(response.getBody(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                                });
                         if (errorMap != null && errorMap.containsKey("msg")) {
                             errorCuerpo = (String) errorMap.get("msg");
                         } else if (errorMap != null && errorMap.containsKey("error_description")) {
@@ -62,13 +63,37 @@ public class AuthService {
                     }
                     throw new ValidacionNegocioException("Supabase Auth: " + errorCuerpo);
                 })
-                .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {
+                });
 
-        if (respuestaSupabase == null || !respuestaSupabase.containsKey("id")) {
-            throw new ValidacionNegocioException("No se pudo obtener el ID del usuario desde Supabase.");
+        if (respuestaSupabase == null) {
+            throw new ValidacionNegocioException("La respuesta de Supabase es nula.");
         }
 
-        UUID supabaseId = UUID.fromString((String) respuestaSupabase.get("id"));
+        String supabaseIdStr = null;
+
+        // Caso 1: Supabase devuelve el ID directamente en la raíz (Versiones antiguas o
+        // configuraciones específicas)
+        if (respuestaSupabase.containsKey("id")) {
+            supabaseIdStr = (String) respuestaSupabase.get("id");
+        }
+        // Caso 2: Supabase devuelve el ID anidado dentro del objeto "user" (Versiones
+        // modernas)
+        else if (respuestaSupabase.containsKey("user")) {
+            Map<String, Object> userObj = (Map<String, Object>) respuestaSupabase.get("user");
+            if (userObj != null && userObj.containsKey("id")) {
+                supabaseIdStr = (String) userObj.get("id");
+            }
+        }
+
+        // Si después de buscar por todos lados no encontramos el ID, ahí sí tiramos
+        // error
+        if (supabaseIdStr == null) {
+            throw new ValidacionNegocioException(
+                    "No se pudo extraer el ID. Respuesta de Supabase: " + respuestaSupabase);
+        }
+
+        UUID supabaseId = UUID.fromString(supabaseIdStr);
 
         // 2. Persistencia Local
         Usuario nuevoUsuario = Usuario.builder()
@@ -99,8 +124,7 @@ public class AuthService {
 
         Map<String, Object> body = Map.of(
                 "email", dto.getEmail(),
-                "password", dto.getPassword()
-        );
+                "password", dto.getPassword());
 
         Map<String, Object> respuestaSupabase = supabaseRestClient.post()
                 .uri("/token?grant_type=password")
@@ -110,7 +134,9 @@ public class AuthService {
                     String errorCuerpo = "Error de autenticación.";
                     try {
                         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                        Map<String, Object> errorMap = mapper.readValue(response.getBody(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                        Map<String, Object> errorMap = mapper.readValue(response.getBody(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                                });
                         if (errorMap != null && errorMap.containsKey("error_description")) {
                             errorCuerpo = (String) errorMap.get("error_description");
                         } else if (errorMap != null && errorMap.containsKey("msg")) {
@@ -121,7 +147,8 @@ public class AuthService {
                     }
                     throw new ValidacionNegocioException("Supabase Auth: " + errorCuerpo);
                 })
-                .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {
+                });
 
         if (respuestaSupabase == null || !respuestaSupabase.containsKey("access_token")) {
             throw new ValidacionNegocioException("Error en la respuesta de autenticación de Supabase.");
@@ -129,7 +156,7 @@ public class AuthService {
 
         // Recuperar info del usuario local
         String accessToken = (String) respuestaSupabase.get("access_token");
-        
+
         Object userObj = respuestaSupabase.get("user");
         if (!(userObj instanceof Map)) {
             log.error("Respuesta de Supabase inválida: el campo 'user' no es un objeto. Recibido: {}", userObj);
@@ -138,7 +165,7 @@ public class AuthService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> userMap = (Map<String, Object>) userObj;
-        
+
         if (!userMap.containsKey("id")) {
             throw new ValidacionNegocioException("No se encontró el identificador del usuario en la sesión.");
         }
@@ -146,7 +173,8 @@ public class AuthService {
         UUID supabaseId = UUID.fromString((String) userMap.get("id"));
 
         Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(supabaseId))
-                .orElseThrow(() -> new ValidacionNegocioException("Usuario autenticado en Supabase pero no registrado en la base de datos local."));
+                .orElseThrow(() -> new ValidacionNegocioException(
+                        "Usuario autenticado en Supabase pero no registrado en la base de datos local."));
 
         return AuthRespuestaDto.builder()
                 .accessToken(accessToken)

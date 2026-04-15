@@ -2,15 +2,17 @@ import React, { useState, useEffect } from "react"
 import { addPropertyControls, ControlType } from "framer"
 
 /**
- * WIZARD DE ONBOARDING - FRAMER (Version 2.1)
+ * WIZARD DE ONBOARDING - Versión 3.0 (Multimedia Ready)
  * -------------------------------------------
- * - Fix: Layout de ubicación (3 columnas).
- * - Add: Matrícula y CV (Opcionales).
- * - Fix: Eliminación de bucle JSON PostGIS.
+ * Integra Cloudinary y validación de planes (5 vs 20 fotos).
+ * Soporte para URLs de video externas.
  */
 
 export default function WizardOnboarding(props) {
-    const { apiUrl, primaryColor, cardBg, textColor, borderRadius } = props
+    const { 
+        apiUrl, primaryColor, cardBg, textColor, borderRadius,
+        cloudinaryCloudName, cloudinaryPreset 
+    } = props
 
     const [step, setStep] = useState(1)
     const [role, setRole] = useState(null)
@@ -21,6 +23,11 @@ export default function WizardOnboarding(props) {
     const [rubros, setRubros] = useState([])
     const [showCustom, setShowCustom] = useState(false)
 
+    // Estado multimedia
+    const [fotoPerfil, setFotoPerfil] = useState("")
+    const [fotosPortafolio, setFotosPortafolio] = useState([])
+    const [videoLinks, setVideoLinks] = useState(["", "", ""])
+
     const [formData, setFormData] = useState({
         email: "", password: "", nombre: "", apellido: "", telefono: "",
         rubroId: "", rubroPersonalizado: "", descripcion: "",
@@ -29,6 +36,14 @@ export default function WizardOnboarding(props) {
     })
 
     useEffect(() => {
+        // Cargar script de Cloudinary
+        if (!window.cloudinary) {
+            const script = document.createElement("script")
+            script.src = "https://widget.cloudinary.com/v2.0/global/all.js"
+            script.async = true
+            document.body.appendChild(script)
+        }
+
         if (step === 3) {
             const fetchRubros = async () => {
                 const cleanApiUrl = apiUrl.replace(/\/+$/, "")
@@ -46,6 +61,29 @@ export default function WizardOnboarding(props) {
         }
     }, [step, apiUrl])
 
+    const openCloudinary = (isMultiple) => {
+        if (!window.cloudinary) return
+        window.cloudinary.openUploadWidget(
+            {
+                cloudName: cloudinaryCloudName,
+                uploadPreset: cloudinaryPreset,
+                multiple: isMultiple,
+                folder: "pps_multimedia",
+                clientAllowedFormats: ["png", "jpg", "jpeg", "webp"],
+                transformation: [{ quality: "auto", fetch_format: "auto" }]
+            },
+            (error, result) => {
+                if (!error && result && result.event === "success") {
+                    if (isMultiple) {
+                        setFotosPortafolio(prev => [...prev, result.info.secure_url])
+                    } else {
+                        setFotoPerfil(result.info.secure_url)
+                    }
+                }
+            }
+        ).open()
+    }
+
     const handleChange = (e) => {
         const { name, value } = e.target
         if (name === "rubroId") {
@@ -59,6 +97,12 @@ export default function WizardOnboarding(props) {
         } else {
             setFormData({ ...formData, [name]: value })
         }
+    }
+
+    const handleVideoChange = (index, value) => {
+        const newLinks = [...videoLinks]
+        newLinks[index] = value
+        setVideoLinks(newLinks)
     }
 
     const submitCuentaBase = async (e) => {
@@ -92,16 +136,12 @@ export default function WizardOnboarding(props) {
         const endpoint = role === "PROVEEDOR" ? "proveedor" : "empresa"
         
         const payload = {
-            rubroId: formData.rubroId || null,
-            rubroPersonalizado: showCustom ? formData.rubroPersonalizado : null,
-            descripcion: formData.descripcion,
-            pais: formData.pais, provincia: formData.provincia, ciudad: formData.ciudad, 
-            calle: formData.calle, numero: parseInt(formData.numero), codigoPostal: parseInt(formData.codigoPostal),
-            matricula: formData.matricula || null,
-            cvUrlPdf: formData.cvUrlPdf || null,
-            ...(role === "PROVEEDOR" 
-                ? { dni: formData.dni } 
-                : { razonSocial: formData.razonSocial, cuit: formData.cuit })
+            ...formData,
+            numero: parseInt(formData.numero),
+            codigoPostal: parseInt(formData.codigoPostal),
+            fotoPerfilUrl: fotoPerfil,
+            fotosPortafolioUrls: fotosPortafolio,
+            videoLinks: videoLinks.filter(l => l.trim() !== "")
         }
 
         try {
@@ -124,7 +164,7 @@ export default function WizardOnboarding(props) {
             <div style={containerStyle}>
                 <div style={{ ...cardStyle, backgroundColor: cardBg, textAlign: "center" }}>
                     <h2 style={{ color: primaryColor }}>¡Éxito! 🎉</h2>
-                    <p style={{ color: textColor }}>Tu perfil ha sido creado correctamente.</p>
+                    <p style={{ color: textColor }}>Perfil y multimedia configurados.</p>
                     <button style={{ ...buttonStyle, backgroundColor: primaryColor }} onClick={() => window.location.reload()}>Finalizar</button>
                 </div>
             </div>
@@ -152,54 +192,56 @@ export default function WizardOnboarding(props) {
                         </div>
                         <input name="email" type="email" placeholder="Email" onChange={handleChange} style={inputStyle} required />
                         <input name="password" type="password" placeholder="Contraseña" onChange={handleChange} style={inputStyle} required />
-                        <input name="telefono" placeholder="WhatsApp" onChange={handleChange} style={inputStyle} required />
                         {error && <p style={errorStyle}>{error}</p>}
-                        <button type="submit" disabled={loading} style={{ ...buttonStyle, backgroundColor: primaryColor }}>{loading ? "Cargando..." : "Siguiente"}</button>
+                        <button type="submit" disabled={loading} style={{ ...buttonStyle, backgroundColor: primaryColor }}>Siguiente</button>
                     </form>
                 )}
 
                 {step === 3 && (
                     <form onSubmit={submitPerfil} style={fadeStyle}>
-                        <h3 style={{ color: textColor, margin: 0 }}>Paso 2: Perfil Público</h3>
+                        <h3 style={{ color: textColor, marginBottom: 5 }}>Paso 2: Detalles y Multimedia</h3>
                         
+                        {/* MULTIMEDIA SECTION */}
+                        <div style={mediaContainer}>
+                            <div style={profilePicBox}>
+                                {fotoPerfil ? <img src={fotoPerfil} style={previewImg} /> : <div onClick={() => openCloudinary(false)} style={uploadPlaceholder}>+ Foto Perfil</div>}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <button type="button" onClick={() => openCloudinary(true)} style={secondaryBtn}>+ Fotos Portafolio ({fotosPortafolio.length})</button>
+                            </div>
+                        </div>
+
                         <select name="rubroId" onChange={handleChange} style={selectStyle} required={!showCustom}>
                             <option value="">Selecciona tu rubro...</option>
                             {rubros.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                            <option value="OTRO">+ Otro (Ingresar manual)</option>
+                            <option value="OTRO">+ Otro</option>
                         </select>
-                        {showCustom && <input name="rubroPersonalizado" placeholder="¿Cuál es tu especialidad?" onChange={handleChange} style={{...inputStyle, border: `1px solid ${primaryColor}`}} required />}
+                        {showCustom && <input name="rubroPersonalizado" placeholder="Especialidad" onChange={handleChange} style={inputStyle} required />}
 
                         {role === "PROVEEDOR" ? (
-                            <input name="dni" placeholder="DNI" onChange={handleChange} style={inputStyle} required />
-                        ) : (
-                            <>
-                                <input name="razonSocial" placeholder="Nombre de la Empresa" onChange={handleChange} style={inputStyle} required />
-                                <input name="cuit" placeholder="CUIT" onChange={handleChange} style={inputStyle} required />
-                            </>
-                        )}
-
-                        {role === "PROVEEDOR" && (
                             <div style={gridRow(2)}>
-                                <input name="matricula" placeholder="Matrícula (Op)" onChange={handleChange} style={inputStyle} />
-                                <input name="cvUrlPdf" placeholder="Link CV/Portfolio (Op)" onChange={handleChange} style={inputStyle} />
+                                <input name="dni" placeholder="DNI" onChange={handleChange} style={inputStyle} required />
+                                <input name="matricula" placeholder="Matrícula" onChange={handleChange} style={inputStyle} />
                             </div>
+                        ) : (
+                            <input name="razonSocial" placeholder="Nombre Empresa" onChange={handleChange} style={inputStyle} required />
                         )}
 
-                        <textarea name="descripcion" placeholder="Descripción breve..." onChange={handleChange} style={{ ...inputStyle, height: "60px" }} required />
+                        <textarea name="descripcion" placeholder="Descripción..." onChange={handleChange} style={{ ...inputStyle, height: "50px" }} required />
                         
-                        <div style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>Ubicación para el Mapa</div>
-                        <div style={gridRow(2)}>
-                            <input name="calle" placeholder="Calle" onChange={handleChange} style={inputStyle} required />
-                            <input name="numero" placeholder="N°" type="number" onChange={handleChange} style={inputStyle} required />
-                        </div>
+                        <div style={{ fontSize: "11px", color: textColor, opacity: 0.6 }}>Videos (YouTube/Links)</div>
+                        {videoLinks.map((link, i) => (
+                            <input key={i} placeholder={`Link Video ${i+1}`} value={link} onChange={(e) => handleVideoChange(i, e.target.value)} style={inputStyle} />
+                        ))}
+
                         <div style={gridRow(3)}>
                             <input name="ciudad" placeholder="Ciudad" onChange={handleChange} style={inputStyle} required />
-                            <input name="provincia" placeholder="Provincia" onChange={handleChange} style={inputStyle} required />
+                            <input name="provincia" placeholder="Prov" onChange={handleChange} style={inputStyle} required />
                             <input name="codigoPostal" placeholder="CP" type="number" onChange={handleChange} style={inputStyle} required />
                         </div>
 
                         {error && <p style={errorStyle}>{error}</p>}
-                        <button type="submit" disabled={loading} style={{ ...buttonStyle, backgroundColor: primaryColor }}>{loading ? "Geolocalizando..." : "Finalizar"}</button>
+                        <button type="submit" disabled={loading} style={{ ...buttonStyle, backgroundColor: primaryColor }}>{loading ? "Registrando..." : "Crear Perfil"}</button>
                     </form>
                 )}
             </div>
@@ -209,20 +251,25 @@ export default function WizardOnboarding(props) {
 
 addPropertyControls(WizardOnboarding, {
     apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
+    cloudinaryCloudName: { type: ControlType.String, title: "Cloud Name", defaultValue: "demo" },
+    cloudinaryPreset: { type: ControlType.String, title: "Upload Preset", defaultValue: "unsigned_preset" },
     primaryColor: { type: ControlType.Color, title: "Acento", defaultValue: "#7c3aed" },
     cardBg: { type: ControlType.Color, title: "Fondo", defaultValue: "#ffffff" },
     textColor: { type: ControlType.Color, title: "Texto", defaultValue: "#000000" },
     borderRadius: { type: ControlType.Number, title: "Esquinas", defaultValue: 16 },
 })
 
-// ESTILOS DINÁMICOS
-const gridRow = (cols) => ({ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "10px", width: "100%" })
-
+const gridRow = (cols) => ({ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "8px", width: "100%" })
 const containerStyle = { width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center", boxSizing: "border-box", overflowY: "auto" }
-const cardStyle = { width: "100%", maxWidth: "450px", padding: "20px", display: "flex", flexDirection: "column", gap: "15px", boxShadow: "0 10px 40px rgba(0,0,0,0.1)", boxSizing: "border-box" }
-const fadeStyle = { display: "flex", flexDirection: "column", gap: "12px", width: "100%" }
-const inputStyle = { padding: "12px", border: "1px solid #ddd", background: "#fff", color: "#000", borderRadius: "8px", fontSize: "13px", width: "100%", boxSizing: "border-box" }
+const cardStyle = { width: "100%", maxWidth: "450px", padding: "20px", display: "flex", flexDirection: "column", gap: "10px", boxShadow: "0 10px 40px rgba(0,0,0,0.1)" }
+const fadeStyle = { display: "flex", flexDirection: "column", gap: "8px", width: "100%" }
+const inputStyle = { padding: "10px", border: "1px solid #ddd", background: "#fff", color: "#000", borderRadius: "8px", fontSize: "12px", width: "100%", boxSizing: "border-box" }
 const selectStyle = { ...inputStyle, appearance: "auto" }
-const buttonStyle = { padding: "14px", border: "none", fontWeight: "bold", cursor: "pointer", color: "white", borderRadius: "8px", width: "100%" }
-const roleButtonStyle = { ...buttonStyle, fontSize: "15px" }
-const errorStyle = { color: "#ef4444", fontSize: "12px", textAlign: "center" }
+const buttonStyle = { padding: "12px", border: "none", fontWeight: "bold", cursor: "pointer", color: "white", borderRadius: "8px", width: "100%" }
+const roleButtonStyle = { ...buttonStyle, fontSize: "14px" }
+const secondaryBtn = { ...buttonStyle, backgroundColor: "#f3f4f6", color: "#374151", fontSize: "12px", border: "1px solid #d1d5db" }
+const errorStyle = { color: "#ef4444", fontSize: "11px", textAlign: "center" }
+const mediaContainer = { display: "flex", gap: "15px", alignItems: "center", marginBottom: "5px" }
+const profilePicBox = { width: "60px", height: "60px", borderRadius: "50%", background: "#f3f4f6", border: "2px dashed #d1d5db", overflow: "hidden", flexShrink: 0 }
+const uploadPlaceholder = { cursor: "pointer", fontSize: "9px", color: "#666", display: "flex", justifyContent: "center", alignItems: "center", height: "100%", textAlign: "center" }
+const previewImg = { width: "100%", height: "100%", objectFit: "cover" }

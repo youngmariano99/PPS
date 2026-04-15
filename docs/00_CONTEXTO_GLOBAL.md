@@ -5,7 +5,7 @@
 *   **Problema:** La fragmentación y dificultad en la búsqueda de profesionales locales de confianza, sumado al "agujero negro" y la falta de transparencia que sufren los postulantes en la búsqueda de empleo formal.
 *   **Objetivo:** Construir una plataforma de fricción cero que una oferta y demanda de servicios locales mediante geolocalización en tiempo real (**PostGIS**), integrando un sistema de postulaciones laborales transparente y un motor anti-fraude para reseñas.
 *   **Alcance Backend:** API RESTful robusta que soporte autenticación, gestión de perfiles duales (Usuarios/Proveedores/Empresas), manejo de coordenadas espaciales, algoritmos de ranking y flujos de matching laboral.
-    *   *Excluye:* pasarelas de pago y chat en tiempo real.
+*     *Excluye:* pasarelas de pago y chat en tiempo real.
 
 ---
 
@@ -52,3 +52,25 @@ El proyecto se rige por los principios de **Clean Architecture** (Arquitectura L
 1.  **Prohibido Inventar:** La IA **NUNCA** debe asumir decisiones de negocio, reglas de base de datos o arquitectura sin respaldo explícito.
 2.  **Parada de Seguridad:** Si falta contexto o no se entiende un flujo, la IA **DEBE DETENERSE** inmediatamente.
 3.  **Acción Requerida ante Duda:** En lugar de generar código inventado, la IA debe devolver un archivo llamado `CUESTIONARIO_DUDAS.md` con las preguntas específicas que necesita que el humano responda para poder continuar con el desarrollo seguro.
+
+---
+
+## 6. Gestión de Multimedia y Límites de Plan
+
+Para garantizar la sostenibilidad y calidad visual de la plataforma, se aplican los siguientes límites estrictos:
+
+### 6.1 Límites de Imágenes (Cloudinary)
+*   **Plan Gratuito:** 
+    *   1 Foto de Perfil.
+    *   Máximo **5** fotos de portafolio/galería.
+*   **Plan Premium:** 
+    *   1 Foto de Perfil.
+    *   Máximo **20** fotos de portafolio/galería.
+
+### 6.2 Enlaces de Video (Externos)
+*   **Capacidad:** Máximo **3** enlaces por perfil (independiente del plan).
+*   **Dominios Permitidos (Regex Validation):**
+    *   YouTube (`youtube.com`, `youtu.be`)
+    *   Instagram (`instagram.com`)
+    *   TikTok (`tiktok.com`)
+    *   Google Drive (`drive.google.com`)

@@ -1,9 +1,8 @@
 package com.PPS.PPS.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -27,10 +26,10 @@ public class PerfilSolicitudDto {
     @NotBlank(message = "La calle es obligatoria")
     private String calle;
 
-    @NotNull(message = "El número es obligatorio")
+    @jakarta.validation.constraints.NotNull(message = "El número es obligatorio")
     private Integer numero;
 
-    @NotNull(message = "El código postal es obligatorio")
+    @jakarta.validation.constraints.NotNull(message = "El código postal es obligatorio")
     private Integer codigoPostal;
 
     // Solo para PerfilProveedor
@@ -42,4 +41,9 @@ public class PerfilSolicitudDto {
     // Campos Opcionales
     private String matricula;
     private String cvUrlPdf;
+
+    // Multimedia
+    private String fotoPerfilUrl;
+    private List<String> fotosPortafolioUrls;
+    private List<String> videoLinks;
 }

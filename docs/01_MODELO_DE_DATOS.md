@@ -194,3 +194,27 @@ CREATE TABLE public.notificaciones (
     mensaje TEXT NOT NULL, entidad_referencia_id UUID, leida BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- 11. PLANES Y SUSCRIPCIONES
+CREATE TABLE public.planes_suscripcion (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre TEXT NOT NULL UNIQUE, 
+    descripcion TEXT,
+    precio_mensual NUMERIC(10, 2) NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE public.suscripciones_usuario (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    plan_id UUID NOT NULL REFERENCES public.planes_suscripcion(id) ON DELETE RESTRICT,
+    estado TEXT NOT NULL DEFAULT 'ACTIVA' CHECK (estado IN ('ACTIVA', 'VENCIDA', 'CANCELADA', 'PENDIENTE')),
+    fecha_inicio TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_fin TIMESTAMPTZ NOT NULL,
+    mp_preferencia_id TEXT, -- Mapea la preferencia de pago de MP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TRIGGER update_suscripciones_modtime BEFORE UPDATE ON public.suscripciones_usuario FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

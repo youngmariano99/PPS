@@ -29,3 +29,14 @@
 * **Módulo/Tarea:** Debugging / Estabilización de Registro y CORS
 * **Archivos Tocados:** `AuthService.java`, `RestClientConfig.java`, `FormularioLogin.jsx`, `FormularioRegistro.jsx`, `FormularioPerfilEmpresa.jsx`, `FormularioPerfilProveedor.jsx`, `BuscadorMapa.jsx`
 * **Qué y Por Qué (1 oración clara):** Se resolvió el error 422 en el registro al robustecer la extracción del ID de Supabase (soportando anidación en "user") y se eliminaron bloqueos de CORS mediante URLs absolutas y cabeceras de autorización Bearer.
+
+* **Fecha:** 2026-04-15
+* **Módulo/Tarea:** Sprint 3 / Membresías y Suscripciones (Fase de Diseño MP)
+* **Archivos Tocados:** `docs/modulos/sprint_3_suscripciones_mp.md`
+* **Qué y Por Qué (1 oración clara):** Se documentó el flujo transaccional inicial y la arquitectura de integración con el Sandbox de Mercado Pago para permitir perfiles destacados en la plataforma.
+
+* **Fecha:** 2026-04-15
+* **M�dulo/Tarea:** Sprint 3 / Persistencia de Suscripciones
+* **Archivos Tocados:** `01_MODELO_DE_DATOS.md`, `docs/modulos/sprint_3_suscripciones_mp.md`
+* **Qu� y Por Qu� (1 oraci�n clara):** Se crearon las tablas `planes_suscripcion` y `suscripciones_usuario` para la persistencia de Mercado Pago.
+

@@ -17,7 +17,7 @@ import java.util.List;
  * Proporciona el listado maestro para los selectores del frontend.
  */
 @RestController
-@RequestMapping("/api/v1/rubros")
+@RequestMapping("/rubros")
 @RequiredArgsConstructor
 @Tag(name = "Rubros", description = "Endpoints para el catálogo de categorías/rubros")
 public class RubroController {

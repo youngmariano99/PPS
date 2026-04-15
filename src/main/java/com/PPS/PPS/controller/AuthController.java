@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Controlador para la gestión de identidad y sesiones.
  */
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Autenticación", description = "Endpoints para registro y login de usuarios")
 public class AuthController {

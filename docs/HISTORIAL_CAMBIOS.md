@@ -40,3 +40,9 @@
 * **Archivos Tocados:** `01_MODELO_DE_DATOS.md`, `docs/modulos/sprint_3_suscripciones_mp.md`
 * **Quï¿½ y Por Quï¿½ (1 oraciï¿½n clara):** Se crearon las tablas `planes_suscripcion` y `suscripciones_usuario` para la persistencia de Mercado Pago.
 
+
+* **Fecha:** 2026-04-15
+* **Módulo/Tarea:** Sprint 3 / Integración y Arquitectura Final de Suscripciones
+* **Archivos Tocados:** `application.yml`, `SuscripcionController.java`, `SuscripcionService.java`, `MercadoPagoService.java`, `SecurityConfig.java`, `data.sql`, (Frontend) `BotonSuscripcionPro.tsx`
+* **Qué y Por Qué (1 oración clara):** Se implementó y documentó el flujo robusto de suscripciones reales con MP, utilizando webhooks como fuente única de verdad, asegurando el CORS y proveyendo un componente de React adaptado a Framer para la interacción delegada a la pasarela de pagos.
+

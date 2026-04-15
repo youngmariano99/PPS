@@ -1,71 +1,56 @@
-# MÓDULO: sprint_3_suscripciones_mp (Membresías y Flujo de Pago)
+# MÓDULO: sprint_3_suscripciones_mp (Membresías y Flujo de Pago Restringido)
 
 ## 1. Objetivo del Módulo
-Este documento define la arquitectura y el flujo de integración de Mercado Pago (en modo Sandbox/Prueba) para gestionar la suscripción premium de proveedores en la Plataforma de Proveedores de Servicios (PPS). Se detalla la fase inicial diseñada para la presentación (flujo funcional con backend y frontend interactuando).
+Este documento define la arquitectura definitiva y el flujo de integración de Mercado Pago (API Preapproval / Suscripciones) para gestionar la suscripción premium de proveedores en la Plataforma de Proveedores de Servicios (PPS).
+
+El objetivo principal de esta iteración ha sido asegurar el flujo transaccional. La regla de oro es: **El frontend (Framer) JAMÁS valida pagos; la única fuente de la verdad para activar una suscripción es el Webhook de Mercado Pago recibido en el backend.**
 
 ---
 
-## 2. Integración con Mercado Pago: Arquitectura y Explicación
+## 2. Arquitectura de Integración (Full Stack)
 
-Para lograr un sistema de pagos funcional sin complicar excesivamente la arquitectura durante una presentación, dividimos la interacción en tres actores: **Frontend (React)**, **Backend (Spring Boot)** y la **API de Mercado Pago**.
+### A. La Base de Datos (PostgreSQL)
+Se formalizó la suscripción en dos tablas (`01_MODELO_DE_DATOS.md`):
+1. **`planes_suscripcion`**: Contiene el plan "PRO" inyectado al inicio (3000 ARS).
+2. **`suscripciones_usuario`**: Entidad pivote. Relaciona al proveedor con el plan. Contiene el estado (`ACTIVA`, `VENCIDA`, etc.), fechas y el fundamental `mp_preferencia_id` que guarda el `preapproval_id` oficial generado por MP.
 
-### ¿Cómo interactúa cada factor?
-1. **Iniciativa (Frontend):** El usuario hace clic en "Suscribirse" enviando su identificador.
-2. **Creación de Preferencia (Backend):** Nuestro servidor se comunica en privado con Mercado Pago mediante credenciales (Test Access Token). Le dice: *"Créame una intención de cobro por $15,000 para este servicio"*.
-3. **El Puente (Checkout Pro):** Mercado Pago responde con una URL segura (`init_point`). El backend se la pasa al frontend, y el navegador del usuario viaja a la pasarela de MP.
-4. **Validación (Sandbox):** El usuario ingresa una "Test Card" (tarjeta de prueba provista por Mercado Pago para simular aprobaciones).
-5. **Retorno y Confirmación:** Al finalizar, MP redirige al usuario a una URL de éxito definida en nuestra app (ej. `/pago-exitoso?status=approved`). El Frontend detecta este `status` en la URL y le notifica al Backend para que cambie el estado del usuario de "básico" a "premium".
+### B. El Backend (Spring Boot)
+Se implementaron tres componentes clave resguardados:
+* **MercadoPagoService**: Un cliente REST (`RestTemplate`) que crea la orden de preaprobación y consulta el estado real.
+* **Controlador `/crear`**: Recibe `usuarioId` y `planId`, genera el `init_point` y se lo devuelve al Frontend.
+* **Controlador `/success`**: Es un endpoint *tonto*. Solo sirve de puente UX. Cuando el usuario vuelve de pagar, atrapa el `preapproval_id`, registra el intento en PostgreSQL con estado **`PENDIENTE`** y redirige ciegamente a la web. **Nunca asume éxito financiero**.
+* **Controlador `/webhook`**: Única ruta capaz de escuchar un evento `type=preapproval`, consultar a Mercado Pago su validez (`authorized`), y cambiar localmente el registro PENDIENTE a **`ACTIVA`**. Además incluye lógica mitigadora que marca como `VENCIDA` cualquier suscripción vieja para evitar cobros dobles.
+
+### C. El Frontend (React component en Framer)
+Se construyó un componente agnóstico de UI (`BotonSuscripcionPro`) con las siguientes reglas:
+1. Lee `usuarioId` directamente de `localStorage` para evitar manipulación de sesión en las queries.
+2. Posee lógica de carga (`isLoading` y UI de resguardo).
+3. Redirige la ventana al `init_point` tras el fetch, perdiendo control total a favor de Mercado Pago.
+4. Requiere absoluta sincronía en el login: El UUID debe ser mapeado correctamente.
 
 ---
 
-## 3. Flujo Paso a Paso y Datos Mínimos
+## 3. Flujo Transaccional Definitivo
 
-### El Flujo Simulativo (Fase 1: En Memoria para Demo)
-En la fase de presentación inmediata, implementamos el flujo usando Mocking (guardando el estado en memoria en Spring Boot):
+1. **Intención:** Proveedor clickea el botón "Suscribirse" (Framer).
+2. **Verificación Local:** El componente lee `userData.id` del LocalStorage. Si existe, hace POST al backend.
+3. **Generación:** Spring Boot llama a la API externa indicando precio (3000) y return URL (`/success`). Retorna el `init_point`.
+4. **Checkout:** Framer usa `window.location.href = init_point` para ceder el control a la pasarela externa.
+5. **Aprobación Simulada:** El usuario inserta una Test Card de MP y aprueba.
+6. **Redirección de Espera:** MP redirige al usuario al `/success` del Backend. Se asienta registro como `PENDIENTE`.
+7. **Redirección Final:** El Backend devuelve al usuario a `framer.com/pago-exitoso`.
+8. **The Truth (Asíncrono):** MP efectúa un POST a `/webhook`. El servidor verifica el estado "authorized" y da por habilitada (`ACTIVA`) la suscripción en la Base de Datos.
 
-* **POST `/api/v1/suscripciones/checkout`**: 
-  * *Entrada:* `userId`
-  * *Acción:* Crea preferencia en MP. 
-  * *Salida:* `init_point` (URL).
-* **El Pago:** El usuario usa la Pasarela Web de MP.
-* **POST `/api/v1/suscripciones/confirmar`**: 
-  * *Entrada:* `userId`, `status="approved"`
-  * *Acción:* Ejecuta `usuariosPremium.put(userId, true)` en la memoria RAM del servidor.
-* **Impacto en Pantalla:** El endpoint de de búsqueda geolocalizada pregunta si el usuario es premium en ese mapa en memoria y adjunta un badge dorado.
+---
 
-### Datos Mínimos Viajando:
-```json
-{
-  "planName": "PPS Premium - Suscripción Mensual",
-  "monthlyPrice": 15000.00,
-  "userId": "uuid-del-proveedor"
-}
+## 4. Configuraciones y Propiedades Críticas
+Para que el sistema orqueste correctamente este baile a 3 bandas (Framer, Spring Boot, MP), se definió de forma inamovible el bloque YAML:
+
+```yaml
+mercadopago:
+  access-token: "TEST-XXXX..." # Token Oficial
+  plan-id: "8a02fcc58..."      # Preapproval UUID
+  backend-base-url: "https://pps-sk7p.onrender.com"
+  frontend-url: "https://overly-mindset-259417.framer.app"
 ```
-
----
-
-## 4. Persistencia Definitiva (Escalable y Relacional)
-
-Para soportar futuras funcionalidades (múltiples planes o historiales de facturación), la estructura de la base de datos ha abandonado el modelo simulado y ahora gestiona la suscripción en dos tablas clave en PostgreSQL (Ver `01_MODELO_DE_DATOS.md`):
-
-1. **`planes_suscripcion`:** 
-   * Guarda el plan "PPS Premium" con su precio (`15000.00`).
-   * *Ejemplo:* `id`, `nombre`, `precio_mensual`.
-2. **`suscripciones_usuario`:** 
-   * Conecta al `usuario_id` con el `plan_id`. 
-   * Determina si está `'ACTIVA'` y guarda el `mp_preferencia_id` que usamos para mapear que el cobro pertenece a ese ticket exacto.
-   * Maneja el periodo mediante `fecha_inicio` y `fecha_fin`.
-
-**Actualización Tras Pago (Backend Real):**
-Cuando Mercado Pago llama a la confirmación exitosa (`/api/v1/suscripciones/confirmar` vía Webhook):
-1. El backend crea una fila en `suscripciones_usuario`.
-2. Settea `estado = 'ACTIVA'`.
-3. Settea `fecha_inicio = NOW()` y `fecha_fin = NOW() + 1 MES`.
-4. El endpoint de geolocalización ahora hace un `JOIN` rápido con esta tabla para saber quién tiene `fecha_fin > NOW()` y destacar su perfil.
-
----
-
-## 5. Historial de Cambios (Módulo Suscripciones)
-
-*   **[2026-04-15] - Diseño Inicial de Suscripciones (Fase Demo):** Se definió el flujo síncrono de redirección a Checkout Pro de Mercado Pago. Se estableció el modelo de estado en memoria para probar interacciones.
-*   **[2026-04-15] - Persistencia Relacional:** Se reemplazó el modelo "en memoria" y los enfoques simplistas por tablas aisladas (`planes_suscripcion` y `suscripciones_usuario`) en la Base de Datos para asegurar la escalabilidad del sistema de monetización.
+*También se habilitaron las excepciones estrictas de CORS en `SecurityConfig` para las rutas webhook.*

@@ -38,4 +38,8 @@ public class PerfilSolicitudDto {
     // Solo para PerfilEmpresa
     private String razonSocial;
     private String cuit;
+    
+    // Campos Opcionales
+    private String matricula;
+    private String cvUrlPdf;
 }

@@ -25,12 +25,20 @@ public class PerfilController {
     @PostMapping("/proveedor/{usuarioId}")
     @Operation(summary = "Crear perfil de Proveedor")
     public ResponseEntity<Object> crearProveedor(@PathVariable UUID usuarioId, @Valid @RequestBody PerfilSolicitudDto dto) {
-        return new ResponseEntity<>(directorioService.crearPerfilProveedor(usuarioId, dto), HttpStatus.CREATED);
+        directorioService.crearPerfilProveedor(usuarioId, dto);
+        return new ResponseEntity<>(java.util.Map.of(
+            "mensaje", "Perfil de proveedor creado con éxito",
+            "usuarioId", usuarioId
+        ), HttpStatus.CREATED);
     }
 
     @PostMapping("/empresa/{usuarioId}")
     @Operation(summary = "Crear perfil de Empresa")
     public ResponseEntity<Object> crearEmpresa(@PathVariable UUID usuarioId, @Valid @RequestBody PerfilSolicitudDto dto) {
-        return new ResponseEntity<>(directorioService.crearPerfilEmpresa(usuarioId, dto), HttpStatus.CREATED);
+        directorioService.crearPerfilEmpresa(usuarioId, dto);
+        return new ResponseEntity<>(java.util.Map.of(
+            "mensaje", "Perfil de empresa creado con éxito",
+            "usuarioId", usuarioId
+        ), HttpStatus.CREATED);
     }
 }

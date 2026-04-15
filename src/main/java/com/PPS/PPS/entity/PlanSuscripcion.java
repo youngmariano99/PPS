@@ -1,19 +1,28 @@
 package com.PPS.PPS.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Define los niveles de planes disponibles (Gratis, Premium, etc.)
- * y sus configuraciones.
+ * Entidad que mapea la tabla planes_suscripcion de la plataforma.
  */
 @Entity
-@Table(name = "planes_suscripcion", schema = "public")
-@Getter
-@Setter
+@Table(name = "planes_suscripcion")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -28,16 +37,17 @@ public class PlanSuscripcion {
 
     private String descripcion;
 
-    @Column(name = "precio_mensual", nullable = false)
+    @Column(name = "precio_mensual", nullable = false, precision = 10, scale = 2)
     private BigDecimal precioMensual;
 
     @Column(nullable = false)
-    @Builder.Default
     private Boolean activo = true;
 
-    @Column(name = "created_at", updatable = false, insertable = false)
-    private OffsetDateTime fechaCreacion;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", updatable = false, insertable = false)
-    private OffsetDateTime fechaActualizacion;
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 }

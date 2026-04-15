@@ -35,3 +35,11 @@ springdoc:
     tagsSorter: alpha
     displayRequestDuration: true
   show-actuator: true
+
+# Configuracion de Mercado Pago
+mercadopago:
+  access-token: ${TEST-1029377916834190-041508-189529c0e4993743d017da80ae469cc0-597138236} 
+  plan-id: ${8a02fcc58d9b41b1a0ac69345d6cd649} 
+  backend-base-url: ${https://pps-sk7p.onrender.com} 
+  frontend-url: ${https://overly-mindset-259417.framer.app} 
+

@@ -10,7 +10,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,22 +19,22 @@ import org.springframework.web.bind.annotation.RestController;
  * Controlador para la gestión de identidad y sesiones.
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Autenticación", description = "Endpoints para registro e inicio de sesión integrados con Supabase")
+@Tag(name = "Autenticación", description = "Endpoints para registro y login de usuarios")
 public class AuthController {
 
     private final AuthService authService;
 
+    @Operation(summary = "Registro de nuevo usuario")
     @PostMapping("/registro")
-    @Operation(summary = "Registrar un nuevo usuario", description = "Crea un usuario en Supabase Auth y sincroniza los datos básicos en la BD local.")
-    public ResponseEntity<AuthRespuestaDto> registrar(@Valid @RequestBody RegistroSolicitudDto dto) {
-        return new ResponseEntity<>(authService.registrar(dto), HttpStatus.CREATED);
+    public ResponseEntity<AuthRespuestaDto> registrar(@Valid @RequestBody RegistroSolicitudDto solicitud) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.registrar(solicitud));
     }
 
+    @Operation(summary = "Inicio de sesión")
     @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión", description = "Valida credenciales con Supabase y retorna un token JWT válido.")
-    public ResponseEntity<AuthRespuestaDto> login(@Valid @RequestBody LoginSolicitudDto dto) {
-        return ResponseEntity.ok(authService.login(dto));
+    public ResponseEntity<AuthRespuestaDto> login(@Valid @RequestBody LoginSolicitudDto solicitud) {
+        return ResponseEntity.ok(authService.login(solicitud));
     }
 }

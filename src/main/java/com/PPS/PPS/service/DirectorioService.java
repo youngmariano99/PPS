@@ -1,5 +1,6 @@
 package com.PPS.PPS.service;
 
+import com.PPS.PPS.dto.PerfilDetalleDto;
 import com.PPS.PPS.dto.PerfilRespuestaDto;
 import com.PPS.PPS.dto.PerfilSolicitudDto;
 import com.PPS.PPS.entity.*;
@@ -204,6 +205,42 @@ public class DirectorioService {
                 .collect(Collectors.toList()));
 
         return resultados;
+    }
+
+    public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
+        PerfilProveedor p = proveedorRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor no encontrado"));
+        
+        boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
+                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
+                .orElse(false);
+
+        List<Portafolio> multimedia;
+        if (esPremium) {
+            multimedia = portafolioRepository.findAllByUsuarioIdOrderByFechaCreacionDesc(p.getUsuario().getId());
+        } else {
+            // Si es gratis, solo traemos las 5 visibles más recientes
+            multimedia = portafolioRepository.findVisibleByUsuarioId(p.getUsuario().getId(), org.springframework.data.domain.PageRequest.of(0, 5));
+        }
+
+        return PerfilDetalleDto.builder()
+                .id(p.getId())
+                .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre() : p.getRubroPersonalizado())
+                .descripcion(p.getDescripcionProfesional())
+                .fotoPerfilUrl(p.getFotoPerfilUrl())
+                .ciudad(p.getCiudad())
+                .provincia(p.getProvincia())
+                .esPremium(esPremium)
+                .fotosPortafolio(multimedia.stream()
+                        .filter(m -> m.getTipoRecurso().equals("IMAGEN"))
+                        .map(Portafolio::getUrlRecurso)
+                        .collect(Collectors.toList()))
+                .videoLinks(multimedia.stream()
+                        .filter(m -> m.getTipoRecurso().equals("ENLACE"))
+                        .map(Portafolio::getUrlRecurso)
+                        .collect(Collectors.toList()))
+                .build();
     }
 
     private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {

@@ -90,7 +90,8 @@ public class SuscripcionService {
                 usuarioId.toString(), 
                 usuario.getEmail(), 
                 backUrlBase, 
-                internalReference
+                internalReference,
+                plan.getPrecioMensual()
         );
     }
 

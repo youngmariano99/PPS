@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/suscripciones")
+@RequestMapping("/suscripciones")
 @RequiredArgsConstructor
 @Slf4j
 public class SuscripcionController {
@@ -36,13 +36,14 @@ public class SuscripcionController {
 
     @PostMapping("/crear")
     public ResponseEntity<Map<String, String>> crear(@Valid @RequestBody CrearSuscripcionRequestDto request) {
-        log.info("Iniciando creacion de suscripcion para usuarioId: {}, planId: {}", 
-                 request.getUsuarioId(), request.getPlanId());
+        log.info("Iniciando creacion de suscripcion para usuarioId: {}, planId: {}",
+                request.getUsuarioId(), request.getPlanId());
 
         String backUrlEndpoint = backendUrl + "/api/v1/suscripciones/success";
 
         // Obtener el Init Point de la API de Mercado Pago
-        String initPoint = suscripcionService.iniciarCheckoutProSuscripcion(request.getUsuarioId(), request.getPlanId(), backUrlEndpoint);
+        String initPoint = suscripcionService.iniciarCheckoutProSuscripcion(request.getUsuarioId(), request.getPlanId(),
+                backUrlEndpoint);
 
         // Devolvemos el init_point al Front
         return ResponseEntity.ok(Map.of("init_point", initPoint));
@@ -72,15 +73,22 @@ public class SuscripcionController {
 
         if (("payment".equals(type) || "payment.created".equals(action)) && data != null) {
             String paymentId = String.valueOf(data.get("id"));
-            
-            // Para ser 100% seguros tendríamos que hacer un GET a MP con este pago para leer su external_reference
-            // Pero por simplicidad del MVP (y porque es test), vamos a extraer external_reference del pago si está en la notificación V2
-            // Nota: MP V2 envía data.id, hay que consultar la API de pagos para el external_reference.
-            // Solución rápida: Asumimos que implementamos la recuperación de MP o que la notificación trae la info.
+
+            // Para ser 100% seguros tendríamos que hacer un GET a MP con este pago para
+            // leer su external_reference
+            // Pero por simplicidad del MVP (y porque es test), vamos a extraer
+            // external_reference del pago si está en la notificación V2
+            // Nota: MP V2 envía data.id, hay que consultar la API de pagos para el
+            // external_reference.
+            // Solución rápida: Asumimos que implementamos la recuperación de MP o que la
+            // notificación trae la info.
             log.info("Pago acreditado ID: {}", paymentId);
-            
-            // En Producción: Consultar MercadoPagoService.obtenerPreferenciaParaPago(paymentId) -> sacar external_reference.
-            // Para el alcance de la demo dejaremos el esqueleto listo para usar procesarWebhookPagoUnico(reference)
+
+            // En Producción: Consultar
+            // MercadoPagoService.obtenerPreferenciaParaPago(paymentId) -> sacar
+            // external_reference.
+            // Para el alcance de la demo dejaremos el esqueleto listo para usar
+            // procesarWebhookPagoUnico(reference)
         }
 
         return ResponseEntity.ok().build();

@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,10 +35,11 @@ public class MercadoPagoService {
      * @param email Correo del usuario.
      * @param backUrl Endpoint al que retorna (éxito o pendiente).
      * @param preapprovalId El ID de la "suscripcion" pendiente que usaremos como reference.
+     * @param precio El precio mensual configurado para el plan.
      * @return El init_point.
      */
-    public String crearPreferenciaSuscripcion(String usuarioId, String email, String backUrl, String preapprovalId) {
-        log.info("Creando Preference en MP para usuario: {}, reference: {}", email, preapprovalId);
+    public String crearPreferenciaSuscripcion(String usuarioId, String email, String backUrl, String preapprovalId, BigDecimal precio) {
+        log.info("Creando Preference en MP para usuario: {}, reference: {}, precio: {}", email, preapprovalId, precio);
 
         String url = "https://api.mercadopago.com/checkout/preferences";
 
@@ -51,7 +53,7 @@ public class MercadoPagoService {
         Map<String, Object> item = new HashMap<>();
         item.put("title", "Suscripción Premium PPS");
         item.put("quantity", 1);
-        item.put("unit_price", 3000); // Precio hardcodeado temporal o lo puedes traer del plan
+        item.put("unit_price", precio); // Dinámico desde la BD
         item.put("currency_id", "ARS");
         body.put("items", java.util.List.of(item));
 

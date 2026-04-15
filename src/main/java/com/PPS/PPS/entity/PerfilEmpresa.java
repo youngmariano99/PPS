@@ -44,11 +44,6 @@ public class PerfilEmpresa {
     @Column(name = "logo_url")
     private String logoUrl;
 
-    private String matricula;
-
-    @Column(name = "cv_url_pdf")
-    private String cvUrlPdf;
-
     // Campos de dirección
     @Column(nullable = false)
     private String pais;

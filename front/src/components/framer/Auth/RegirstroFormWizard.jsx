@@ -178,11 +178,12 @@ export default function WizardOnboarding(props) {
                             </>
                         )}
 
-                        {/* NUEVOS CAMPOS OPCIONALES */}
-                        <div style={gridRow(2)}>
-                            <input name="matricula" placeholder="Matrícula (Op)" onChange={handleChange} style={inputStyle} />
-                            <input name="cvUrlPdf" placeholder="Link CV/Portfolio (Op)" onChange={handleChange} style={inputStyle} />
-                        </div>
+                        {role === "PROVEEDOR" && (
+                            <div style={gridRow(2)}>
+                                <input name="matricula" placeholder="Matrícula (Op)" onChange={handleChange} style={inputStyle} />
+                                <input name="cvUrlPdf" placeholder="Link CV/Portfolio (Op)" onChange={handleChange} style={inputStyle} />
+                            </div>
+                        )}
 
                         <textarea name="descripcion" placeholder="Descripción breve..." onChange={handleChange} style={{ ...inputStyle, height: "60px" }} required />
                         

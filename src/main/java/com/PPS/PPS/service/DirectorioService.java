@@ -92,8 +92,6 @@ public class DirectorioService {
                                 .rubroPersonalizado(dto.getRubroPersonalizado())
                                 .razonSocial(dto.getRazonSocial())
                                 .cuit(dto.getCuit())
-                                .matricula(dto.getMatricula())
-                                .cvUrlPdf(dto.getCvUrlPdf())
                                 .descripcionEmpresa(dto.getDescripcion())
                                 .pais(dto.getPais())
                                 .provincia(dto.getProvincia())

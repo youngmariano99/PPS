@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Data
 public class PerfilSolicitudDto {
-    @NotNull(message = "El rubro es obligatorio")
     private UUID rubroId;
 
     private String rubroPersonalizado;

@@ -41,8 +41,13 @@ public class DirectorioService {
                 Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
                                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
-                Rubro rubro = rubroRepository.findById(Objects.requireNonNull(dto.getRubroId()))
-                                .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
+                Rubro rubro = null;
+                if (dto.getRubroId() != null) {
+                        rubro = rubroRepository.findById(dto.getRubroId())
+                                        .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
+                } else if (dto.getRubroPersonalizado() == null || dto.getRubroPersonalizado().isBlank()) {
+                        throw new ValidacionNegocioException("Debe seleccionar un rubro o ingresar uno personalizado.");
+                }
 
                 Point punto = obtenerPuntoDesdeDireccion(dto);
 
@@ -69,8 +74,13 @@ public class DirectorioService {
                 Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
                                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
-                Rubro rubro = rubroRepository.findById(Objects.requireNonNull(dto.getRubroId()))
-                                .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
+                Rubro rubro = null;
+                if (dto.getRubroId() != null) {
+                        rubro = rubroRepository.findById(dto.getRubroId())
+                                        .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
+                } else if (dto.getRubroPersonalizado() == null || dto.getRubroPersonalizado().isBlank()) {
+                        throw new ValidacionNegocioException("Debe seleccionar un rubro o ingresar uno personalizado.");
+                }
 
                 Point punto = obtenerPuntoDesdeDireccion(dto);
 
@@ -104,7 +114,8 @@ public class DirectorioService {
                                                 .id(p.getId())
                                                 .nombrePublico(p.getUsuario().getNombre() + " "
                                                                 + p.getUsuario().getApellido())
-                                                .rubro(p.getRubroPrincipal().getNombre())
+                                                .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
+                                                                : p.getRubroPersonalizado())
                                                 .descripcion(p.getDescripcionProfesional())
                                                 .ciudad(p.getCiudad())
                                                 .latitud(p.getUbicacion().getY())
@@ -118,7 +129,8 @@ public class DirectorioService {
                                 .map(e -> PerfilRespuestaDto.builder()
                                                 .id(e.getId())
                                                 .nombrePublico(e.getRazonSocial())
-                                                .rubro(e.getRubroPrincipal().getNombre())
+                                                .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre()
+                                                                : e.getRubroPersonalizado())
                                                 .descripcion(e.getDescripcionEmpresa())
                                                 .ciudad(e.getCiudad())
                                                 .latitud(e.getUbicacion().getY())

@@ -24,21 +24,21 @@ public class MercadoPagoService {
     @Value("${mercadopago.access-token}")
     private String accessToken;
 
-    @Value("${mercadopago.plan-id}")
-    private String planId;
-
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
      * Crea una Preferencia de Pago en Mercado Pago (Suscripcion Mensual simulada).
-     * @param usuarioId ID del usuario para tracking.
-     * @param email Correo del usuario.
-     * @param backUrl Endpoint al que retorna (éxito o pendiente).
-     * @param preapprovalId El ID de la "suscripcion" pendiente que usaremos como reference.
-     * @param precio El precio mensual configurado para el plan.
+     * 
+     * @param usuarioId     ID del usuario para tracking.
+     * @param email         Correo del usuario.
+     * @param backUrl       Endpoint al que retorna (éxito o pendiente).
+     * @param preapprovalId El ID de la "suscripcion" pendiente que usaremos como
+     *                      reference.
+     * @param precio        El precio mensual configurado para el plan.
      * @return El init_point.
      */
-    public String crearPreferenciaSuscripcion(String usuarioId, String email, String backUrl, String preapprovalId, BigDecimal precio) {
+    public String crearPreferenciaSuscripcion(String usuarioId, String email, String backUrl, String preapprovalId,
+            BigDecimal precio) {
         log.info("Creando Preference en MP para usuario: {}, reference: {}, precio: {}", email, preapprovalId, precio);
 
         String url = "https://api.mercadopago.com/checkout/preferences";
@@ -48,7 +48,7 @@ public class MercadoPagoService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> body = new HashMap<>();
-        
+
         // 1. Items (Lo que se cobra)
         Map<String, Object> item = new HashMap<>();
         item.put("title", "Suscripción Premium PPS");
@@ -80,8 +80,7 @@ public class MercadoPagoService {
                     url,
                     HttpMethod.POST,
                     requestEntity,
-                    MpPreapprovalResponseDto.class
-            );
+                    MpPreapprovalResponseDto.class);
 
             if (response.getBody() != null && response.getBody().getInit_point() != null) {
                 return response.getBody().getInit_point();
@@ -96,6 +95,7 @@ public class MercadoPagoService {
 
     /**
      * Consulta el estado REAL de una suscripcion usando el ID de la misma.
+     * 
      * @param preapprovalId El ID de la pre-aprobacion.
      * @return El estado retornado por MP (ej. "authorized", "paused", "cancelled").
      */
@@ -112,8 +112,7 @@ public class MercadoPagoService {
                     url,
                     HttpMethod.GET,
                     requestEntity,
-                    MpPreapprovalResponseDto.class
-            );
+                    MpPreapprovalResponseDto.class);
 
             if (response.getBody() != null) {
                 return response.getBody().getStatus();

@@ -29,116 +29,118 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DirectorioService {
 
-    private final PerfilProveedorRepository proveedorRepository;
-    private final PerfilEmpresaRepository empresaRepository;
-    private final RubroRepository rubroRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final GeocodingService geocodingService;
-    private final GeometryFactory geometryFactory;
+        private final PerfilProveedorRepository proveedorRepository;
+        private final PerfilEmpresaRepository empresaRepository;
+        private final RubroRepository rubroRepository;
+        private final UsuarioRepository usuarioRepository;
+        private final GeocodingService geocodingService;
+        private final GeometryFactory geometryFactory;
 
-    @Transactional
-    public PerfilProveedor crearPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
-        Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+        @Transactional
+        public PerfilProveedor crearPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
+                Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
-        Rubro rubro = rubroRepository.findById(Objects.requireNonNull(dto.getRubroId()))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
+                Rubro rubro = rubroRepository.findById(Objects.requireNonNull(dto.getRubroId()))
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
 
-        Point punto = obtenerPuntoDesdeDireccion(dto);
+                Point punto = obtenerPuntoDesdeDireccion(dto);
 
-        PerfilProveedor perfil = PerfilProveedor.builder()
-                .usuario(usuario)
-                .rubroPrincipal(rubro)
-                .rubroPersonalizado(dto.getRubroPersonalizado())
-                .dni(dto.getDni())
-                .descripcionProfesional(dto.getDescripcion())
-                .pais(dto.getPais())
-                .provincia(dto.getProvincia())
-                .ciudad(dto.getCiudad())
-                .calle(dto.getCalle())
-                .numero(dto.getNumero())
-                .codigoPostal(dto.getCodigoPostal())
-                .ubicacion(punto)
-                .build();
+                PerfilProveedor perfil = PerfilProveedor.builder()
+                                .usuario(usuario)
+                                .rubroPrincipal(rubro)
+                                .rubroPersonalizado(dto.getRubroPersonalizado())
+                                .dni(dto.getDni())
+                                .descripcionProfesional(dto.getDescripcion())
+                                .pais(dto.getPais())
+                                .provincia(dto.getProvincia())
+                                .ciudad(dto.getCiudad())
+                                .calle(dto.getCalle())
+                                .numero(dto.getNumero())
+                                .codigoPostal(dto.getCodigoPostal())
+                                .ubicacion(punto)
+                                .build();
 
-        return proveedorRepository.save(perfil);
-    }
-
-    @Transactional
-    public PerfilEmpresa crearPerfilEmpresa(UUID usuarioId, PerfilSolicitudDto dto) {
-        Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
-
-        Rubro rubro = rubroRepository.findById(Objects.requireNonNull(dto.getRubroId()))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
-
-        Point punto = obtenerPuntoDesdeDireccion(dto);
-
-        PerfilEmpresa perfil = PerfilEmpresa.builder()
-                .usuario(usuario)
-                .rubroPrincipal(rubro)
-                .rubroPersonalizado(dto.getRubroPersonalizado())
-                .razonSocial(dto.getRazonSocial())
-                .cuit(dto.getCuit())
-                .descripcionEmpresa(dto.getDescripcion())
-                .pais(dto.getPais())
-                .provincia(dto.getProvincia())
-                .ciudad(dto.getCiudad())
-                .calle(dto.getCalle())
-                .numero(dto.getNumero())
-                .codigoPostal(dto.getCodigoPostal())
-                .ubicacion(punto)
-                .build();
-
-        return empresaRepository.save(perfil);
-    }
-
-    public List<PerfilRespuestaDto> buscarCercanos(double lat, double lon, double radioKm) {
-        double radioMetros = radioKm * 1000;
-        
-        List<PerfilRespuestaDto> resultados = new ArrayList<>();
-
-        // Buscar Proveedores
-        resultados.addAll(proveedorRepository.buscarCercanos(lat, lon, radioMetros).stream()
-                .map(p -> PerfilRespuestaDto.builder()
-                        .id(p.getId())
-                        .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
-                        .rubro(p.getRubroPrincipal().getNombre())
-                        .descripcion(p.getDescripcionProfesional())
-                        .ciudad(p.getCiudad())
-                        .latitud(p.getUbicacion().getY())
-                        .longitud(p.getUbicacion().getX())
-                        .tipo("PROVEEDOR")
-                        .build())
-                .collect(Collectors.toList()));
-
-        // Buscar Empresas
-        resultados.addAll(empresaRepository.buscarCercanos(lat, lon, radioMetros).stream()
-                .map(e -> PerfilRespuestaDto.builder()
-                        .id(e.getId())
-                        .nombrePublico(e.getRazonSocial())
-                        .rubro(e.getRubroPrincipal().getNombre())
-                        .descripcion(e.getDescripcionEmpresa())
-                        .ciudad(e.getCiudad())
-                        .latitud(e.getUbicacion().getY())
-                        .longitud(e.getUbicacion().getX())
-                        .tipo("EMPRESA")
-                        .build())
-                .collect(Collectors.toList()));
-
-        return resultados;
-    }
-
-    private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {
-        String direccionFull = String.format("%s %d, %s, %s, %s", 
-                dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia(), dto.getPais());
-        
-        double[] coords = geocodingService.obtenerCoordenadas(direccionFull);
-        
-        if (coords == null) {
-            throw new ValidacionNegocioException("No se pudo geolocalizar la dirección provista. Verifique los datos.");
+                return proveedorRepository.save(perfil);
         }
 
-        return geometryFactory.createPoint(new Coordinate(coords[0], coords[1])); // Longitud, Latitud
-    }
+        @Transactional
+        public PerfilEmpresa crearPerfilEmpresa(UUID usuarioId, PerfilSolicitudDto dto) {
+                Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+                Rubro rubro = rubroRepository.findById(Objects.requireNonNull(dto.getRubroId()))
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Rubro no encontrado"));
+
+                Point punto = obtenerPuntoDesdeDireccion(dto);
+
+                PerfilEmpresa perfil = PerfilEmpresa.builder()
+                                .usuario(usuario)
+                                .rubroPrincipal(rubro)
+                                .rubroPersonalizado(dto.getRubroPersonalizado())
+                                .razonSocial(dto.getRazonSocial())
+                                .cuit(dto.getCuit())
+                                .descripcionEmpresa(dto.getDescripcion())
+                                .pais(dto.getPais())
+                                .provincia(dto.getProvincia())
+                                .ciudad(dto.getCiudad())
+                                .calle(dto.getCalle())
+                                .numero(dto.getNumero())
+                                .codigoPostal(dto.getCodigoPostal())
+                                .ubicacion(punto)
+                                .build();
+
+                return empresaRepository.save(perfil);
+        }
+
+        public List<PerfilRespuestaDto> buscarCercanos(double lat, double lon, double radioKm) {
+                double radioMetros = radioKm * 1000;
+
+                List<PerfilRespuestaDto> resultados = new ArrayList<>();
+
+                // Buscar Proveedores
+                resultados.addAll(proveedorRepository.buscarCercanos(lat, lon, radioMetros).stream()
+                                .map(p -> PerfilRespuestaDto.builder()
+                                                .id(p.getId())
+                                                .nombrePublico(p.getUsuario().getNombre() + " "
+                                                                + p.getUsuario().getApellido())
+                                                .rubro(p.getRubroPrincipal().getNombre())
+                                                .descripcion(p.getDescripcionProfesional())
+                                                .ciudad(p.getCiudad())
+                                                .latitud(p.getUbicacion().getY())
+                                                .longitud(p.getUbicacion().getX())
+                                                .tipo("PROVEEDOR")
+                                                .build())
+                                .collect(Collectors.toList()));
+
+                // Buscar Empresas
+                resultados.addAll(empresaRepository.buscarCercanos(lat, lon, radioMetros).stream()
+                                .map(e -> PerfilRespuestaDto.builder()
+                                                .id(e.getId())
+                                                .nombrePublico(e.getRazonSocial())
+                                                .rubro(e.getRubroPrincipal().getNombre())
+                                                .descripcion(e.getDescripcionEmpresa())
+                                                .ciudad(e.getCiudad())
+                                                .latitud(e.getUbicacion().getY())
+                                                .longitud(e.getUbicacion().getX())
+                                                .tipo("EMPRESA")
+                                                .build())
+                                .collect(Collectors.toList()));
+
+                return resultados;
+        }
+
+        private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {
+                String direccionFull = String.format("%s ,%d, %s, %s, %s",
+                                dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia(), dto.getPais());
+
+                double[] coords = geocodingService.obtenerCoordenadas(direccionFull);
+
+                if (coords == null) {
+                        throw new ValidacionNegocioException(
+                                        "No se pudo geolocalizar la dirección provista. Verifique los datos.");
+                }
+
+                return geometryFactory.createPoint(new Coordinate(coords[0], coords[1])); // Longitud, Latitud
+        }
 }

@@ -24,3 +24,8 @@
 * **Módulo/Tarea:** Sprint 2 / Directorio y Geolocalización (Core Marketplace)
 * **Archivos Tocados:** `GeometryConfig.java`, `Rubro.java`, `PerfilProveedor.java`, `PerfilEmpresa.java`, `GeocodingService.java`, `DirectorioService.java`, `PerfilController.java`, `DirectorioController.java`, `directorioApi.js`
 * **Qué y Por Qué (1 oración clara):** Se implementó el motor de geoposicionamiento integrando PostGIS y Nominatim, permitiendo la creación de perfiles con coordenadas reales y la búsqueda de servicios por radio de cercanía.
+
+* **Fecha:** 2026-04-14
+* **Módulo/Tarea:** Debugging / Estabilización de Registro y CORS
+* **Archivos Tocados:** `AuthService.java`, `RestClientConfig.java`, `FormularioLogin.jsx`, `FormularioRegistro.jsx`, `FormularioPerfilEmpresa.jsx`, `FormularioPerfilProveedor.jsx`, `BuscadorMapa.jsx`
+* **Qué y Por Qué (1 oración clara):** Se resolvió el error 422 en el registro al robustecer la extracción del ID de Supabase (soportando anidación en "user") y se eliminaron bloqueos de CORS mediante URLs absolutas y cabeceras de autorización Bearer.

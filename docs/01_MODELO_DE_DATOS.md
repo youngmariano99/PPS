@@ -14,7 +14,8 @@ Cuando la IA deba generar código Java (`@Entity`) basado en este esquema, DEBE 
 * **Triggers de Auditoría:** El campo `updated_at` es manejado por un Trigger de PostgreSQL. La entidad Java no debe sobreescribirlo manualmente.
 
 ## 3. ESQUEMA SQL (Única Fuente de Verdad)
-> **ATENCIÓN IA:** Este es el esquema físico exacto. PROHIBIDO inventar tablas, columnas o relaciones que no existan en este script.
+> **ATENCIÓN IA:** Este es el esquema físico exacto. PROHIBIDO inventar tablas, columnas o relaciones.
+> **REGLA DE EVOLUCIÓN:** Todo cambio en tablas existentes debe actualizar el `CREATE` y añadir el `ALTER TABLE` al final del bloque SQL.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -100,6 +101,7 @@ CREATE TABLE public.portafolios (
     usuario_id UUID REFERENCES public.usuarios(id) ON DELETE CASCADE,
     empresa_id UUID REFERENCES public.perfiles_empresa(id) ON DELETE CASCADE,
     titulo TEXT NOT NULL, url_recurso TEXT NOT NULL, tipo_recurso TEXT NOT NULL CHECK (tipo_recurso IN ('IMAGEN', 'DOCUMENTO', 'ENLACE')),
+    visible BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_portafolio_propietario CHECK ((usuario_id IS NOT NULL AND empresa_id IS NULL) OR (usuario_id IS NULL AND empresa_id IS NOT NULL))
 );
@@ -218,7 +220,16 @@ CREATE TABLE public.suscripciones_usuario (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TRIGGER update_suscripciones_modtime BEFORE UPDATE ON public.suscripciones_usuario FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+--------------------------------------------------------------------------------
+-- HISTORIAL DE MIGRACIONES (SCRIPTS DE ACTUALIZACIÓN)
+--------------------------------------------------------------------------------
+
+-- [2026-04-15] Refactorización Multimedia Sprint 4
+-- Propósito: Añadir foto de perfil al proveedor y soporte de visibilidad para portafolio.
+ALTER TABLE public.perfiles_proveedor ADD COLUMN foto_perfil_url TEXT;
+ALTER TABLE public.portafolios ADD COLUMN visible BOOLEAN NOT NULL DEFAULT TRUE;
 ```
 
-### 12. Extensión Multimedia (Consolidada)
-La gestión de multimedia se ha unificado en la tabla existente `portafolios` para evitar redundancias. La identidad visual se maneja mediante `foto_perfil_url` (Proveedores) y `logo_url` (Empresas).
+### 12. Extensión Multimedia (Consolidada + Degradación Suave)
+La gestión de multimedia se ha unificado en la tabla existente `portafolios` para evitar redundancias. Implementa "Graceful Downgrade": los recursos se preservan siempre, pero su visibilidad pública se filtra mediante la columna `visible` basándose en el plan activo.

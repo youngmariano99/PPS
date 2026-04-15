@@ -1,5 +1,6 @@
 package com.PPS.PPS.service;
 
+import com.PPS.PPS.dto.PerfilDetalleDto;
 import com.PPS.PPS.dto.PerfilRespuestaDto;
 import com.PPS.PPS.dto.PerfilSolicitudDto;
 import com.PPS.PPS.entity.*;
@@ -29,7 +30,7 @@ public class DirectorioService {
     private final RubroRepository rubroRepository;
     private final UsuarioRepository usuarioRepository;
     private final SuscripcionUsuarioRepository suscripcionRepository;
-    private final PortafolioRepository portafolioRepository; // Inyectado
+    private final PortafolioRepository portafolioRepository;
     private final GeocodingService geocodingService;
     private final GeometryFactory geometryFactory;
 
@@ -60,7 +61,7 @@ public class DirectorioService {
                 .dni(dto.getDni())
                 .matricula(dto.getMatricula())
                 .cvUrlPdf(dto.getCvUrlPdf())
-                .fotoPerfilUrl(dto.getFotoPerfilUrl()) // Foto Perfil Directa
+                .fotoPerfilUrl(dto.getFotoPerfilUrl())
                 .descripcionProfesional(dto.getDescripcion())
                 .pais(dto.getPais())
                 .provincia(dto.getProvincia())
@@ -71,9 +72,9 @@ public class DirectorioService {
                 .ubicacion(punto)
                 .build();
 
-        perfil = proveedorRepository.save(perfil);
-        guardarMultimediaEnPortafolio(dto, usuario, null); // Guardar galería
-        return perfil;
+        PerfilProveedor guardado = proveedorRepository.save(perfil);
+        guardarMultimediaEnPortafolio(dto, usuario, null);
+        return Objects.requireNonNull(guardado);
     }
 
     @Transactional
@@ -100,7 +101,7 @@ public class DirectorioService {
                 .razonSocial(dto.getRazonSocial())
                 .cuit(dto.getCuit())
                 .descripcionEmpresa(dto.getDescripcion())
-                .logoUrl(dto.getFotoPerfilUrl()) // Logo Directo
+                .logoUrl(dto.getFotoPerfilUrl())
                 .pais(dto.getPais())
                 .provincia(dto.getProvincia())
                 .ciudad(dto.getCiudad())
@@ -110,13 +111,13 @@ public class DirectorioService {
                 .ubicacion(punto)
                 .build();
 
-        perfil = empresaRepository.save(perfil);
-        guardarMultimediaEnPortafolio(dto, null, perfil); // Guardar galería
-        return perfil;
+        PerfilEmpresa guardado = empresaRepository.save(perfil);
+        guardarMultimediaEnPortafolio(dto, null, guardado);
+        return Objects.requireNonNull(guardado);
     }
 
     private void validarLimitesMultimedia(UUID usuarioId, PerfilSolicitudDto dto) {
-        boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(usuarioId, "ACTIVA")
+        boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(Objects.requireNonNull(usuarioId), "ACTIVA")
                 .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
                 .orElse(false);
 
@@ -141,7 +142,6 @@ public class DirectorioService {
     private void guardarMultimediaEnPortafolio(PerfilSolicitudDto dto, Usuario u, PerfilEmpresa e) {
         List<Portafolio> items = new ArrayList<>();
 
-        // Galería de Imágenes
         if (dto.getFotosPortafolioUrls() != null) {
             for (String url : dto.getFotosPortafolioUrls()) {
                 items.add(Portafolio.builder()
@@ -154,7 +154,6 @@ public class DirectorioService {
             }
         }
 
-        // Links de Video
         if (dto.getVideoLinks() != null) {
             for (String url : dto.getVideoLinks()) {
                 items.add(Portafolio.builder()
@@ -205,6 +204,41 @@ public class DirectorioService {
                 .collect(Collectors.toList()));
 
         return resultados;
+    }
+
+    public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
+        PerfilProveedor p = proveedorRepository.findById(Objects.requireNonNull(id))
+                .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor no encontrado"));
+        
+        boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
+                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
+                .orElse(false);
+
+        List<Portafolio> multimedia;
+        if (esPremium) {
+            multimedia = portafolioRepository.findAllByUsuarioIdOrderByFechaCreacionDesc(p.getUsuario().getId());
+        } else {
+            multimedia = portafolioRepository.findVisibleByUsuarioId(p.getUsuario().getId(), org.springframework.data.domain.PageRequest.of(0, 5));
+        }
+
+        return PerfilDetalleDto.builder()
+                .id(p.getId())
+                .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre() : p.getRubroPersonalizado())
+                .descripcion(p.getDescripcionProfesional())
+                .fotoPerfilUrl(p.getFotoPerfilUrl())
+                .ciudad(p.getCiudad())
+                .provincia(p.getProvincia())
+                .esPremium(esPremium)
+                .fotosPortafolio(multimedia.stream()
+                        .filter(m -> m.getTipoRecurso().equals("IMAGEN"))
+                        .map(Portafolio::getUrlRecurso)
+                        .collect(Collectors.toList()))
+                .videoLinks(multimedia.stream()
+                        .filter(m -> m.getTipoRecurso().equals("ENLACE"))
+                        .map(Portafolio::getUrlRecurso)
+                        .collect(Collectors.toList()))
+                .build();
     }
 
     private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {

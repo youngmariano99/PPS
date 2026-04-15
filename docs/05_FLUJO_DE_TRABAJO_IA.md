@@ -22,6 +22,10 @@ Antes de proponer una sola línea de código, la IA debe leer en silencio y asim
 La IA NO DEBE escupir cientos de líneas de código de una vez. Antes de programar, debe presentar un plan breve:
 1. Enumerar qué capas (Controller, Service, Repository, DTO, Entity) o componentes de React va a tocar.
 2. **Definición de Patrones:** Confirmar explícitamente qué Patrón de Diseño (Factory, Strategy, Decorator, Proxy, State) va a utilizar si la lógica incluye condicionales complejos o instanciación de objetos pesados. NUNCA crear métodos controladores de flujo masivos (if/else o switch).
+3. **Control de Cambios SQL:** Si la tarea implica cambios en la base de datos:
+    * Toda modificación a tablas existentes DEBE reflejarse de dos formas en `01_MODELO_DE_DATOS.md`:
+        1. Actualizar el bloque `CREATE TABLE` original.
+        2. Añadir el bloque `ALTER TABLE` correspondiente en la sección de "Historial de Migraciones (Scripts de Actualización)" al final del script SQL.
 
 ## PASO 3: Ejecución Estricta (Reglas de Código en Java/React)
 * **Modularidad:** Respetar el límite de ~350 a 400 líneas por archivo. Si un `Service` o `Component` crece, dividir responsabilidades en componentes más pequeños.

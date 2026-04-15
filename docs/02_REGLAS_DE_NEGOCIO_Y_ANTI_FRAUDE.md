@@ -37,4 +37,15 @@ El orden en que se muestran los proveedores en el buscador no es al azar.
 * **Ponderación de Relevancia:** Una vez filtrados por distancia, el orden (ORDER BY) debe considerar:
   1. Promedio de estrellas en `resenas`.
   2. Cantidad total de reseñas (para desempatar o premiar trayectoria).
-  3. Perfil completo (si tiene portafolio o no).s
+  3. Perfil completo (si tiene portafolio o no).
+
+## 7. Gestión Multimedia y Límites por Suscripción
+La plataforma monetiza mediante la visibilidad y capacidad de portafolio, protegiendo al mismo tiempo el almacenamiento del servidor y el esfuerzo del usuario.
+
+* **Suscripción como Única Fuente de Verdad:** Está estrictamente PROHIBIDO usar flags estáticos en la tabla de usuarios. El sistema DEBE consultar en tiempo real la tabla `suscripciones_usuario` filtrando por `estado = 'ACTIVA'`.
+* **Preservación de Datos (Graceful Downgrade):** Si un usuario Premium cancela su plan, sus recursos (hasta 20) NO se eliminan. Se mantienen en la base de datos para facilitar el regreso al plan de pago.
+* **Límites de Visibilidad Pública:** 
+    * **Premium:** Se muestran todas las fotos cargadas.
+    * **Gratuito:** Solo se muestran **5 fotos** del portafolio que tengan el flag `visible = true`. 
+* **Selección de Visibilidad:** El sistema debe permitir al usuario Gratuito elegir qué 5 fotos mostrar de su pool de fotos históricas. Por defecto, si el usuario no elige, se muestran las 5 más recientes.
+* **Regla para la IA:** El `DirectorioService` es el responsable de aplicar estos filtros de visibilidad en las consultas públicas.

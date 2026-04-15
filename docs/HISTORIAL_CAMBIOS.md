@@ -36,7 +36,7 @@
 * **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se documentÃ³ el flujo transaccional inicial y la arquitectura de integraciÃ³n con el Sandbox de Mercado Pago para permitir perfiles destacados en la plataforma.
 
 * **Fecha:** 2026-04-15
-* **Módulo/Tarea:** Sprint 3 / Persistencia de Suscripciones
+* **Mï¿½dulo/Tarea:** Sprint 3 / Persistencia de Suscripciones
 * **Archivos Tocados:** `01_MODELO_DE_DATOS.md`, `docs/modulos/sprint_3_suscripciones_mp.md`
-* **Qué y Por Qué (1 oración clara):** Se crearon las tablas `planes_suscripcion` y `suscripciones_usuario` para la persistencia de Mercado Pago.
+* **Quï¿½ y Por Quï¿½ (1 oraciï¿½n clara):** Se crearon las tablas `planes_suscripcion` y `suscripciones_usuario` para la persistencia de Mercado Pago.
 

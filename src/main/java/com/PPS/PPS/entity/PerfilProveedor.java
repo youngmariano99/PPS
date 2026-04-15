@@ -6,9 +6,6 @@ import org.locationtech.jts.geom.Point;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Perfil público de un proveedor de servicios independiente.
- */
 @Entity
 @Table(name = "perfiles_proveedor", schema = "public")
 @Getter
@@ -22,14 +19,15 @@ public class PerfilProveedor {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @OneToOne
-    @JoinColumn(name = "usuario_id", nullable = false, unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rubro_principal_id")
     private Rubro rubroPrincipal;
 
+    @Column(name = "rubro_personalizado")
     private String rubroPersonalizado;
 
     @Column(nullable = false, unique = true)
@@ -37,29 +35,33 @@ public class PerfilProveedor {
 
     private String matricula;
 
-    @Column(name = "descripcion_profesional", nullable = false, columnDefinition = "TEXT")
-    private String descripcionProfesional;
-
     @Column(name = "cv_url_pdf")
     private String cvUrlPdf;
 
-    // Campos de dirección
+    @Column(name = "foto_perfil_url")
+    private String fotoPerfilUrl;
+
+    @Column(name = "descripcion_profesional", nullable = false)
+    private String descripcionProfesional;
+
     @Column(nullable = false)
     private String pais;
+
     @Column(nullable = false)
     private String provincia;
+
     @Column(nullable = false)
     private String ciudad;
+
     @Column(nullable = false)
     private String calle;
+
     @Column(nullable = false)
     private Integer numero;
+
     @Column(name = "codigo_postal", nullable = false)
     private Integer codigoPostal;
 
-    /**
-     * Ubicación geográfica (Lon/Lat) mapeada para PostGIS.
-     */
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point ubicacion;
 

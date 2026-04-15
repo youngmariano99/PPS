@@ -74,7 +74,7 @@ CREATE TABLE public.perfiles_proveedor (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     usuario_id UUID NOT NULL UNIQUE REFERENCES public.usuarios(id) ON DELETE CASCADE,
     rubro_principal_id UUID REFERENCES public.rubros(id), rubro_personalizado TEXT,
-    dni TEXT NOT NULL UNIQUE, matricula TEXT, descripcion_profesional TEXT NOT NULL, cv_url_pdf TEXT,
+    dni TEXT NOT NULL UNIQUE, matricula TEXT, descripcion_profesional TEXT NOT NULL, cv_url_pdf TEXT, foto_perfil_url TEXT,
     pais TEXT NOT NULL, provincia TEXT NOT NULL, ciudad TEXT NOT NULL, calle TEXT NOT NULL, numero INTEGER NOT NULL, codigo_postal INTEGER NOT NULL,
     ubicacion GEOGRAPHY(Point, 4326), 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -218,3 +218,7 @@ CREATE TABLE public.suscripciones_usuario (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TRIGGER update_suscripciones_modtime BEFORE UPDATE ON public.suscripciones_usuario FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
+
+### 12. Extensión Multimedia (Consolidada)
+La gestión de multimedia se ha unificado en la tabla existente `portafolios` para evitar redundancias. La identidad visual se maneja mediante `foto_perfil_url` (Proveedores) y `logo_url` (Empresas).

@@ -82,8 +82,13 @@ public class MercadoPagoService {
                     requestEntity,
                     MpPreapprovalResponseDto.class);
 
-            if (response.getBody() != null && response.getBody().getInit_point() != null) {
-                return response.getBody().getInit_point();
+            if (response.getBody() != null) {
+                // Preferimos sandbox_init_point para pruebas, si no existe usamos init_point
+                String link = response.getBody().getSandbox_init_point();
+                if (link == null) {
+                    link = response.getBody().getInit_point();
+                }
+                return link;
             }
             throw new RuntimeException("Respuesta vacía al generar el link de pago");
 

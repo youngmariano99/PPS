@@ -8,6 +8,7 @@ import lombok.Data;
 public class MpPreapprovalResponseDto {
     private String id; // El preapproval_id
     private String init_point; 
+    private String sandbox_init_point; 
     private String status;
     private String payer_email;
 }

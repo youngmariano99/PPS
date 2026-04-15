@@ -1,0 +1,1 @@
+INSERT INTO planes_suscripcion (id, nombre, descripcion, precio_mensual, activo) VALUES ('86a2af80-fe68-45e3-a61d-fc39cf3a5df6', 'PRO', 'Potencia tu perfil en la plataforma y garantiza que tus potenciales clientes te vean por sobre tu competencia', 3000.00, true) ON CONFLICT (nombre) DO NOTHING;

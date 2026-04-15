@@ -35,6 +35,7 @@ public class SecurityConfig {
                         // Permitir acceso a Swagger y endpoints públicos de auth por ahora
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/suscripciones/webhook", "/api/v1/suscripciones/success").permitAll()
                         // Por ahora permitimos todo para no bloquear el desarrollo,
                         // pero bajo la supervisión del filtro CORS
                         .anyRequest().permitAll());

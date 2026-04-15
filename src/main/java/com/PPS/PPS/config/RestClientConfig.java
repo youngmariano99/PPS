@@ -22,6 +22,7 @@ public class RestClientConfig {
         return RestClient.builder()
                 .baseUrl(supabaseUrl + "/auth/v1")
                 .defaultHeader("apikey", supabaseAnonKey)
+                .defaultHeader("Authorization", "Bearer " + supabaseAnonKey)
                 .defaultHeader("Content-Type", "application/json")
                 .build();
     }

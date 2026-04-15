@@ -105,7 +105,7 @@ addPropertyControls(FormularioLogin, {
     apiUrl: {
         type: ControlType.String,
         title: "URL del Backend",
-        defaultValue: "https://pps-backend.onrender.com/api/v1"
+        defaultValue: "https://pps-sk7p.onrender.com/api/v1"
     },
     btnText: { type: ControlType.String, title: "Texto", defaultValue: "Ingresar" },
     btnColor: { type: ControlType.Color, title: "Color Fondo", defaultValue: "#0070f3" },

@@ -101,7 +101,7 @@ export default function FormularioPerfilEmpresa(props) {
 }
 
 addPropertyControls(FormularioPerfilEmpresa, {
-    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-backend.onrender.com/api/v1" },
+    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
     btnText: { type: ControlType.String, title: "Texto", defaultValue: "Dar de Alta Empresa" },
     btnColor: { type: ControlType.Color, title: "Color", defaultValue: "#a855f7" },
     textColor: { type: ControlType.Color, title: "Color Texto", defaultValue: "#FFFFFF" },

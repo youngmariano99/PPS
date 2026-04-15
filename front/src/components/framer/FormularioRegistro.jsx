@@ -84,7 +84,7 @@ export default function FormularioRegistro(props) {
 }
 
 addPropertyControls(FormularioRegistro, {
-    apiUrl: { type: ControlType.String, title: "URL del Backend", defaultValue: "https://pps-backend.onrender.com/api/v1" },
+    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
     btnText: { type: ControlType.String, title: "Texto", defaultValue: "Crear Cuenta" },
     btnColor: { type: ControlType.Color, title: "Color Fondo", defaultValue: "#22c55e" },
     textColor: { type: ControlType.Color, title: "Color Texto", defaultValue: "#FFFFFF" },

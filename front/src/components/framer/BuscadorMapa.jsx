@@ -112,7 +112,7 @@ export default function BuscadorMapa(props) {
 
 // Configuración de Controles en Framer
 addPropertyControls(BuscadorMapa, {
-    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-backend.onrender.com/api/v1" },
+    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
     primaryColor: { type: ControlType.Color, title: "Acento", defaultValue: "#7c3aed" },
     cardBg: { type: ControlType.Color, title: "Fondo Card", defaultValue: "#ffffff" },
     radioPorDefecto: { type: ControlType.Number, title: "Radio (km)", defaultValue: 10, min: 1, max: 200 }

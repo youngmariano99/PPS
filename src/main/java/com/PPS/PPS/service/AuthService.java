@@ -48,7 +48,19 @@ public class AuthService {
                 .body(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    throw new ValidacionNegocioException("Error al registrar en Supabase: " + response.getStatusText());
+                    String errorCuerpo = "Error al registrar en Supabase.";
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        Map<String, Object> errorMap = mapper.readValue(response.getBody(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                        if (errorMap != null && errorMap.containsKey("msg")) {
+                            errorCuerpo = (String) errorMap.get("msg");
+                        } else if (errorMap != null && errorMap.containsKey("error_description")) {
+                            errorCuerpo = (String) errorMap.get("error_description");
+                        }
+                    } catch (Exception e) {
+                        errorCuerpo = response.getStatusText();
+                    }
+                    throw new ValidacionNegocioException("Supabase Auth: " + errorCuerpo);
                 })
                 .body(new ParameterizedTypeReference<Map<String, Object>>() {});
 

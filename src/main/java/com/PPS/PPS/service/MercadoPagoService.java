@@ -47,7 +47,7 @@ public class MercadoPagoService {
         body.put("preapproval_plan_id", planId);
         body.put("payer_email", email);
         body.put("back_url", backUrl);
-        body.put("reason", "PPS Premium Suscripcion");
+        // MP inherits the reason from the plan. Overriding it may cause a 400 Bad Request.
 
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 

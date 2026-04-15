@@ -41,6 +41,7 @@ public class PlanSuscripcion {
     private BigDecimal precioMensual;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean activo = true;
 
     @CreationTimestamp

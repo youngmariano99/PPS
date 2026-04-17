@@ -171,8 +171,60 @@ public class DirectorioService {
             portafolioRepository.saveAll(items);
         }
     }
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<PerfilRespuestaDto> buscarCercanosLista(double lat, double lon, double radioKm, int page, int size) {
+        double radioMetros = radioKm * 1000;
+        List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
-    public List<PerfilRespuestaDto> buscarCercanos(double lat, double lon, double radioKm) {
+        resultados.addAll(proveedorRepository.buscarCercanos(lat, lon, radioMetros).stream()
+                .map(p -> {
+                    boolean tieneSuscripcionActiva = suscripcionRepository
+                            .findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA").isPresent();
+
+                    return PerfilRespuestaDto.builder()
+                        .id(p.getId())
+                        .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                        .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
+                                : p.getRubroPersonalizado())
+                        .descripcion(p.getDescripcionProfesional())
+                        .ciudad(p.getCiudad())
+                        .latitud(p.getUbicacion().getY())
+                        .longitud(p.getUbicacion().getX())
+                        .tipo("PROVEEDOR")
+                        .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
+                        .promedioEstrellas(0.0) // TODO: Mapear cuando ResenaRepository esté disponible
+                        .cantidadResenas(0) // TODO: Mapear cuando ResenaRepository esté disponible
+                        .destacado(tieneSuscripcionActiva)
+                        .build();
+                })
+                .collect(Collectors.toList()));
+
+        // Las Empresas quedan omitidas temporalmente ("solo traiga proveedores")
+
+        java.util.Comparator<PerfilRespuestaDto> rankingCriterio = java.util.Comparator
+                .comparing(PerfilRespuestaDto::isDestacado).reversed()
+                .thenComparing(PerfilRespuestaDto::isPerfilCompleto).reversed()
+                .thenComparing(java.util.Comparator.comparingDouble(PerfilRespuestaDto::getPromedioEstrellas).reversed())
+                .thenComparing(java.util.Comparator.comparingInt(PerfilRespuestaDto::getCantidadResenas).reversed());
+
+        List<PerfilRespuestaDto> sortedResultados = resultados.stream()
+                .sorted(rankingCriterio)
+                .collect(Collectors.toList());
+
+        // Paginación en Memoria
+        int start = Math.min(page * size, sortedResultados.size());
+        int end = Math.min((page + 1) * size, sortedResultados.size());
+        List<PerfilRespuestaDto> paginatedList = sortedResultados.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(
+                paginatedList, 
+                org.springframework.data.domain.PageRequest.of(page, size), 
+                sortedResultados.size()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<PerfilRespuestaDto> buscarCercanosMapa(double lat, double lon, double radioKm) {
         double radioMetros = radioKm * 1000;
         List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
@@ -188,8 +240,9 @@ public class DirectorioService {
                         .longitud(p.getUbicacion().getX())
                         .tipo("PROVEEDOR")
                         .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                        .promedioEstrellas(0.0) // TODO: Mapear cuando ResenaRepository esté disponible
-                        .cantidadResenas(0) // TODO: Mapear cuando ResenaRepository esté disponible
+                        .promedioEstrellas(0.0) 
+                        .cantidadResenas(0) 
+                        .destacado(false) // Optimizado para mapa masivo
                         .build())
                 .collect(Collectors.toList()));
 
@@ -205,19 +258,13 @@ public class DirectorioService {
                         .longitud(e.getUbicacion().getX())
                         .tipo("EMPRESA")
                         .perfilCompleto(e.getLogoUrl() != null && !e.getLogoUrl().isEmpty())
-                        .promedioEstrellas(0.0) // TODO: Mapear cuando ResenaRepository esté disponible
-                        .cantidadResenas(0) // TODO: Mapear cuando ResenaRepository esté disponible
+                        .promedioEstrellas(0.0)
+                        .cantidadResenas(0)
+                        .destacado(false)
                         .build())
                 .collect(Collectors.toList()));
 
-        java.util.Comparator<PerfilRespuestaDto> rankingEmpresarialCriterio = java.util.Comparator
-                .comparing(PerfilRespuestaDto::isPerfilCompleto).reversed()
-                .thenComparing(java.util.Comparator.comparingDouble(PerfilRespuestaDto::getPromedioEstrellas).reversed())
-                .thenComparing(java.util.Comparator.comparingInt(PerfilRespuestaDto::getCantidadResenas).reversed());
-
-        return resultados.stream()
-                .sorted(rankingEmpresarialCriterio)
-                .collect(Collectors.toList());
+        return resultados;
     }
 
     public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {

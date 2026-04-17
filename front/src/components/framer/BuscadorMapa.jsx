@@ -44,7 +44,7 @@ export default function BuscadorMapa(props) {
 
         // Limpieza de URL para evitar dobles barras
         const cleanApiUrl = apiUrl.replace(/\/+$/, "")
-        const fullUrl = `${cleanApiUrl}/directorio/buscar?lat=${lat}&lon=${lon}&radioKm=${r}`
+        const fullUrl = `${cleanApiUrl}/directorio/buscar/mapa?lat=${lat}&lon=${lon}&radioKm=${r}`
 
         console.log("🚀 Llamando a Buscador:", fullUrl)
 

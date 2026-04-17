@@ -19,4 +19,5 @@ public class PerfilRespuestaDto {
     private boolean perfilCompleto;
     private double promedioEstrellas;
     private int cantidadResenas;
+    private boolean destacado;
 }

@@ -23,13 +23,24 @@ public class DirectorioController {
 
     private final DirectorioService directorioService;
 
-    @GetMapping("/buscar")
-    @Operation(summary = "Buscar perfiles cercanos", description = "Filtra proveedores y empresas por radio de distancia (km) desde una coordenada.")
-    public ResponseEntity<List<PerfilRespuestaDto>> buscar(
+    @GetMapping("/buscar/lista")
+    @Operation(summary = "Obtener lista paginada de proveedores", description = "Filtra solo proveedores con paginación y destaca suscriptores activos.")
+    public ResponseEntity<org.springframework.data.domain.Page<PerfilRespuestaDto>> buscarLista(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam(defaultValue = "1") double radioKm,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
+        return ResponseEntity.ok(directorioService.buscarCercanosLista(lat, lon, radioKm, page, size));
+    }
+
+    @GetMapping("/buscar/mapa")
+    @Operation(summary = "Obtener puntos masivos para el mapa", description = "Filtra proveedores y empresas sin paginar para renderizado masivo en el mapa.")
+    public ResponseEntity<List<PerfilRespuestaDto>> buscarMapa(
             @RequestParam double lat,
             @RequestParam double lon,
             @RequestParam(defaultValue = "10") double radioKm) {
-        return ResponseEntity.ok(directorioService.buscarCercanos(lat, lon, radioKm));
+        return ResponseEntity.ok(directorioService.buscarCercanosMapa(lat, lon, radioKm));
     }
 
     @GetMapping("/proveedor/{id}")

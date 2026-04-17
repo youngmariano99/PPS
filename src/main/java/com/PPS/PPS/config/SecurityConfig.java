@@ -78,7 +78,8 @@ public class SecurityConfig {
                 "Access-Control-Request-Method", 
                 "Access-Control-Request-Headers",
                 "X-Framer-Preview",
-                "Cache-Control"
+                "Cache-Control",
+                "X-User-Id"
         ));
 
         // IMPORTANT: allowCredentials(false) permite el uso de "*" en los orígenes

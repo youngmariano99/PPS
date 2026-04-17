@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/directorio")
@@ -28,5 +30,11 @@ public class DirectorioController {
             @RequestParam double lon,
             @RequestParam(defaultValue = "10") double radioKm) {
         return ResponseEntity.ok(directorioService.buscarCercanos(lat, lon, radioKm));
+    }
+
+    @GetMapping("/proveedor/{id}")
+    @Operation(summary = "Obtener detalle de perfil de proveedor", description = "Retorna el perfil completo incluyendo portfolio y esPremium")
+    public ResponseEntity<Object> obtenerDetalle(@PathVariable UUID id) {
+        return ResponseEntity.ok(directorioService.obtenerDetalleProveedor(id));
     }
 }

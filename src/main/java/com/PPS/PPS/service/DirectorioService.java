@@ -3,6 +3,7 @@ package com.PPS.PPS.service;
 import com.PPS.PPS.dto.PerfilDetalleDto;
 import com.PPS.PPS.dto.PerfilRespuestaDto;
 import com.PPS.PPS.dto.PerfilSolicitudDto;
+import com.PPS.PPS.dto.UsuarioPerfilDto;
 import com.PPS.PPS.entity.*;
 import com.PPS.PPS.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.exception.ValidacionNegocioException;
@@ -251,6 +252,23 @@ public class DirectorioService {
                         .filter(m -> m.getTipoRecurso().equals("ENLACE"))
                         .map(Portafolio::getUrlRecurso)
                         .collect(Collectors.toList()))
+                .build();
+    }
+
+    public UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+        boolean esProveedor = proveedorRepository.findByUsuarioId(usuarioId).isPresent();
+        boolean esEmpresa = empresaRepository.findByUsuarioId(usuarioId).isPresent();
+
+        return UsuarioPerfilDto.builder()
+                .id(usuario.getId())
+                .nombre(usuario.getNombre())
+                .apellido(usuario.getApellido())
+                .email(usuario.getEmail())
+                .rol(esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO"))
+                .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
                 .build();
     }
 

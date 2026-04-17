@@ -339,6 +339,7 @@ public class DirectorioService {
                 .apellido(usuario.getApellido())
                 .email(usuario.getEmail())
                 .rol(rol)
+                .telefono(usuario.getTelefono())
                 .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
                 .build();
     }

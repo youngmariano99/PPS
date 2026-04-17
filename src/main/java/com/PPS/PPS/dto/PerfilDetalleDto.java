@@ -19,5 +19,11 @@ public class PerfilDetalleDto {
     private String provincia;
     private List<String> fotosPortafolio;
     private List<String> videoLinks;
+    private String telefono;
+    private String matricula;
+    private String direccion;
+    private String instagramUrl;
+    private String facebookUrl;
+    private String linkedinUrl;
     private boolean esPremium;
 }

@@ -9,6 +9,7 @@ import com.PPS.PPS.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.exception.ValidacionNegocioException;
 import com.PPS.PPS.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DirectorioService {
 
     private final PerfilProveedorRepository proveedorRepository;
@@ -295,8 +297,16 @@ public class DirectorioService {
     }
 
     public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
-        PerfilProveedor p = proveedorRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor no encontrado"));
+        log.info("Obteniendo detalle de proveedor para ID: {}", id);
+        
+        // Buscamos primero por usuario_id (el ID de Supabase que suele mandar el front)
+        // Si no, buscamos por el ID propio del perfil (PK)
+        PerfilProveedor p = proveedorRepository.findByUsuarioId(id)
+                .orElseGet(() -> proveedorRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("Proveedor no encontrado para ID: {}", id);
+                    return new RecursoNoEncontradoException("Proveedor no encontrado");
+                }));
         
         boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
                 .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
@@ -317,6 +327,12 @@ public class DirectorioService {
                 .fotoPerfilUrl(p.getFotoPerfilUrl())
                 .ciudad(p.getCiudad())
                 .provincia(p.getProvincia())
+                .telefono(p.getUsuario().getTelefono())
+                .matricula(p.getMatricula())
+                .direccion(p.getCalle() + " " + p.getNumero())
+                .instagramUrl(p.getInstagramUrl())
+                .facebookUrl(p.getFacebookUrl())
+                .linkedinUrl(p.getLinkedinUrl())
                 .esPremium(esPremium)
                 .fotosPortafolio(multimedia.stream()
                         .filter(m -> m.getTipoRecurso().equals("IMAGEN"))
@@ -330,18 +346,27 @@ public class DirectorioService {
     }
 
     public UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId) {
+        log.info("Descubriendo perfil para usuario ID: {}", usuarioId);
+        
         Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+                .orElseThrow(() -> {
+                    log.error("Usuario con ID {} no encontrado en base de datos local", usuarioId);
+                    return new RecursoNoEncontradoException("Usuario no encontrado");
+                });
 
         boolean esProveedor = proveedorRepository.findByUsuarioId(usuarioId).isPresent();
         boolean esEmpresa = empresaRepository.findByUsuarioId(usuarioId).isPresent();
+        
+        String rol = esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO");
+        log.info("Usuario {} identificado con rol: {}", usuarioId, rol);
 
         return UsuarioPerfilDto.builder()
                 .id(usuario.getId())
                 .nombre(usuario.getNombre())
                 .apellido(usuario.getApellido())
                 .email(usuario.getEmail())
-                .rol(esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO"))
+                .rol(rol)
+                .telefono(usuario.getTelefono())
                 .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
                 .build();
     }
@@ -354,5 +379,47 @@ public class DirectorioService {
             throw new ValidacionNegocioException("Geolocalización fallida.");
         }
         return geometryFactory.createPoint(new Coordinate(coords[0], coords[1]));
+    }
+
+    @Transactional
+    public void actualizarPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
+        log.info("Actualizando perfil profesional para usuario: {}", usuarioId);
+        
+        PerfilProveedor perfil = proveedorRepository.findByUsuarioId(usuarioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Perfil profesional no encontrado"));
+
+        // Actualizar datos profesionales
+        perfil.setDescripcionProfesional(dto.getDescripcion());
+        perfil.setMatricula(dto.getMatricula());
+        perfil.setFotoPerfilUrl(dto.getFotoPerfilUrl());
+        perfil.setInstagramUrl(dto.getInstagramUrl());
+        perfil.setFacebookUrl(dto.getFacebookUrl());
+        perfil.setLinkedinUrl(dto.getLinkedinUrl());
+
+        // Si hay cambio de dirección, re-geocodificar
+        if (!perfil.getCalle().equals(dto.getCalle()) || !perfil.getNumero().equals(dto.getNumero()) || 
+            !perfil.getCiudad().equals(dto.getCiudad())) {
+            perfil.setCalle(dto.getCalle());
+            perfil.setNumero(dto.getNumero());
+            perfil.setCiudad(dto.getCiudad());
+            perfil.setProvincia(dto.getProvincia());
+            perfil.setPais(dto.getPais());
+            perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
+        }
+
+        proveedorRepository.save(perfil);
+    }
+
+    @Transactional
+    public void actualizarUsuario(UUID id, UsuarioPerfilDto dto) {
+        log.info("Actualizando datos personales del usuario: {}", id);
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+        if (dto.getNombre() != null) usuario.setNombre(dto.getNombre());
+        if (dto.getApellido() != null) usuario.setApellido(dto.getApellido());
+        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
+
+        usuarioRepository.save(usuario);
     }
 }

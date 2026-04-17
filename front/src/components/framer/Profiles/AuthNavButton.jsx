@@ -7,11 +7,11 @@ import { User, LogIn, ChevronRight, RefreshCw, LogOut } from "lucide-react"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
 
 /**
- * BOTÓN DE NAVEGACIÓN PPS (AUTH DINÁMICO) - V2
- * -------------------------------------------
- * - Robusto contra errores de CORS.
- * - Soporta URLs absolutas para la web real.
- * - Detecta rol de forma automática para redirigir.
+ * BOTÓN DE NAVEGACIÓN PPS (AUTH DINÁMICO) - V4 (ANTI-CACHE)
+ * --------------------------------------------------------
+ * - Usa getUser() para validación real del servidor (evita sesiones viejas).
+ * - Cierre de sesión con limpieza total de localStorage.
+ * - Logs de auditoría por email de usuario.
  */
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
@@ -27,28 +27,42 @@ export default function AuthNavButton(props) {
 
     const [status, setStatus] = useState("checking") 
     const [userRole, setUserRole] = useState(null)
+    const [userEmail, setUserEmail] = useState("")
 
     useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session) {
-                await discoverRole(session)
+        const fetchFreshUser = async () => {
+            // getUser() es mejor que getSession() porque valida con el servidor
+            const { data: { user }, error } = await supabase.auth.getUser()
+            
+            if (user) {
+                console.log("AuthNav: Valid user found:", user.email)
+                setUserEmail(user.email)
+                // Obtenemos la sesión para el token necesario en discoverRole
+                const { data: { session } } = await supabase.auth.getSession()
+                if (session) await discoverRole(session)
+                else setStatus("guest")
             } else {
+                console.log("AuthNav: No valid user detected.")
                 setStatus("guest")
             }
         }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (session) discoverRole(session)
-            else {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("AuthNav: Auth Event triggered:", event)
+            if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+                if (session) {
+                    setUserEmail(session.user.email)
+                    await discoverRole(session)
+                }
+            } else if (event === "SIGNED_OUT") {
                 setStatus("guest")
                 setUserRole(null)
+                setUserEmail("")
             }
         })
 
         const discoverRole = async (session) => {
             try {
-                // Intentamos descubrir el rol
                 const response = await fetch(`${apiUrl}/usuarios/me`, {
                     headers: {
                         "Authorization": `Bearer ${session.access_token}`,
@@ -57,39 +71,51 @@ export default function AuthNavButton(props) {
                 })
                 if (response.ok) {
                     const data = await response.json()
+                    console.log(`AuthNav: Role for ${session.user.email} is ${data.rol}`)
                     setUserRole(data.rol)
                     setStatus("authenticated")
                 } else {
-                    // Si falla el endpoint (ej. CORS o 404), igual estamos autenticados
+                    console.warn("AuthNav: Discovery failed for user.")
                     setStatus("authenticated")
                 }
             } catch (err) {
-                console.warn("Role discovery bypassed due to error:", err)
+                console.error("AuthNav: Discovery fetch error:", err)
                 setStatus("authenticated")
             }
         }
 
-        checkSession()
+        fetchFreshUser()
         return () => subscription.unsubscribe()
     }, [apiUrl])
 
     const handleClick = () => {
         if (status === "guest") {
-            // Ir al login de la web real
             window.location.href = loginUrl
         } else if (status === "authenticated") {
-            if (userRole === "PROVEEDOR") {
-                window.location.href = providerProfileUrl
-            } else {
-                window.location.href = userProfileUrl
-            }
+            const targetUrl = userRole === "PROVEEDOR" ? providerProfileUrl : userProfileUrl
+            window.location.href = targetUrl
         }
     }
 
     const handleLogout = async (e) => {
         e.stopPropagation()
+        console.log("AuthNav: Initiating total logout and cache clear...")
+        
+        // 1. Sign out de Supabase
         await supabase.auth.signOut()
+        
+        // 2. Limpieza agresiva de localStorage para evitar persistencia de sesion vieja
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && (key.includes("supabase") || key.includes("sb-"))) {
+                localStorage.removeItem(key)
+            }
+        }
+        
+        // 3. Redirección y recarga total
         window.location.href = loginUrl
+        // Dejamos un pequeño delay para asegurar que el storage se limpie
+        setTimeout(() => window.location.reload(), 200)
     }
 
     const btnStyle = {
@@ -99,16 +125,16 @@ export default function AuthNavButton(props) {
         gap: "10px",
         backgroundColor: primaryColor,
         color: textColor,
-        fontSize: `${fontSize}px`,
-        fontWeight: "800",
-        borderRadius: `${borderRadius}px`,
-        padding: `${padding}px 28px`,
+        fontSize: "13px",
+        fontWeight: "700",
+        borderRadius: `10px`, 
+        padding: "0 22px",
         border: "none",
         cursor: "pointer",
         width: "100%",
         fontFamily: "Inter, sans-serif",
-        boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
-        height: "50px"
+        boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+        height: "38px"
     }
 
     if (status === "checking") {
@@ -137,7 +163,10 @@ export default function AuthNavButton(props) {
                 ) : (
                     <>
                         <User size={18} />
-                        <span>{userRole === "PROVEEDOR" ? "Perfil PRO" : "Mi Perfil"}</span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                            <span style={{ fontSize: "12px", opacity: 0.8, lineHeight: 1 }}>{userRole === "PROVEEDOR" ? "PRO" : "USUARIO"}</span>
+                            <span style={{ fontSize: "14px", lineHeight: 1 }}>Mi Perfil</span>
+                        </div>
                         <ChevronRight size={14} style={{ opacity: 0.6 }} />
                     </>
                 )}
@@ -148,7 +177,7 @@ export default function AuthNavButton(props) {
                     whileHover={{ scale: 1.05 }}
                     onClick={handleLogout}
                     style={{ ...btnStyle, width: "60px", padding: 0, backgroundColor: "#fee2e2", color: "#ef4444" }}
-                    title="Cerrar Sesión"
+                    title={`Cerrar Sesión (${userEmail})`}
                 >
                     <LogOut size={20} />
                 </motion.button>

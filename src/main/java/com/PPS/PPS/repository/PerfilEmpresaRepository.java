@@ -13,7 +13,8 @@ import java.util.UUID;
 @Repository
 public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UUID> {
 
-    Optional<PerfilEmpresa> findByUsuarioId(UUID usuarioId);
+    @Query("SELECT e FROM PerfilEmpresa e WHERE e.usuario.id = :usuarioId")
+    Optional<PerfilEmpresa> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
     /**
      * Paso 1: Busca IDs usando PostGIS puro para performance.

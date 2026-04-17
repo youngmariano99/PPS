@@ -16,5 +16,6 @@ public class UsuarioPerfilDto {
     private String apellido;
     private String email;
     private String rol; // USUARIO, PROVEEDOR, EMPRESA
+    private String telefono;
     private String fechaRegistro;
 }

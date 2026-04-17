@@ -2,105 +2,31 @@ import React, { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { 
-    User, Mail, MapPin, Calendar, 
-    Zap, Check, ArrowRight,
-    Layout, Shield, RefreshCw
+    User, Mail, Calendar, 
+    ChevronRight, Briefcase, 
+    Shield, RefreshCw, Hash, Phone
 } from "lucide-react"
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
 
 /**
- * PANTALLA DE PERFIL DE USUARIO COMPLETA (PPS) - V6 (REAL-ONLY)
- * --------------------------------------------------------
- * - FULL WIDTH (100% de la web)
- * - DATOS REALES PRIORITARIOS (Espera sesión de Supabase)
- * - MODO DEMO opcional para diseño en Framer
+ * PANTALLA DE PERFIL DE USUARIO BASE PPS - V7 (UI MATURA)
+ * ------------------------------------------------------------------
+ * - Diseño Minimalista/Maduro (Inter Display equilibrada).
+ * - Estructura Full Width con contenedor de 1120px.
+ * - Sincronización robusta con el backend PPS.
  */
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// --- SUB-COMPONENTES ---
-
-const ProfileHeader = ({ name, email, location, avatarUrl, primaryColor, rol }) => {
-    return (
-        <div style={headerStyles.container}>
-            <div style={headerStyles.contentWrapper}>
-                <div style={headerStyles.layoutRow}>
-                    <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        style={headerStyles.avatarWrapper}
-                    >
-                        <div style={{ ...headerStyles.avatar, backgroundImage: avatarUrl ? `url(${avatarUrl})` : "none" }}>
-                            {!avatarUrl && <User size={48} color="#94a3b8" />}
-                        </div>
-                    </motion.div>
-                    <div style={headerStyles.infoBlock}>
-                        <div style={headerStyles.infoRow}>
-                            <h1 style={headerStyles.nameStyle}>{name || "Cargando..."}</h1>
-                            <span style={headerStyles.userTag}>{rol || "Usuario"}</span>
-                        </div>
-                        <div style={headerStyles.metaRow}>
-                            <div style={headerStyles.metaItem}><Mail size={16} /><span>{email}</span></div>
-                            <div style={headerStyles.metaItem}><MapPin size={16} /><span>{location}</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-const ProfileInfoCard = ({ title, items, primaryColor }) => {
-    const icons = {
-        mail: <Mail size={18} color={primaryColor} />,
-        map: <MapPin size={18} color={primaryColor} />,
-        calendar: <Calendar size={18} color={primaryColor} />,
-    }
-    return (
-        <div style={cardStyles.container}>
-            <h3 style={cardStyles.title}>{title}</h3>
-            <div style={cardStyles.list}>
-                {items.map((item, i) => (
-                    <div key={i} style={cardStyles.item}>
-                        <div style={cardStyles.icon}>{icons[item.icon] || <Check size={18} />}</div>
-                        <div style={cardStyles.text}>
-                            <span style={cardStyles.label}>{item.label}</span>
-                            <span style={cardStyles.value}>{item.value}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
-}
-
-const CTAUpgrade = ({ primaryColor }) => {
-    return (
-        <motion.div whileHover={{ y: -5 }} style={{ ...ctaStyles.container, border: `1px solid ${primaryColor}44` }}>
-            <div style={ctaStyles.header}>
-                <div style={{ ...ctaStyles.iconCircle, backgroundColor: primaryColor }}><Zap size={20} color="white" /></div>
-                <div>
-                    <h2 style={ctaStyles.title}>¿Querés ofrecer servicios?</h2>
-                    <p style={ctaStyles.subtitle}>Convertite en proveedor en PPS.</p>
-                </div>
-            </div>
-            <button style={{ ...ctaStyles.button, backgroundColor: primaryColor }}>
-                Comenzar ahora <ArrowRight size={18} />
-            </button>
-        </motion.div>
-    )
-}
-
-// --- COMPONENTE PRINCIPAL ---
-
 export default function UserProfileComplete(props) {
     const { 
         apiUrl, enableDemoMode,
-        demoName, demoEmail, demoLoc, demoDate, demoAvatar, primaryColor 
+        demoName, demoEmail, demoLoc, demoDate, demoAvatar,
+        primaryColor, secondaryColor 
     } = props
 
     const [data, setData] = useState(null)
@@ -108,32 +34,33 @@ export default function UserProfileComplete(props) {
     const [error, setError] = useState(null)
 
     useEffect(() => {
-        const discoverAndFetch = async () => {
+        const fetchUserData = async () => {
             setLoading(true)
-            const { data: { session } } = await supabase.auth.getSession()
+            const { data: { user } } = await supabase.auth.getUser()
             
-            if (session) {
+            if (user) {
                 try {
-                    const userId = session.user.id
+                    const { data: { session } } = await supabase.auth.getSession()
                     const response = await fetch(`${apiUrl}/usuarios/me`, {
                         headers: {
                             "Authorization": `Bearer ${session.access_token}`,
-                            "X-User-Id": userId
+                            "X-User-Id": user.id
                         }
                     })
-                    
+
                     if (response.ok) {
                         const res = await response.json()
                         setData({
                             name: `${res.nombre} ${res.apellido}`,
                             email: res.email,
+                            phone: res.telefono || "No registrado",
                             location: demoLoc, 
                             date: res.fechaRegistro || demoDate,
                             avatar: demoAvatar,
                             rol: res.rol || "Usuario"
                         })
                     } else {
-                        setError("Inicia sesión para ver tu perfil.")
+                        setError("No pudimos obtener tus datos.")
                     }
                 } catch (err) {
                     setError("Error de conexión.")
@@ -141,58 +68,77 @@ export default function UserProfileComplete(props) {
             } else if (enableDemoMode) {
                 setData({
                     name: demoName, email: demoEmail, location: demoLoc,
-                    date: demoDate, avatar: demoAvatar, rol: "Usuario Demo"
+                    date: demoDate, avatar: demoAvatar, rol: "Usuario (Demo)", phone: "261445566"
                 })
             } else {
-                setError("Inicia sesión para acceder.")
+                setError("Debes iniciar sesión.")
             }
             setLoading(false)
         }
-        discoverAndFetch()
-    }, [apiUrl, enableDemoMode, demoName, demoEmail, demoLoc, demoDate, demoAvatar])
+        fetchUserData()
+    }, [apiUrl, enableDemoMode])
 
-    if (loading) {
-        return (
-            <div style={{ ...pageStyles.container, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><RefreshCw size={48} color={primaryColor} /></motion.div>
-            </div>
-        )
-    }
+    if (loading) return <div style={s.loader}><RefreshCw size={32} color={primaryColor} className="spin" /></div>
 
-    if (error && !data) {
-        return (
-            <div style={{ ...pageStyles.container, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px" }}>
-                <User size={64} color="#cbd5e1" style={{ marginBottom: "24px" }} />
-                <h2 style={{ fontSize: "24px", fontWeight: "900", color: "#0f172a" }}>{error}</h2>
-                <button 
-                   onClick={() => window.location.href = "/login"}
-                   style={{ ...ctaStyles.button, backgroundColor: primaryColor, marginTop: "24px", width: "auto", padding: "12px 32px" }}
-                >
-                    Ir al login
-                </button>
-            </div>
-        )
-    }
-
-    const infoItems = [
-        { label: "Email", value: data.email, icon: "mail" },
-        { label: "Ubicación", value: data.location, icon: "map" },
-        { label: "Miembro desde", value: data.date, icon: "calendar" },
-    ]
+    if (error && !data) return (
+        <div style={s.errorContainer}>
+            <User size={64} color="#e2e8f0" />
+            <h2 style={{ fontSize: "24px", color: "#0f172a", marginTop: "24px", fontFamily: "Inter Display" }}>{error}</h2>
+            <button onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/login"} style={{ ...s.mainBtn, backgroundColor: primaryColor, marginTop: "24px" }}>Ir al Login</button>
+        </div>
+    )
 
     return (
-        <div style={pageStyles.container}>
-            {enableDemoMode && (
-                <div style={pageStyles.demoBanner}>
-                    <Zap size={14} color="#854d0e" fill="#854d0e" />
-                    <span><b>Modo Edición:</b> Estos datos son temporales de Framer.</span>
+        <div style={s.page}>
+            {/* Minimal Header */}
+            <div style={{ ...s.header, backgroundColor: secondaryColor }}>
+                <div style={s.container}>
+                    <div style={s.avatarWrap}>
+                        <div style={{ ...s.avatar, backgroundImage: data.avatar ? `url(${data.avatar})` : "none" }}>
+                            {!data.avatar && <User size={40} color="#94a3b8" />}
+                        </div>
+                    </div>
                 </div>
-            )}
-            <ProfileHeader {...data} avatarUrl={data.avatar} primaryColor={primaryColor} />
-            <div style={pageStyles.mainContentWrapper}>
-                <div style={pageStyles.body}>
-                    <ProfileInfoCard title="Mi información" items={infoItems} primaryColor={primaryColor} />
-                    <CTAUpgrade primaryColor={primaryColor} />
+            </div>
+
+            {/* Main Info */}
+            <div style={s.container}>
+                <div style={s.info}>
+                    <h1 style={s.name}>{data.name}</h1>
+                    <div style={{...s.badge, color: primaryColor}}>{data.rol}</div>
+                    
+                    <div style={s.meta}>
+                        <div style={s.metaItem}><Mail size={16} /> <span>{data.email}</span></div>
+                        <div style={s.metaItem}><Phone size={16} /> <span>{data.phone}</span></div>
+                        <div style={s.metaItem}><Calendar size={16} /> <span>Desde el {data.date}</span></div>
+                    </div>
+                </div>
+
+                <div style={s.grid}>
+                    <div style={s.section}>
+                        <h3 style={s.label}>Mi Actividad</h3>
+                        <motion.button whileHover={{ y: -2 }} style={s.card}>
+                            <div style={s.row}>
+                                <div style={s.iconTitle}><Briefcase size={20} color={primaryColor} /> <div><h4>Mis Postulaciones</h4><p>Estado de tus empleos solicitados</p></div></div>
+                                <ChevronRight size={18} color="#cbd5e1" />
+                            </div>
+                        </motion.button>
+                    </div>
+
+                    <div style={s.section}>
+                        <h3 style={s.label}>Oportunidades PRO</h3>
+                        <motion.div whileHover={{ y: -2 }} style={{ ...s.card, border: `1px solid ${primaryColor}33`, backgroundColor: `${primaryColor}05` }}>
+                            <div style={s.row}>
+                                <div style={s.iconTitle}><Shield size={20} color={primaryColor} /> <div><h4>Ser Profesional</h4><p>Publica tus servicios gratis hoy</p></div></div>
+                                <button 
+                                    onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}
+                                    style={{ ...s.mainBtn, backgroundColor: primaryColor, padding: "8px 16px", fontSize: "13px" }}
+                                >
+                                    ¡Comenzar!
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
                 </div>
             </div>
             <div style={{ height: "100px" }} />
@@ -202,52 +148,48 @@ export default function UserProfileComplete(props) {
 
 addPropertyControls(UserProfileComplete, {
     apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
-    enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo (Framer)", defaultValue: false },
-    demoName: { type: ControlType.String, title: "Nombre Demo", defaultValue: "Alex Rivera", hidden(p) { return !p.enableDemoMode } },
-    demoEmail: { type: ControlType.String, title: "Email Demo", defaultValue: "alex@email.com", hidden(p) { return !p.enableDemoMode } },
-    demoLoc: { type: ControlType.String, title: "Ubicación Demo", defaultValue: "Mendoza, ARG", hidden(p) { return !p.enableDemoMode } },
-    demoDate: { type: ControlType.String, title: "Registro Demo", defaultValue: "Enero 2024", hidden(p) { return !p.enableDemoMode } },
-    demoAvatar: { type: ControlType.Image, title: "Avatar Demo", hidden(p) { return !p.enableDemoMode } },
-    primaryColor: { type: ControlType.Color, title: "Color PPS", defaultValue: "#7c3aed" },
+    enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo", defaultValue: false },
+    demoName: { type: ControlType.String, title: "Nombre Demo", defaultValue: "Carlos Gomez" },
+    demoEmail: { type: ControlType.String, title: "Email Demo", defaultValue: "carlos@mail.com" },
+    demoLoc: { type: ControlType.String, title: "Ciudad Demo", defaultValue: "Buenos Aires, ARG" },
+    demoDate: { type: ControlType.String, title: "Fecha Demo", defaultValue: "Abril 2024" },
+    demoAvatar: { type: ControlType.Image, title: "Avatar Demo" },
+    primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#7c3aed" },
+    secondaryColor: { type: ControlType.Color, title: "Color Fondo", defaultValue: "#f8fafc" },
 })
 
-const pageStyles = {
-    container: { width: "100%", minHeight: "100vh", backgroundColor: "#f8fafc", fontFamily: "Inter, sans-serif" },
-    demoBanner: { padding: "10px 24px", backgroundColor: "#fdf2f2", color: "#991b1b", fontSize: "12px", borderBottom: "1px solid #fee2e2" },
-    mainContentWrapper: { width: "100%", display: "flex", justifyContent: "center" },
-    body: { width: "100%", padding: "60px 24px", display: "flex", flexDirection: "column", gap: "60px" },
-}
-
-const headerStyles = {
-    container: { width: "100%", backgroundColor: "white", padding: "60px 0", borderBottom: "1px solid #e2e8f0" },
-    contentWrapper: { width: "100%", display: "flex", justifyContent: "center" },
-    layoutRow: { width: "100%", padding: "0 40px", display: "flex", alignItems: "center", gap: "48px" },
-    avatarWrapper: { position: "relative" },
-    avatar: { width: "140px", height: "140px", borderRadius: "40px", backgroundColor: "#f1f5f9", backgroundSize: "cover", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 40px rgba(0,0,0,0.05)" },
-    infoBlock: { flex: 1, display: "flex", flexDirection: "column", gap: "12px" },
-    infoRow: { display: "flex", alignItems: "center", gap: "20px" },
-    nameStyle: { fontSize: "40px", fontWeight: "900", margin: 0, letterSpacing: "-1.5px" },
-    userTag: { fontSize: "13px", fontWeight: "900", color: "#64748b", backgroundColor: "#f1f5f9", padding: "6px 14px", borderRadius: "10px", textTransform: "uppercase" },
-    metaRow: { display: "flex", gap: "32px", color: "#64748b", fontSize: "18px" },
-    metaItem: { display: "flex", alignItems: "center", gap: "10px" }
-}
-
-const cardStyles = {
-    container: { padding: "48px", backgroundColor: "white", borderRadius: "32px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" },
-    title: { fontSize: "13px", fontWeight: "900", color: "#000", textTransform: "uppercase", marginBottom: "40px", letterSpacing: "2px" },
-    list: { display: "flex", flexDirection: "column", gap: "32px" },
-    item: { display: "flex", alignItems: "center", gap: "24px" },
-    icon: { width: "56px", height: "56px", borderRadius: "18px", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" },
-    text: { display: "flex", flexDirection: "column" },
-    label: { fontSize: "14px", color: "#94a3b8" },
-    value: { fontSize: "20px", fontWeight: "700", color: "#1e293b" }
-}
-
-const ctaStyles = {
-    container: { padding: "60px", borderRadius: "40px", display: "flex", flexDirection: "column", gap: "40px", boxShadow: "0 20px 40px rgba(124, 58, 237, 0.1)" },
-    header: { display: "flex", gap: "24px", alignItems: "center" },
-    iconCircle: { width: "72px", height: "72px", borderRadius: "22px", display: "flex", alignItems: "center", justifyContent: "center" },
-    title: { fontSize: "28px", fontWeight: "900", margin: 0 },
-    subtitle: { fontSize: "18px", color: "#475569", margin: 0 },
-    button: { width: "100%", padding: "24px", borderRadius: "22px", border: "none", color: "white", fontWeight: "900", fontSize: "20px", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", cursor: "pointer", boxShadow: "0 15px 30px rgba(124, 58, 237, 0.3)" }
+const s = {
+    page: { width: "100%", minHeight: "100vh", backgroundColor: "#ffffff", fontFamily: "Inter, sans-serif" },
+    container: { width: "100%", maxWidth: "1120px", margin: "0 auto", padding: "0 24px", position: "relative" },
+    header: { width: "100%", height: "140px", marginBottom: "70px" },
+    avatarWrap: { position: "absolute", bottom: "-30px", left: "24px", padding: "4px", backgroundColor: "white", borderRadius: "28px", boxShadow: "0 10px 30px rgba(0,0,0,0.06)" },
+    avatar: { width: "90px", height: "90px", borderRadius: "24px", backgroundColor: "#f8fafc", backgroundSize: "cover", display: "flex", alignItems: "center", justifyContent: "center" },
+    info: { marginBottom: "40px" },
+    name: { fontSize: "32px", fontWeight: "700", color: "#0f172a", margin: "0 0 6px 0", letterSpacing: "-1px", fontFamily: "Inter Display, sans-serif" },
+    badge: { fontSize: "11px", fontWeight: "800", textTransform: "uppercase", marginBottom: "16px", letterSpacing: "1px" },
+    meta: { display: "flex", flexWrap: "wrap", gap: "28px", color: "#64748b", fontSize: "14px" },
+    metaItem: { display: "flex", alignItems: "center", gap: "8px" },
+    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px" },
+    section: { display: "flex", flexDirection: "column", gap: "16px" },
+    label: { fontSize: "10px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "2.5px" },
+    card: { padding: "24px", backgroundColor: "white", borderRadius: "20px", border: "1px solid #f1f5f9", boxShadow: "0 2px 4px rgba(0,0,0,0.02)", width: "100%", textAlign: "left", cursor: "pointer" },
+    row: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" },
+    iconTitle: { display: "flex", alignItems: "center", gap: "16px" },
+    mainBtn: { 
+        height: "38px",
+        padding: "0 22px", 
+        borderRadius: "10px", 
+        border: "none", 
+        color: "white", 
+        fontWeight: "700", 
+        cursor: "pointer", 
+        fontFamily: "Inter",
+        fontSize: "13px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 4px 10px rgba(0,0,0,0.08)"
+    },
+    loader: { width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
+    errorContainer: { width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px" }
 }

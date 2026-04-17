@@ -13,7 +13,8 @@ import java.util.UUID;
 @Repository
 public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UUID> {
 
-    Optional<PerfilEmpresa> findByUsuarioId(UUID usuarioId);
+    @Query("SELECT e FROM PerfilEmpresa e WHERE e.usuario.id = :usuarioId")
+    Optional<PerfilEmpresa> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
     @Query(value = "SELECT * FROM perfiles_empresa p " +
                    "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true", 

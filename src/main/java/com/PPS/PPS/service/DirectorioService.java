@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DirectorioService {
 
     private final PerfilProveedorRepository proveedorRepository;
@@ -303,18 +304,26 @@ public class DirectorioService {
     }
 
     public UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId) {
+        log.info("Descubriendo perfil para usuario ID: {}", usuarioId);
+        
         Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+                .orElseThrow(() -> {
+                    log.error("Usuario con ID {} no encontrado en base de datos local", usuarioId);
+                    return new RecursoNoEncontradoException("Usuario no encontrado");
+                });
 
         boolean esProveedor = proveedorRepository.findByUsuarioId(usuarioId).isPresent();
         boolean esEmpresa = empresaRepository.findByUsuarioId(usuarioId).isPresent();
+        
+        String rol = esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO");
+        log.info("Usuario {} identificado con rol: {}", usuarioId, rol);
 
         return UsuarioPerfilDto.builder()
                 .id(usuario.getId())
                 .nombre(usuario.getNombre())
                 .apellido(usuario.getApellido())
                 .email(usuario.getEmail())
-                .rol(esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO"))
+                .rol(rol)
                 .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
                 .build();
     }

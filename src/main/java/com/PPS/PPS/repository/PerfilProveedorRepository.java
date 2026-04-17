@@ -13,7 +13,8 @@ import java.util.UUID;
 @Repository
 public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor, UUID> {
 
-    Optional<PerfilProveedor> findByUsuarioId(UUID usuarioId);
+    @Query("SELECT p FROM PerfilProveedor p WHERE p.usuario.id = :usuarioId")
+    Optional<PerfilProveedor> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
     /**
      * Busca proveedores dentro de un radio en metros desde un punto dado.

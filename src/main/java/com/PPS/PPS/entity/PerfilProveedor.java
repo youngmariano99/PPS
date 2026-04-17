@@ -65,6 +65,15 @@ public class PerfilProveedor {
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point ubicacion;
 
+    @Column(name = "instagram_url")
+    private String instagramUrl;
+
+    @Column(name = "facebook_url")
+    private String facebookUrl;
+
+    @Column(name = "linkedin_url")
+    private String linkedinUrl;
+
     @Column(name = "created_at", updatable = false, insertable = false)
     private OffsetDateTime fechaCreacion;
 

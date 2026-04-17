@@ -300,6 +300,12 @@ public class DirectorioService {
                 .fotoPerfilUrl(p.getFotoPerfilUrl())
                 .ciudad(p.getCiudad())
                 .provincia(p.getProvincia())
+                .telefono(p.getUsuario().getTelefono())
+                .matricula(p.getMatricula())
+                .direccion(p.getCalle() + " " + p.getNumero())
+                .instagramUrl(p.getInstagramUrl())
+                .facebookUrl(p.getFacebookUrl())
+                .linkedinUrl(p.getLinkedinUrl())
                 .esPremium(esPremium)
                 .fotosPortafolio(multimedia.stream()
                         .filter(m -> m.getTipoRecurso().equals("IMAGEN"))
@@ -337,13 +343,48 @@ public class DirectorioService {
                 .build();
     }
 
-    private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {
-        String direccionFull = String.format("%s ,%d, %s, %s, %s",
-                dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia(), dto.getPais());
-        double[] coords = geocodingService.obtenerCoordenadas(direccionFull);
-        if (coords == null) {
-            throw new ValidacionNegocioException("Geolocalización fallida.");
-        }
         return geometryFactory.createPoint(new Coordinate(coords[0], coords[1]));
+    }
+
+    @Transactional
+    public void actualizarPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
+        log.info("Actualizando perfil profesional para usuario: {}", usuarioId);
+        
+        PerfilProveedor perfil = proveedorRepository.findByUsuarioId(usuarioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Perfil profesional no encontrado"));
+
+        // Actualizar datos profesionales
+        perfil.setDescripcionProfesional(dto.getDescripcion());
+        perfil.setMatricula(dto.getMatricula());
+        perfil.setFotoPerfilUrl(dto.getFotoPerfilUrl());
+        perfil.setInstagramUrl(dto.getInstagramUrl());
+        perfil.setFacebookUrl(dto.getFacebookUrl());
+        perfil.setLinkedinUrl(dto.getLinkedinUrl());
+
+        // Si hay cambio de dirección, re-geocodificar
+        if (!perfil.getCalle().equals(dto.getCalle()) || !perfil.getNumero().equals(dto.getNumero()) || 
+            !perfil.getCiudad().equals(dto.getCiudad())) {
+            perfil.setCalle(dto.getCalle());
+            perfil.setNumero(dto.getNumero());
+            perfil.setCiudad(dto.getCiudad());
+            perfil.setProvincia(dto.getProvincia());
+            perfil.setPais(dto.getPais());
+            perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
+        }
+
+        proveedorRepository.save(perfil);
+    }
+
+    @Transactional
+    public void actualizarUsuario(UUID id, UsuarioPerfilDto dto) {
+        log.info("Actualizando datos personales del usuario: {}", id);
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+        if (dto.getNombre() != null) usuario.setNombre(dto.getNombre());
+        if (dto.getApellido() != null) usuario.setApellido(dto.getApellido());
+        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
+
+        usuarioRepository.save(usuario);
     }
 }

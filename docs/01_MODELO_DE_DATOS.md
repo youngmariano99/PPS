@@ -78,6 +78,7 @@ CREATE TABLE public.perfiles_proveedor (
     dni TEXT NOT NULL UNIQUE, matricula TEXT, descripcion_profesional TEXT NOT NULL, cv_url_pdf TEXT, foto_perfil_url TEXT,
     pais TEXT NOT NULL, provincia TEXT NOT NULL, ciudad TEXT NOT NULL, calle TEXT NOT NULL, numero INTEGER NOT NULL, codigo_postal INTEGER NOT NULL,
     ubicacion GEOGRAPHY(Point, 4326), 
+    instagram_url TEXT, facebook_url TEXT, linkedin_url TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_prov_rubro CHECK (rubro_principal_id IS NOT NULL OR rubro_personalizado IS NOT NULL)
 );
@@ -239,7 +240,10 @@ ALTER TABLE public.intenciones_contacto ADD COLUMN direccion_ip TEXT;
 ALTER TABLE public.resenas ADD COLUMN solicitud_servicio_id UUID UNIQUE;
 ALTER TABLE public.resenas ADD COLUMN trabajo_verificado BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE public.resenas ALTER COLUMN intencion_contacto_id DROP NOT NULL;
-ALTER TABLE public.resenas ADD CONSTRAINT chk_resena_origen CHECK ((intencion_contacto_id IS NOT NULL AND solicitud_servicio_id IS NULL) OR (intencion_contacto_id IS NULL AND solicitud_servicio_id IS NOT NULL));
+-- [2026-04-17] Redes Sociales en Perfiles
+ALTER TABLE public.perfiles_proveedor ADD COLUMN instagram_url TEXT;
+ALTER TABLE public.perfiles_proveedor ADD COLUMN facebook_url TEXT;
+ALTER TABLE public.perfiles_proveedor ADD COLUMN linkedin_url TEXT;
 ```
 
 ### 12. Extensión Multimedia (Consolidada + Degradación Suave)

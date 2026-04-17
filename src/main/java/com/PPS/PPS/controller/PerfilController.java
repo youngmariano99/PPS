@@ -1,44 +1,45 @@
 package com.PPS.PPS.controller;
 
 import com.PPS.PPS.dto.PerfilSolicitudDto;
+import com.PPS.PPS.dto.UsuarioPerfilDto;
 import com.PPS.PPS.service.DirectorioService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/perfiles")
+@RequestMapping("/perfil")
 @RequiredArgsConstructor
-@Tag(name = "Perfiles", description = "Gestión de perfiles de Proveedores y Empresas")
-@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Perfil", description = "Gestión del perfil del usuario logueado")
 public class PerfilController {
 
     private final DirectorioService directorioService;
 
-    @PostMapping("/proveedor/{usuarioId}")
-    @Operation(summary = "Crear perfil de Proveedor")
-    public ResponseEntity<Object> crearProveedor(@PathVariable UUID usuarioId, @Valid @RequestBody PerfilSolicitudDto dto) {
-        directorioService.crearPerfilProveedor(usuarioId, dto);
-        return new ResponseEntity<>(java.util.Map.of(
-            "mensaje", "Perfil de proveedor creado con éxito",
-            "usuarioId", usuarioId
-        ), HttpStatus.CREATED);
+    @GetMapping("/me")
+    @Operation(summary = "Obtener datos del usuario actual", description = "Detecta el rol y devuelve los datos del usuario logueado.")
+    public ResponseEntity<UsuarioPerfilDto> obtenerMiPerfil(@RequestHeader("X-User-Id") UUID usuarioId) {
+        return ResponseEntity.ok(directorioService.obtenerPerfilUsuario(usuarioId));
     }
 
-    @PostMapping("/empresa/{usuarioId}")
-    @Operation(summary = "Crear perfil de Empresa")
-    public ResponseEntity<Object> crearEmpresa(@PathVariable UUID usuarioId, @Valid @RequestBody PerfilSolicitudDto dto) {
-        directorioService.crearPerfilEmpresa(usuarioId, dto);
-        return new ResponseEntity<>(java.util.Map.of(
-            "mensaje", "Perfil de empresa creado con éxito",
-            "usuarioId", usuarioId
-        ), HttpStatus.CREATED);
+    @PutMapping("/usuario/me")
+    @Operation(summary = "Actualizar datos personales", description = "Permite al usuario cambiar su nombre, apellido o teléfono.")
+    public ResponseEntity<Void> actualizarMisDatos(
+            @RequestHeader("X-User-Id") UUID usuarioId,
+            @RequestBody UsuarioPerfilDto dto) {
+        directorioService.actualizarUsuario(usuarioId, dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/proveedor/me")
+    @Operation(summary = "Actualizar perfil profesional", description = "Permite al proveedor cambiar su descripción, matrícula, dirección y redes sociales.")
+    public ResponseEntity<Void> actualizarMiPerfilProfesional(
+            @RequestHeader("X-User-Id") UUID usuarioId,
+            @RequestBody PerfilSolicitudDto dto) {
+        directorioService.actualizarPerfilProveedor(usuarioId, dto);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,178 +1,133 @@
 import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { 
-    User, Mail, Phone, MapPin, Calendar, 
-    Star, Shield, Briefcase, Camera,
-    MessageSquare, Maximize, RefreshCw, Zap
+    User, Mail, Phone, MapPin, 
+    Star, Shield, Camera,
+    Maximize, RefreshCw, Zap,
+    Award, Hash, Landmark, Edit3, Save, X,
+    Instagram, Facebook, Linkedin, ExternalLink
 } from "lucide-react"
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
 
 /**
- * PANTALLA DE PERFIL DE PROVEEDOR COMPLETA (PPS) - V7 (DIAGNOSTIC MODE)
- * -----------------------------------------------------------
- * - Robusto contra cruce de sesiones.
- * - Soporta búsqueda por Usuario ID o Perfil ID.
- * - Logs detallados para depuración en vivo.
+ * PANTALLA DE PERFIL DE PROVEEDOR PPS - V10 (UI MATURA & EDICIÓN)
+ * -------------------------------------------------------------
+ * - Diseño Minimalista/Maduro (Tipografía Inter Display equilibrada).
+ * - Sistema de Edición en tiempo real (Instagram, LinkedIn, Bio, Tel).
+ * - Botones refinados y micro-interacciones.
  */
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// --- SUB-COMPONENTES ---
-
-const Header = ({ name, category, location, rating, isPro, avatarUrl, primaryColor }) => (
-    <div style={hS.container}>
-        <div style={hS.contentWrapper}>
-            <div style={hS.content}>
-                <div style={hS.row}>
-                    <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} style={hS.avatarWrap}>
-                        <div style={{ ...hS.avatar, backgroundImage: avatarUrl ? `url(${avatarUrl})` : "none" }}>
-                            {!avatarUrl && <User size={48} color="#94a3b8" />}
-                        </div>
-                        {isPro && <div style={{ ...hS.proBadge, backgroundColor: primaryColor }}><Shield size={16} color="white" /></div>}
-                    </motion.div>
-                    <div style={hS.info}>
-                        <div style={hS.nameRow}>
-                            <h1 style={hS.name}>{name || "Cargando..."}</h1>
-                            {isPro && <span style={{ ...hS.proTag, border: `1px solid ${primaryColor}`, color: primaryColor }}>PRO</span>}
-                        </div>
-                        <div style={hS.meta}>
-                            <span style={{ color: primaryColor, fontWeight: "600" }}>{category || "Rubro"}</span>
-                            <div style={hS.metaItem}><MapPin size={14} /><span>{location || "Ubicación"}</span></div>
-                            <div style={hS.metaItem}><Star size={14} fill="#f59e0b" color="#f59e0b" /><b>{rating || 0}</b></div>
-                        </div>
-                    </div>
-                </div>
-                <div style={hS.desktopAction}>
-                    <button style={{ ...hS.btn, backgroundColor: primaryColor, width: "auto", minWidth: "160px" }}>Contactar ahora</button>
-                </div>
-            </div>
-        </div>
-    </div>
-)
-
-const Portfolio = ({ images, primaryColor }) => (
-    <div style={pS.container}>
-        <h2 style={fS.title}>Portfolio de Trabajos</h2>
-        {(!images || images.length === 0) ? (
-            <div style={pS.empty}><Camera size={32} color={primaryColor} /><p>Sin trabajos aún</p></div>
-        ) : (
-            <div style={pS.grid}>
-                {images.map((img, i) => (
-                    <motion.div key={i} whileHover={{ scale: 1.02 }} style={pS.imgWrap}>
-                        <div style={{ ...pS.img, backgroundImage: `url(${img})` }} />
-                        <div style={pS.overlay}><Maximize size={20} color="white" /></div>
-                    </motion.div>
-                ))}
-            </div>
-        )}
-    </div>
-)
-
-// --- COMPONENTE PRINCIPAL ---
-
 export default function ProviderProfileComplete(props) {
     const { 
-        apiUrl, enableDemoMode,
-        demoName, demoCategory, demoDesc, demoLoc, demoRating, demoTotal,
-        demoAvatar, demoPhone, demoEmail, primaryColor 
+        apiUrl, enableDemoMode, primaryColor 
     } = props
 
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [isEditing, setIsEditing] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [editForm, setEditForm] = useState({})
     const [error, setError] = useState(null)
-    const [isDesktop, setIsDesktop] = useState(true)
 
-    useEffect(() => {
-        const checkWidth = () => setIsDesktop(window.innerWidth > 900)
-        checkWidth()
-        window.addEventListener("resize", checkWidth)
-        return () => window.removeEventListener("resize", checkWidth)
-    }, [])
-
-    useEffect(() => {
-        const discoverAndFetch = async () => {
-            setLoading(true)
-            setError(null)
-
-            const { data: { session } } = await supabase.auth.getSession()
-            
-            if (session) {
-                console.log("ProviderProfile: Real session detected for user:", session.user.id)
-                try {
-                    const userId = session.user.id
-                    const response = await fetch(`${apiUrl}/directorio/proveedor/${userId}`, {
-                        headers: {
-                            "Authorization": `Bearer ${session.access_token}`,
-                            "X-User-Id": userId
-                        }
-                    })
-                    
-                    if (response.ok) {
-                        const res = await response.json()
-                        console.log("ProviderProfile: Data received correctly for:", res.nombrePublico)
-                        setData({
-                            name: res.nombrePublico,
-                            category: res.rubro,
-                            description: res.descripcion,
-                            location: res.ciudad ? `${res.ciudad}, ${res.provincia}` : "No definida",
-                            rating: res.promedioEstrellas || 0,
-                            total: res.cantidadResenas || 0,
-                            isPro: res.esPremium,
-                            avatar: res.fotoPerfilUrl,
-                            portfolio: res.fotosPortafolio || [],
-                            phone: demoPhone, 
-                            email: res.email || demoEmail
-                        })
-                    } else {
-                        console.error("ProviderProfile: Backend error status:", response.status)
-                        setError(`Error (${response.status}): No pudimos cargar tu perfil profesional.`)
-                    }
-                } catch (err) {
-                    console.error("ProviderProfile: Connection failed:", err)
-                    setError("Error de conexión con el servidor PPS.")
-                }
-            } else if (enableDemoMode) {
-                console.log("ProviderProfile: Guest mode - Using demo data.")
-                setData({
-                    name: demoName, category: demoCategory, description: demoDesc, location: demoLoc,
-                    rating: demoRating, total: demoTotal, isPro: true, avatar: demoAvatar,
-                    portfolio: [], phone: demoPhone, email: demoEmail
+    const discoverAndFetch = async () => {
+        setLoading(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+                const response = await fetch(`${apiUrl}/directorio/proveedor/${user.id}`, {
+                    headers: { "Authorization": `Bearer ${session.access_token}`, "X-User-Id": user.id }
                 })
-            } else {
-                console.warn("ProviderProfile: No session found and Demo mode is OFF.")
-                setError("Inicia sesión en la web para ver tu perfil.")
-            }
-            setLoading(false)
+                if (response.ok) {
+                    const res = await response.json()
+                    const mapped = {
+                        id: res.id, name: res.nombrePublico, category: res.rubro,
+                        description: res.descripcion, location: res.ciudad ? `${res.ciudad}, ${res.provincia}` : "",
+                        address: res.direccion || "", city: res.ciudad || "", province: res.provincia || "",
+                        rating: res.promedioEstrellas || 0, isPro: res.esPremium,
+                        avatar: res.fotoPerfilUrl, portfolio: res.fotosPortafolio || [],
+                        phone: res.telefono || "", email: res.email || user.email,
+                        matricula: res.matricula || "",
+                        instagram: res.instagramUrl || "", facebook: res.facebookUrl || "", linkedin: res.linkedinUrl || ""
+                    }
+                    setData(mapped)
+                    setEditForm(mapped)
+                }
+            } catch (err) { setError("Error de conexión.") }
+        } else if (enableDemoMode) {
+             const demo = { name: "Juan Perez", category: "Gasista", description: "Exp. 10 años", location: "Mendoza", rating: 4.8, isPro: true, phone: "261445566", email: "demo@pps.com", matricula: "123", portfolio: [] }
+             setData(demo); setEditForm(demo)
         }
-
-        discoverAndFetch()
-    }, [apiUrl, enableDemoMode, demoName, demoCategory, demoDesc, demoLoc, demoRating, demoTotal, demoAvatar, demoPhone, demoEmail])
-
-    if (loading) {
-        return (
-            <div style={{ ...fS.page, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><RefreshCw size={48} color={primaryColor} /></motion.div>
-                <p style={{ color: "#64748b", marginTop: "16px", fontWeight: "600" }}>Sincronizando perfil real...</p>
-            </div>
-        )
+        setLoading(false)
     }
 
-    if (error && !data) {
+    useEffect(() => { discoverAndFetch() }, [apiUrl, enableDemoMode])
+
+    const handleSave = async () => {
+        setSaving(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        try {
+            // 1. Actualizar Datos Profesionales
+            await fetch(`${apiUrl}/perfil/proveedor/me`, {
+                method: "PUT",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`, 
+                    "X-User-Id": user.id 
+                },
+                body: JSON.stringify({
+                    descripcion: editForm.description,
+                    matricula: editForm.matricula,
+                    fotoPerfilUrl: editForm.avatar,
+                    calle: editForm.address.split(" ")[0] || "",
+                    numero: parseInt(editForm.address.split(" ")[1]) || 0,
+                    ciudad: editForm.city,
+                    provincia: editForm.province,
+                    pais: "Argentina", 
+                    instagramUrl: editForm.instagram,
+                    facebookUrl: editForm.facebook,
+                    linkedinUrl: editForm.linkedin
+                })
+            })
+
+            // 2. Actualizar Teléfono en Usuario Base
+            await fetch(`${apiUrl}/perfil/usuario/me`, {
+                method: "PUT",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`, 
+                    "X-User-Id": user.id 
+                },
+                body: JSON.stringify({ telefono: editForm.phone })
+            })
+
+            await discoverAndFetch()
+            setIsEditing(false)
+        } catch (e) { console.error(e) }
+        setSaving(false)
+    }
+
+    if (loading) return <div style={fS.loader}><RefreshCw size={32} color={primaryColor} className="spin" /></div>
+
+    if (error || !data) {
         return (
-            <div style={{ ...fS.page, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px" }}>
-                <Shield size={64} color="#cbd5e1" style={{ marginBottom: "24px" }} />
-                <h2 style={{ fontSize: "24px", fontWeight: "900", color: "#0f172a" }}>{error}</h2>
-                <p style={{ color: "#64748b", marginTop: "12px", maxWidth: "400px" }}>Asegúrate de estar logueado y haber completado tu registro profesional.</p>
+            <div style={fS.errorContainer}>
+                <Shield size={64} color="#e2e8f0" />
+                <h2 style={{ fontSize: "20px", fontWeight: "700", marginTop: "20px" }}>{error || "Cargando perfil..."}</h2>
                 <button 
                    onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/login"}
-                   style={{ ...hS.btn, backgroundColor: primaryColor, marginTop: "24px", width: "auto" }}
+                   style={{ ...fS.mainBtn, backgroundColor: primaryColor, marginTop: "20px" }}
                 >
-                    Ir al Inicio de Sesión
+                    Volver al Inicio
                 </button>
             </div>
         )
@@ -180,100 +135,201 @@ export default function ProviderProfileComplete(props) {
 
     return (
         <div style={fS.page}>
-            {enableDemoMode && !loading && !error && (
-                <div style={fS.demoBanner}>
-                    <Zap size={14} color="#854d0e" fill="#854d0e" />
-                    <span><b>Vista de Diseño:</b> Mostrando datos de ejemplo de Framer.</span>
-                </div>
-            )}
-            <Header 
-                name={data.name} category={data.category} location={data.location} 
-                rating={data.rating} isPro={data.isPro} avatarUrl={data.avatar} 
-                primaryColor={primaryColor} 
-            />
-            <div style={fS.mainContentWrapper}>
-                <div style={{ ...fS.body, gridTemplateColumns: isDesktop ? "1.8fr 1fr" : "1fr" }}>
-                    <div style={fS.column}>
-                        <div style={fS.section}>
-                            <h2 style={fS.title}>Sobre el servicio</h2>
-                            <div style={fS.card}><p style={fS.desc}>{data.description}</p></div>
-                        </div>
-                        <Portfolio images={data.portfolio} primaryColor={primaryColor} />
-                    </div>
-                    <div style={fS.column}>
-                        <div style={fS.section}>
-                            <h2 style={fS.title}>Contacto Directo</h2>
-                            <div style={{ ...fS.card, display: "flex", flexDirection: "column", gap: "20px" }}>
-                                <div style={fS.cardItem}><Phone size={20} color={primaryColor} /><span>{data.phone}</span></div>
-                                <div style={fS.cardItem}><Mail size={20} color={primaryColor} /><span>{data.email}</span></div>
-                                <div style={fS.cardItem}><MapPin size={20} color={primaryColor} /><span>{data.location}</span></div>
+            {/* Header Area */}
+            <div style={hS.container}>
+                <div style={fS.content}>
+                    <div style={hS.flex}>
+                        <div style={hS.left}>
+                            <div style={{ 
+                                ...hS.avatar, 
+                                backgroundImage: data && data.avatar ? `url(${data.avatar})` : "none" 
+                            }}>
+                                {(!data || !data.avatar) && <User size={40} color="#94a3b8" />}
+                                {isEditing && <div style={hS.avatarOverlay}><Camera size={20} /></div>}
+                            </div>
+                            <div style={hS.info}>
+                                <div style={hS.nameRow}>
+                                    <h1 style={hS.name}>{data.name}</h1>
+                                    {data.isPro && <span style={{...hS.proTag, color: primaryColor}}><Award size={14} /> PRO</span>}
+                                </div>
+                                <p style={{...hS.cat, color: primaryColor}}>{data.category}</p>
                             </div>
                         </div>
-                        <div style={{ ...fS.verified, backgroundColor: "#0f172a" }}>
-                            <Shield size={32} color={primaryColor} />
-                            <div><h4 style={fS.vTitle}>Profesional Verificado</h4><p style={fS.vText}>Información validada por equipo PPS.</p></div>
+                        <div style={hS.actions}>
+                             {!isEditing ? (
+                                <motion.button whileHover={{ scale: 1.02 }} onClick={() => setIsEditing(true)} style={hS.btnEdit}>
+                                    <Edit3 size={16} /> <span>Editar Perfil</span>
+                                </motion.button>
+                             ) : (
+                                <div style={{ display: "flex", gap: "10px" }}>
+                                    <button onClick={() => setIsEditing(false)} style={hS.btnCancel} disabled={saving}><X size={16} /></button>
+                                    <button onClick={handleSave} style={{...hS.btnSave, backgroundColor: primaryColor}} disabled={saving}>
+                                        {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} <span>Guardar</span>
+                                    </button>
+                                </div>
+                             )}
                         </div>
                     </div>
                 </div>
             </div>
-            <div style={{ height: "100px" }} />
+
+            {/* Main Content */}
+            <div style={fS.content}>
+                <div style={fS.grid}>
+                    {/* Left: Bio & Portfolio */}
+                    <div style={fS.col}>
+                        <section style={fS.section}>
+                            <h4 style={fS.label}>Resumen Profesional</h4>
+                            {isEditing ? (
+                                <textarea 
+                                    style={fS.inputArea} 
+                                    value={editForm.description} 
+                                    onChange={e => setEditForm({...editForm, description: e.target.value})}
+                                />
+                            ) : (
+                                <div style={fS.card}><p style={fS.desc}>{data.description}</p></div>
+                            )}
+                        </section>
+
+                        <section style={fS.section}>
+                            <h4 style={fS.label}>Portfolio de Trabajos</h4>
+                            {data.portfolio.length === 0 ? (
+                                <div style={fS.empty}><p>No hay trabajos cargados.</p></div>
+                            ) : (
+                                <div style={fS.pGrid}>
+                                    {data.portfolio.map((img, i) => (
+                                        <div key={i} style={{...fS.pImg, backgroundImage: `url(${img})`}}></div>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    </div>
+
+                    {/* Right: Contact & Networks */}
+                    <div style={fS.col}>
+                        <section style={fS.section}>
+                            <h4 style={fS.label}>Información de Contacto</h4>
+                            <div style={fS.card}>
+                                <div style={fS.cRow}>
+                                    <Phone size={18} color={primaryColor} />
+                                    {isEditing ? <input style={fS.input} value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} /> : <span>{data.phone}</span>}
+                                </div>
+                                <div style={fS.cRow}><Mail size={18} color={primaryColor} /> <span>{data.email}</span></div>
+                                <div style={fS.cRow}>
+                                    <Landmark size={18} color={primaryColor} />
+                                    {isEditing ? <input style={fS.input} placeholder="Dirección" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} /> : <span>{data.address}</span>}
+                                </div>
+                                <div style={fS.cRow}>
+                                    <Hash size={18} color={primaryColor} />
+                                    {isEditing ? <input style={fS.input} placeholder="Matrícula" value={editForm.matricula} onChange={e => setEditForm({...editForm, matricula: e.target.value})} /> : <span>M.P {data.matricula || "No registrada"}</span>}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section style={fS.section}>
+                            <h4 style={fS.label}>Redes Sociales</h4>
+                            <div style={fS.card}>
+                                <div style={fS.cRow}>
+                                    <Instagram size={18} color="#e1306c" />
+                                    {isEditing ? <input style={fS.input} placeholder="Instagram URL" value={editForm.instagram} onChange={e => setEditForm({...editForm, instagram: e.target.value})} /> : (data.instagram ? <a href={data.instagram} target="_blank" style={fS.link}>Instagram <ExternalLink size={12}/></a> : <span>No vinculado</span>)}
+                                </div>
+                                <div style={fS.cRow}>
+                                    <Linkedin size={18} color="#0077b5" />
+                                    {isEditing ? <input style={fS.input} placeholder="LinkedIn URL" value={editForm.linkedin} onChange={e => setEditForm({...editForm, linkedin: e.target.value})} /> : (data.linkedin ? <a href={data.linkedin} target="_blank" style={fS.link}>LinkedIn <ExternalLink size={12}/></a> : <span>No vinculado</span>)}
+                                </div>
+                                <div style={fS.cRow}>
+                                    <Facebook size={18} color="#1877f2" />
+                                    {isEditing ? <input style={fS.input} placeholder="Facebook URL" value={editForm.facebook} onChange={e => setEditForm({...editForm, facebook: e.target.value})} /> : (data.facebook ? <a href={data.facebook} target="_blank" style={fS.link}>Facebook <ExternalLink size={12}/></a> : <span>No vinculado</span>)}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <div style={{ height: "60px" }} />
         </div>
     )
 }
 
-addPropertyControls(ProviderProfileComplete, {
-    apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
-    enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo (Framer)", defaultValue: false },
-    demoName: { type: ControlType.String, title: "Nombre Demo", defaultValue: "Juan Perez", hidden(p) { return !p.enableDemoMode } },
-    demoCategory: { type: ControlType.String, title: "Rubro Demo", defaultValue: "Gasista", hidden(p) { return !p.enableDemoMode } },
-    demoDesc: { type: ControlType.String, title: "Desc Demo", display: "textarea", defaultValue: "Matriculado con 10 años de exp.", hidden(p) { return !p.enableDemoMode } },
-    demoLoc: { type: ControlType.String, title: "Ciudad Demo", defaultValue: "Mendoza, ARG", hidden(p) { return !p.enableDemoMode } },
-    demoRating: { type: ControlType.Number, title: "Rating Demo", defaultValue: 4.8, min: 0, max: 5, step: 0.1, hidden(p) { return !p.enableDemoMode } },
-    demoTotal: { type: ControlType.Number, title: "Reseñas Demo", defaultValue: 45, hidden(p) { return !p.enableDemoMode } },
-    demoAvatar: { type: ControlType.Image, title: "Avatar Demo", hidden(p) { return !p.enableDemoMode } },
-    demoPhone: { type: ControlType.String, title: "Tel Demo", defaultValue: "+54 9 261 445566", hidden(p) { return !p.enableDemoMode } },
-    demoEmail: { type: ControlType.String, title: "Email Demo", defaultValue: "juan@pps.com", hidden(p) { return !p.enableDemoMode } },
-    primaryColor: { type: ControlType.Color, title: "Color PPS", defaultValue: "#7c3aed" },
-})
+// --- STYLES (PURE INTER MATURE UI) ---
 
 const fS = {
-    page: { width: "100%", minHeight: "100vh", backgroundColor: "#f8fafc", fontFamily: "Inter, sans-serif" },
-    demoBanner: { padding: "10px 24px", backgroundColor: "#fdf2f2", color: "#991b1b", fontSize: "12px", display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px solid #fee2e2" },
-    mainContentWrapper: { width: "100%", display: "flex", justifyContent: "center" },
-    body: { width: "100%", padding: "60px 24px", display: "grid", gap: "60px" },
-    column: { display: "flex", flexDirection: "column", gap: "60px" },
+    page: { width: "100%", minHeight: "100vh", backgroundColor: "#fdfdfd", color: "#1e293b", fontFamily: "Inter, sans-serif" },
+    content: { width: "100%", maxWidth: "1120px", margin: "0 auto", padding: "0 24px" },
+    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "60px", marginTop: "40px" },
+    col: { display: "flex", flexDirection: "column", gap: "40px" },
     section: { width: "100%" },
-    title: { fontSize: "13px", fontWeight: "900", color: "#64748b", textTransform: "uppercase", marginBottom: "20px", letterSpacing: "2px" },
-    card: { padding: "40px", backgroundColor: "white", borderRadius: "32px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" },
-    desc: { fontSize: "18px", color: "#334155", lineHeight: "1.8", margin: 0 },
-    cardItem: { display: "flex", alignItems: "center", gap: "20px", fontSize: "16px", fontWeight: "700", color: "#0f172a" },
-    verified: { display: "flex", alignItems: "center", gap: "24px", padding: "40px", borderRadius: "32px", color: "white" },
-    vTitle: { fontSize: "20px", fontWeight: "900", margin: "0 0 6px 0" },
-    vText: { fontSize: "15px", opacity: 0.7, margin: 0 },
+    label: { fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "16px" },
+    card: { padding: "28px", backgroundColor: "white", borderRadius: "20px", border: "1px solid #f1f5f9", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" },
+    desc: { fontSize: "16px", lineHeight: "1.7", color: "#475569", margin: 0 },
+    cRow: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px", fontSize: "15px", color: "#334155" },
+    link: { color: "#334155", textDecoration: "none", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" },
+    input: { width: "100%", padding: "8px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none" },
+    inputArea: { width: "100%", minHeight: "150px", padding: "16px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "15px", fontFamily: "Inter", resize: "none" },
+    pGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
+    pImg: { aspectRatio: "1/1", borderRadius: "16px", backgroundSize: "cover", backgroundColor: "#f1f5f9" },
+    loader: { width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
+    empty: { padding: "40px", textAlign: "center", backgroundColor: "#f8fafc", borderRadius: "20px", border: "1px dashed #e2e8f0", color: "#94a3b8", fontSize: "14px" }
 }
 
 const hS = {
-    container: { width: "100%", backgroundColor: "white", padding: "80px 0 60px 0", borderBottom: "1px solid #e2e8f0" },
-    contentWrapper: { width: "100%", display: "flex", justifyContent: "center" },
-    content: { width: "100%", padding: "0 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "40px" },
-    row: { display: "flex", alignItems: "center", gap: "48px" },
-    avatarWrap: { position: "relative" },
-    avatar: { width: "180px", height: "180px", borderRadius: "50px", backgroundColor: "#f1f5f9", backgroundSize: "cover", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 40px rgba(0,0,0,0.1)" },
-    proBadge: { position: "absolute", top: "-15px", right: "-15px", width: "50px", height: "50px", borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "center", border: "5px solid white" },
-    info: { display: "flex", flexDirection: "column", gap: "12px" },
-    nameRow: { display: "flex", alignItems: "center", gap: "20px" },
-    name: { fontSize: "48px", fontWeight: "900", color: "#000", margin: 0, letterSpacing: "-2px" },
-    proTag: { fontSize: "14px", fontWeight: "900", padding: "6px 14px", borderRadius: "10px" },
-    meta: { display: "flex", flexWrap: "wrap", gap: "32px", fontSize: "18px", color: "#64748b" },
-    metaItem: { display: "flex", alignItems: "center", gap: "10px" },
-    btn: { padding: "20px 48px", borderRadius: "22px", border: "none", color: "white", fontWeight: "900", fontSize: "18px", cursor: "pointer", boxShadow: "0 15px 30px rgba(124, 58, 237, 0.3)" }
+    container: { padding: "80px 0 60px 0", borderBottom: "1px solid #f1f5f9", backgroundColor: "white" },
+    flex: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "32px" },
+    left: { display: "flex", alignItems: "center", gap: "32px" },
+    avatar: { width: "100px", height: "100px", borderRadius: "32px", backgroundSize: "cover", position: "relative", backgroundColor: "#f8fafc", boxShadow: "0 10px 20px rgba(0,0,0,0.05)" },
+    avatarOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", borderRadius: "32px" },
+    info: { display: "flex", flexDirection: "column", gap: "4px" },
+    nameRow: { display: "flex", alignItems: "center", gap: "12px" },
+    name: { fontSize: "36px", fontWeight: "700", letterSpacing: "-1.5px", margin: 0, fontFamily: "Inter Display, sans-serif" },
+    proTag: { fontSize: "11px", fontWeight: "800", display: "flex", alignItems: "center", gap: "4px" },
+    cat: { fontSize: "16px", fontWeight: "600" },
+    actions: { display: "flex", alignItems: "center" },
+    btnEdit: { 
+        height: "38px",
+        padding: "0 18px", 
+        borderRadius: "10px", 
+        border: "1px solid #e2e8f0", 
+        backgroundColor: "white", 
+        color: "#475569", 
+        fontWeight: "600", 
+        display: "flex", 
+        alignItems: "center", 
+        gap: "8px", 
+        cursor: "pointer", 
+        fontSize: "13px",
+        fontFamily: "Inter"
+    },
+    btnSave: { 
+        height: "38px",
+        padding: "0 20px", 
+        borderRadius: "10px", 
+        border: "none", 
+        color: "white", 
+        fontWeight: "700", 
+        display: "flex", 
+        alignItems: "center", 
+        gap: "8px", 
+        cursor: "pointer", 
+        fontSize: "13px", 
+        fontFamily: "Inter",
+        boxShadow: "0 4px 10px rgba(0,0,0,0.08)" 
+    },
+    btnCancel: { 
+        height: "38px",
+        padding: "0 12px", 
+        borderRadius: "10px", 
+        border: "1px solid #fee2e2", 
+        backgroundColor: "#fef2f2", 
+        color: "#ef4444", 
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+    }
 }
 
-const pS = {
-    container: { width: "100%" },
-    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" },
-    imgWrap: { position: "relative", aspectRatio: "16/11", borderRadius: "32px", overflow: "hidden", backgroundColor: "#f1f5f9", cursor: "pointer" },
-    img: { width: "100%", height: "100%", backgroundSize: "cover", backgroundPosition: "center" },
-    overlay: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s" },
-    empty: { padding: "100px", backgroundColor: "white", borderRadius: "32px", border: "1px dashed #cbd5e1", textAlign: "center" }
-}
+addPropertyControls(ProviderProfileComplete, {
+    apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
+    enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo", defaultValue: false },
+    primaryColor: { type: ControlType.Color, title: "Color PPS", defaultValue: "#7c3aed" }
+})

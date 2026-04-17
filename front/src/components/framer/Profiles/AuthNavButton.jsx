@@ -7,11 +7,11 @@ import { User, LogIn, ChevronRight, RefreshCw, LogOut } from "lucide-react"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
 
 /**
- * BOTÓN DE NAVEGACIÓN PPS (AUTH DINÁMICO) - V2
- * -------------------------------------------
- * - Robusto contra errores de CORS.
- * - Soporta URLs absolutas para la web real.
- * - Detecta rol de forma automática para redirigir.
+ * BOTÓN DE NAVEGACIÓN PPS (AUTH DINÁMICO) - V3 (SAFE RELOAD)
+ * --------------------------------------------------------
+ * - Fuerza un refresh total al cerrar sesión para evitar cruce de usuarios.
+ * - Soporta URLs absolutas.
+ * - Diagnóstico detallado por consola.
  */
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
@@ -32,13 +32,16 @@ export default function AuthNavButton(props) {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession()
             if (session) {
+                console.log("AuthNav: Session found for user:", session.user.id)
                 await discoverRole(session)
             } else {
+                console.log("AuthNav: No session found.")
                 setStatus("guest")
             }
         }
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("AuthNav: Auth Event:", event)
             if (session) discoverRole(session)
             else {
                 setStatus("guest")
@@ -48,7 +51,6 @@ export default function AuthNavButton(props) {
 
         const discoverRole = async (session) => {
             try {
-                // Intentamos descubrir el rol
                 const response = await fetch(`${apiUrl}/usuarios/me`, {
                     headers: {
                         "Authorization": `Bearer ${session.access_token}`,
@@ -57,14 +59,15 @@ export default function AuthNavButton(props) {
                 })
                 if (response.ok) {
                     const data = await response.json()
+                    console.log("AuthNav: Discovery successful. Role:", data.rol)
                     setUserRole(data.rol)
                     setStatus("authenticated")
                 } else {
-                    // Si falla el endpoint (ej. CORS o 404), igual estamos autenticados
+                    console.warn("AuthNav: Discovery failed with status:", response.status)
                     setStatus("authenticated")
                 }
             } catch (err) {
-                console.warn("Role discovery bypassed due to error:", err)
+                console.error("AuthNav: Fetch error:", err)
                 setStatus("authenticated")
             }
         }
@@ -75,21 +78,21 @@ export default function AuthNavButton(props) {
 
     const handleClick = () => {
         if (status === "guest") {
-            // Ir al login de la web real
             window.location.href = loginUrl
         } else if (status === "authenticated") {
-            if (userRole === "PROVEEDOR") {
-                window.location.href = providerProfileUrl
-            } else {
-                window.location.href = userProfileUrl
-            }
+            const targetUrl = userRole === "PROVEEDOR" ? providerProfileUrl : userProfileUrl
+            console.log("AuthNav: Redirecting to:", targetUrl)
+            window.location.href = targetUrl
         }
     }
 
     const handleLogout = async (e) => {
         e.stopPropagation()
+        console.log("AuthNav: Logging out...")
         await supabase.auth.signOut()
+        // IMPORTANTE: Forzamos el refresh total para limpiar cualquier caché de sesión o ID de usuario dominante
         window.location.href = loginUrl
+        setTimeout(() => window.location.reload(), 100)
     }
 
     const btnStyle = {

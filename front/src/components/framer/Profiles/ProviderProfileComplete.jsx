@@ -11,12 +11,11 @@ import {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
 
 /**
- * PANTALLA DE PERFIL DE PROVEEDOR COMPLETA (PPS) - V6 (REAL-ONLY)
+ * PANTALLA DE PERFIL DE PROVEEDOR COMPLETA (PPS) - V7 (DIAGNOSTIC MODE)
  * -----------------------------------------------------------
- * - FULL WIDTH (100% de la web)
- * - SIN PORTADA (Diseño profesional compacto)
- * - DATOS REALES PRIORITARIOS (Espera sesión de Supabase)
- * - MODO DEMO opcional para diseño en Framer
+ * - Robusto contra cruce de sesiones.
+ * - Soporta búsqueda por Usuario ID o Perfil ID.
+ * - Logs detallados para depuración en vivo.
  */
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
@@ -103,7 +102,7 @@ export default function ProviderProfileComplete(props) {
             const { data: { session } } = await supabase.auth.getSession()
             
             if (session) {
-                console.log("Conectado con UID:", session.user.id)
+                console.log("ProviderProfile: Real session detected for user:", session.user.id)
                 try {
                     const userId = session.user.id
                     const response = await fetch(`${apiUrl}/directorio/proveedor/${userId}`, {
@@ -115,6 +114,7 @@ export default function ProviderProfileComplete(props) {
                     
                     if (response.ok) {
                         const res = await response.json()
+                        console.log("ProviderProfile: Data received correctly for:", res.nombrePublico)
                         setData({
                             name: res.nombrePublico,
                             category: res.rubro,
@@ -125,24 +125,27 @@ export default function ProviderProfileComplete(props) {
                             isPro: res.esPremium,
                             avatar: res.fotoPerfilUrl,
                             portfolio: res.fotosPortafolio || [],
-                            phone: demoPhone, // TODO: Backend debe devolver telefono
+                            phone: demoPhone, 
                             email: res.email || demoEmail
                         })
                     } else {
-                        setError("No se pudo cargar tu perfil real. ¿Eres proveedor?")
+                        console.error("ProviderProfile: Backend error status:", response.status)
+                        setError(`Error (${response.status}): No pudimos cargar tu perfil profesional.`)
                     }
                 } catch (err) {
-                    setError("Error de conexión con el servidor.")
+                    console.error("ProviderProfile: Connection failed:", err)
+                    setError("Error de conexión con el servidor PPS.")
                 }
             } else if (enableDemoMode) {
-                // Modo Demo solo si no hay sesión y está activado
+                console.log("ProviderProfile: Guest mode - Using demo data.")
                 setData({
                     name: demoName, category: demoCategory, description: demoDesc, location: demoLoc,
                     rating: demoRating, total: demoTotal, isPro: true, avatar: demoAvatar,
                     portfolio: [], phone: demoPhone, email: demoEmail
                 })
             } else {
-                setError("Inicia sesión para ver tu perfil PPS.")
+                console.warn("ProviderProfile: No session found and Demo mode is OFF.")
+                setError("Inicia sesión en la web para ver tu perfil.")
             }
             setLoading(false)
         }
@@ -154,7 +157,7 @@ export default function ProviderProfileComplete(props) {
         return (
             <div style={{ ...fS.page, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><RefreshCw size={48} color={primaryColor} /></motion.div>
-                <p style={{ color: "#64748b", marginTop: "16px", fontWeight: "600" }}>Sincronizando con PPS...</p>
+                <p style={{ color: "#64748b", marginTop: "16px", fontWeight: "600" }}>Sincronizando perfil real...</p>
             </div>
         )
     }
@@ -164,12 +167,12 @@ export default function ProviderProfileComplete(props) {
             <div style={{ ...fS.page, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px" }}>
                 <Shield size={64} color="#cbd5e1" style={{ marginBottom: "24px" }} />
                 <h2 style={{ fontSize: "24px", fontWeight: "900", color: "#0f172a" }}>{error}</h2>
-                <p style={{ color: "#64748b", marginTop: "12px", maxWidth: "400px" }}>Si acabas de registrarte, asegúrate de haber completado tu perfil profesional.</p>
+                <p style={{ color: "#64748b", marginTop: "12px", maxWidth: "400px" }}>Asegúrate de estar logueado y haber completado tu registro profesional.</p>
                 <button 
-                   onClick={() => window.location.href = "/login"}
+                   onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/login"}
                    style={{ ...hS.btn, backgroundColor: primaryColor, marginTop: "24px", width: "auto" }}
                 >
-                    Ir al inicio de sesión
+                    Ir al Inicio de Sesión
                 </button>
             </div>
         )
@@ -180,7 +183,7 @@ export default function ProviderProfileComplete(props) {
             {enableDemoMode && !loading && !error && (
                 <div style={fS.demoBanner}>
                     <Zap size={14} color="#854d0e" fill="#854d0e" />
-                    <span><b>Modo Edición:</b> Estos datos son temporales de Framer.</span>
+                    <span><b>Vista de Diseño:</b> Mostrando datos de ejemplo de Framer.</span>
                 </div>
             )}
             <Header 
@@ -208,7 +211,7 @@ export default function ProviderProfileComplete(props) {
                         </div>
                         <div style={{ ...fS.verified, backgroundColor: "#0f172a" }}>
                             <Shield size={32} color={primaryColor} />
-                            <div><h4 style={fS.vTitle}>Profesional Verificado</h4><p style={fS.vText}>Información validada por PPS.</p></div>
+                            <div><h4 style={fS.vTitle}>Profesional Verificado</h4><p style={fS.vText}>Información validada por equipo PPS.</p></div>
                         </div>
                     </div>
                 </div>

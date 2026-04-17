@@ -9,6 +9,7 @@ import com.PPS.PPS.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.exception.ValidacionNegocioException;
 import com.PPS.PPS.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -269,8 +270,16 @@ public class DirectorioService {
     }
 
     public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
-        PerfilProveedor p = proveedorRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor no encontrado"));
+        log.info("Obteniendo detalle de proveedor para ID: {}", id);
+        
+        // Buscamos primero por usuario_id (el ID de Supabase que suele mandar el front)
+        // Si no, buscamos por el ID propio del perfil (PK)
+        PerfilProveedor p = proveedorRepository.findByUsuarioId(id)
+                .orElseGet(() -> proveedorRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("Proveedor no encontrado para ID: {}", id);
+                    return new RecursoNoEncontradoException("Proveedor no encontrado");
+                }));
         
         boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
                 .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))

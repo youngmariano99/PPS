@@ -343,6 +343,13 @@ public class DirectorioService {
                 .build();
     }
 
+    private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {
+        String direccionFull = String.format("%s ,%d, %s, %s, %s",
+                dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia(), dto.getPais());
+        double[] coords = geocodingService.obtenerCoordenadas(direccionFull);
+        if (coords == null) {
+            throw new ValidacionNegocioException("Geolocalización fallida.");
+        }
         return geometryFactory.createPoint(new Coordinate(coords[0], coords[1]));
     }
 

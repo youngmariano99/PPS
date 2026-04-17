@@ -41,3 +41,9 @@ mercadopago:
   access-token: "TEST-1029377916834190-041508-189529c0e4993743d017da80ae469cc0-597138236" 
   backend-base-url: "https://pps-sk7p.onrender.com"
   frontend-url: "https://overly-mindset-259417.framer.app"
+
+# Configuracion de Cloudinary
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME=denfvu7zy}
+  api_key: ${CLOUDINARY_API_KEY=612442988948125}
+  api_secret: ${CLOUDINARY_API_SECRET=6abLUReq7Ox7yPg8EdFERviyR00}

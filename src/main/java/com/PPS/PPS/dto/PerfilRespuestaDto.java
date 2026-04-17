@@ -16,4 +16,7 @@ public class PerfilRespuestaDto {
     private double latitud;
     private double longitud;
     private String tipo; // PROVEEDOR o EMPRESA
+    private boolean perfilCompleto;
+    private double promedioEstrellas;
+    private int cantidadResenas;
 }

@@ -41,21 +41,41 @@ export default function FormularioLogin(props) {
                 body: JSON.stringify({ email, password }),
             })
 
-            const data = await response.json()
-            console.log("📦 Respuesta:", data)
+            const text = await response.text()
+            console.log("📦 RAW RESPONSE:", text)
 
-            if (!response.ok) throw new Error(data.mensaje || "Credenciales incorrectas")
+            let data
+            try {
+                data = JSON.parse(text)
+            } catch (e) {
+                throw new Error("Respuesta no es JSON válido: " + text)
+            }
+
+            if (!response.ok)
+                throw new Error(data.mensaje || "Credenciales incorrectas")
 
             // Paso 2: Autenticación en Supabase para obtener sesión local (JWT)
             // Esto es necesario si usamos funciones de Supabase como Storage o RLS
-            const { error: sbError } = await supabase.auth.signInWithPassword({ email, password })
+            const { error: sbError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            })
             if (sbError) throw sbError
+
+            //Guardar usuario en localStorage (CLAVE para el botón de pago)
+            localStorage.setItem(
+                "usuario",
+                JSON.stringify({
+                    id: data.usuarioId,
+                    nombre: data.nombre,
+                    email: data.email,
+                })
+            )
 
             alert(`¡Hola ${data.nombre}! Ingreso exitoso.`)
 
             // Aquí podrías disparar un evento de Framer para navegar a otra página
             if (props.onLoginSuccess) props.onLoginSuccess(data)
-
         } catch (err) {
             setError(err.message)
         } finally {
@@ -90,7 +110,7 @@ export default function FormularioLogin(props) {
                         ...buttonStyle,
                         backgroundColor: btnColor,
                         color: textColor,
-                        borderRadius: `${borderRadius}px`
+                        borderRadius: `${borderRadius}px`,
                     }}
                 >
                     {loading ? "Verificando..." : btnText}
@@ -105,16 +125,54 @@ addPropertyControls(FormularioLogin, {
     apiUrl: {
         type: ControlType.String,
         title: "URL del Backend",
-        defaultValue: "https://pps-sk7p.onrender.com/api/v1"
+        defaultValue: "https://pps-sk7p.onrender.com/api/v1",
     },
-    btnText: { type: ControlType.String, title: "Texto", defaultValue: "Ingresar" },
-    btnColor: { type: ControlType.Color, title: "Color Fondo", defaultValue: "#0070f3" },
-    textColor: { type: ControlType.Color, title: "Color Texto", defaultValue: "#FFFFFF" },
-    borderRadius: { type: ControlType.Number, title: "Esquinas", defaultValue: 8, min: 0, max: 20 }
+    btnText: {
+        type: ControlType.String,
+        title: "Texto",
+        defaultValue: "Ingresar",
+    },
+    btnColor: {
+        type: ControlType.Color,
+        title: "Color Fondo",
+        defaultValue: "#0070f3",
+    },
+    textColor: {
+        type: ControlType.Color,
+        title: "Color Texto",
+        defaultValue: "#FFFFFF",
+    },
+    borderRadius: {
+        type: ControlType.Number,
+        title: "Esquinas",
+        defaultValue: 8,
+        min: 0,
+        max: 20,
+    },
 })
 
-const containerStyle = { width: "100%", height: "100%", display: "flex", flexDirection: "column" }
-const formStyle = { display: "flex", flexDirection: "column", gap: "10px", padding: "10px" }
-const inputStyle = { padding: "12px", border: "1px solid #333", background: "#000", color: "white" }
-const buttonStyle = { padding: "12px", border: "none", fontWeight: "bold", cursor: "pointer" }
+const containerStyle = {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+}
+const formStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "10px",
+}
+const inputStyle = {
+    padding: "12px",
+    border: "1px solid #333",
+    background: "#000",
+    color: "white",
+}
+const buttonStyle = {
+    padding: "12px",
+    border: "none",
+    fontWeight: "bold",
+    cursor: "pointer",
+}
 const errorStyle = { color: "#ff4d4d", fontSize: "14px", textAlign: "center" }

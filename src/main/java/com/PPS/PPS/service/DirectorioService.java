@@ -186,6 +186,9 @@ public class DirectorioService {
                         .latitud(p.getUbicacion().getY())
                         .longitud(p.getUbicacion().getX())
                         .tipo("PROVEEDOR")
+                        .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
+                        .promedioEstrellas(0.0) // TODO: Mapear cuando ResenaRepository esté disponible
+                        .cantidadResenas(0) // TODO: Mapear cuando ResenaRepository esté disponible
                         .build())
                 .collect(Collectors.toList()));
 
@@ -200,10 +203,20 @@ public class DirectorioService {
                         .latitud(e.getUbicacion().getY())
                         .longitud(e.getUbicacion().getX())
                         .tipo("EMPRESA")
+                        .perfilCompleto(e.getLogoUrl() != null && !e.getLogoUrl().isEmpty())
+                        .promedioEstrellas(0.0) // TODO: Mapear cuando ResenaRepository esté disponible
+                        .cantidadResenas(0) // TODO: Mapear cuando ResenaRepository esté disponible
                         .build())
                 .collect(Collectors.toList()));
 
-        return resultados;
+        java.util.Comparator<PerfilRespuestaDto> rankingEmpresarialCriterio = java.util.Comparator
+                .comparing(PerfilRespuestaDto::isPerfilCompleto).reversed()
+                .thenComparing(java.util.Comparator.comparingDouble(PerfilRespuestaDto::getPromedioEstrellas).reversed())
+                .thenComparing(java.util.Comparator.comparingInt(PerfilRespuestaDto::getCantidadResenas).reversed());
+
+        return resultados.stream()
+                .sorted(rankingEmpresarialCriterio)
+                .collect(Collectors.toList());
     }
 
     public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {

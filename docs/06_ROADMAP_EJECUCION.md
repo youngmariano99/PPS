@@ -71,3 +71,16 @@ Este documento define el orden cronológico estricto de desarrollo para el Proye
   1. Crear Entidades para `alertas_empleo` y `notificaciones`.
   2. Inyectar la creación de notificaciones en los servicios anteriores (ej. alertar cuando una postulación es vista).
   3. Crear el contrato API en el Frontend (`/api/notificacionesApi.js`).
+
+---
+
+## MÓDULOS FUTUROS (Backlog de Escalamiento)
+
+### Evolución del Sistema de Reputación (Trabajos Completados)
+**Objetivo:** Utilizar el ciclo de vida real de una solicitud de servicio (específicamente el estado "COMPLETO") como un factor de mayor peso en el Algoritmo de Ranking de perfiles, recompensando con posicionamiento orgánico a quienes cierran el trato dentro de la plataforma.
+* **Beneficios Estratégicos:**
+  1. **Incentivo de Transacción:** Motiva a que los proveedores busquen empujar y completar el flujo formal de estados del sistema para ganar visibilidad gratuita.
+  2. **Auditoría Transparente:** Distinción clara entre leads generados y trabajos reales ejecutados.
+  3. **Resolución de Conflictos:** En caso de fricciones, la auditoría sobre la trazabilidad del estado hace más fácil la investigación preventiva y legal.
+  4. **Consolidación de las Reseñas:** Hace que las reseñas sean inobjetables y cobren muchísimo más valor al ir atadas a un servicio exitoso.
+  5. **Métrica Pública (Social Proof):** Habilita la posibilidad de mostrar métricas duras de trazabilidad en el portafolio (Ej. "150 trabajos completados registrados").

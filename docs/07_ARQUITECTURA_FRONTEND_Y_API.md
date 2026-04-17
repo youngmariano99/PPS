@@ -33,7 +33,7 @@ Todas las peticiones protegidas a Spring Boot deben inyectar automáticamente el
 ```javascript
 import { supabase } from './supabaseClient';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1'; // Ajustar según entorno
+const API_BASE_URL = 'https://pps-sk7p.onrender.com/api/v1'; // Ajustar según entorno
 
 export async function fetchConAuth(endpoint, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();

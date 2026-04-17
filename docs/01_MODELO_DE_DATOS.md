@@ -156,16 +156,20 @@ CREATE TABLE public.intenciones_contacto (
     usuario_interesado_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
     proveedor_contactado_id UUID REFERENCES public.perfiles_proveedor(id) ON DELETE CASCADE,
     empresa_contactada_id UUID REFERENCES public.perfiles_empresa(id) ON DELETE CASCADE,
+    direccion_ip TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_contacto_destino CHECK ((proveedor_contactado_id IS NOT NULL AND empresa_contactada_id IS NULL) OR (proveedor_contactado_id IS NULL AND empresa_contactada_id IS NOT NULL))
 );
 
 CREATE TABLE public.resenas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    intencion_contacto_id UUID NOT NULL UNIQUE REFERENCES public.intenciones_contacto(id) ON DELETE CASCADE, 
+    intencion_contacto_id UUID UNIQUE REFERENCES public.intenciones_contacto(id) ON DELETE CASCADE, 
+    solicitud_servicio_id UUID UNIQUE, 
+    trabajo_verificado BOOLEAN NOT NULL DEFAULT FALSE,
     estrellas NUMERIC(3, 2) NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5),
     comentario TEXT, respuesta_proveedor TEXT, fecha_respuesta TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_resena_origen CHECK ((intencion_contacto_id IS NOT NULL AND solicitud_servicio_id IS NULL) OR (intencion_contacto_id IS NULL AND solicitud_servicio_id IS NOT NULL))
 );
 CREATE TRIGGER trg_cooldown_resena BEFORE INSERT ON public.resenas FOR EACH ROW EXECUTE FUNCTION validar_cooldown_resena();
 
@@ -229,6 +233,13 @@ CREATE TRIGGER update_suscripciones_modtime BEFORE UPDATE ON public.suscripcione
 -- Propósito: Añadir foto de perfil al proveedor y soporte de visibilidad para portafolio.
 ALTER TABLE public.perfiles_proveedor ADD COLUMN foto_perfil_url TEXT;
 ALTER TABLE public.portafolios ADD COLUMN visible BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- [2026-04-17] Auditoría y Anti-Fraude en Contactos y Reseñas Duales
+ALTER TABLE public.intenciones_contacto ADD COLUMN direccion_ip TEXT;
+ALTER TABLE public.resenas ADD COLUMN solicitud_servicio_id UUID UNIQUE;
+ALTER TABLE public.resenas ADD COLUMN trabajo_verificado BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.resenas ALTER COLUMN intencion_contacto_id DROP NOT NULL;
+ALTER TABLE public.resenas ADD CONSTRAINT chk_resena_origen CHECK ((intencion_contacto_id IS NOT NULL AND solicitud_servicio_id IS NULL) OR (intencion_contacto_id IS NULL AND solicitud_servicio_id IS NOT NULL));
 ```
 
 ### 12. Extensión Multimedia (Consolidada + Degradación Suave)

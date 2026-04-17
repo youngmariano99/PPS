@@ -10,10 +10,13 @@ La plataforma equilibra una experiencia de usuario fluida con una seguridad estr
 * **El Cooldown de 24hs (Seguridad):** La creación de una reseña está protegida a nivel de base de datos por el Trigger `validar_cooldown_resena()`. 
 * **Regla para la IA:** En el Backend (Spring Boot), al capturar la excepción SQL lanzada por este trigger (`COOLDOWN_RESENA`), el `ResenaService` debe atraparla y lanzar una excepción de negocio personalizada (`CooldownException`) para que el controlador devuelva un HTTP 429 (Too Many Requests) o 400 (Bad Request) con un mensaje amigable al frontend.
 
-## 3. Moderación y Derecho a Réplica
-El sistema no otorga poder absoluto ni al cliente ni al proveedor.
+## 3. Moderación, Derecho a Réplica y Reseñas Duales (Modelo Amazon)
+El sistema no otorga poder absoluto ni al cliente ni al proveedor, y categoriza la autenticidad de las reseñas.
+* **Reseñas Duales:** Existen reseñas de "Baja Fricción" (originadas solo por un contacto, con `intencion_contacto_id`) y reseñas de "Alta Confianza" (originadas tras una contratación formal en la plataforma, con `solicitud_servicio_id`).
+* **Trabajo Verificado:** Si la reseña pertenece a una solicitud COMPLETADA o CANCELADA post-aceptación, el flag `trabajo_verificado` será TRUE y tendrá gran destaque visual.
 * **Inmutabilidad del Cliente:** Una vez que un cliente publica una reseña, no puede editarla (para evitar extorsiones).
 * **Derecho a Réplica:** El proveedor evaluado no puede borrar la reseña, pero TIENE el derecho a responderla públicamente una única vez actualizando el campo `respuesta_proveedor`.
+* **Escudo Anti-Fraude (Bloqueo IP):** Al crear una reseña, el Backend (Service) DEBE validar imperativamente que la `direccion_ip` del cliente que reseña NO sea idéntica a la IP desde la cual se registró o generó el proveedor evaluado. Si coincide, se lanzará una `ValidacionNegocioException` por Astroturfing / auto-promoción.
 * **Sistema de Reportes:** Si el proveedor considera que la reseña es fraudulenta (ej. no hubo servicio real), usa la tabla `reportes_resenas`.
 * **Regla para la IA:** El endpoint de creación de reportes debe exigir obligatoriamente un `motivo` y permitir opcionalmente una `evidencia_url` (ej. captura de pantalla alojada en Supabase Storage).
 

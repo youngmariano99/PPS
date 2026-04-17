@@ -79,7 +79,10 @@ public class SecurityConfig {
                 "Access-Control-Request-Headers",
                 "X-Framer-Preview",
                 "Cache-Control",
-                "X-User-Id"
+                "X-User-Id",
+                "x-user-id",
+                "apiversion",
+                "proxy-authorization"
         ));
 
         // IMPORTANT: allowCredentials(false) permite el uso de "*" en los orígenes

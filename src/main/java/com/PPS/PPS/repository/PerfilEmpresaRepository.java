@@ -7,10 +7,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UUID> {
+
+    Optional<PerfilEmpresa> findByUsuarioId(UUID usuarioId);
 
     @Query(value = "SELECT * FROM perfiles_empresa p " +
                    "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true", 

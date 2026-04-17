@@ -7,10 +7,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor, UUID> {
+
+    Optional<PerfilProveedor> findByUsuarioId(UUID usuarioId);
 
     /**
      * Busca proveedores dentro de un radio en metros desde un punto dado.

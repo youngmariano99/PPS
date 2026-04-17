@@ -130,7 +130,7 @@ export default function BuscadorDirectorioFinal(props) {
         try {
             // Buscar con radio máximo para tener todos los datos
             const res = await fetch(
-                `${api}/directorio/buscar?lat=${lat}&lon=${lon}&radioKm=100`
+                `${api}/directorio/buscar/mapa?lat=${lat}&lon=${lon}&radioKm=100`
             )
             if (res.ok) {
                 const data = await res.json()

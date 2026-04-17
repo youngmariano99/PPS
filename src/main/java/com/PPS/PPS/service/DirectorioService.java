@@ -37,6 +37,8 @@ public class DirectorioService {
 
     private static final Pattern VIDEO_PATTERN = Pattern.compile(
             "^(https?://)?(www\\.)?(youtube\\.com|youtu\\.be|instagram\\.com|tiktok\\.com|drive\\.google\\.com)/.*$");
+            
+    private static final double MAX_RADIO_METROS = 50000.0;
 
     @Transactional
     public PerfilProveedor crearPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
@@ -174,12 +176,28 @@ public class DirectorioService {
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<PerfilRespuestaDto> buscarCercanosLista(double lat, double lon, double radioKm, int page, int size) {
         double radioMetros = radioKm * 1000;
+        if (radioMetros > MAX_RADIO_METROS) {
+            radioMetros = MAX_RADIO_METROS;
+        }
+
         List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
-        resultados.addAll(proveedorRepository.buscarCercanos(lat, lon, radioMetros).stream()
+        List<UUID> idsCercanos = proveedorRepository.buscarIdsCercanos(lat, lon, radioMetros);
+        List<PerfilProveedor> proveedoresCrudos = idsCercanos.isEmpty() ? new ArrayList<>() : proveedorRepository.findByIdIn(idsCercanos);
+
+        // Batch Fetching: Extracción masiva para evitar N+1
+        List<UUID> usuarioIds = proveedoresCrudos.stream()
+                .map(p -> p.getUsuario().getId())
+                .collect(Collectors.toList());
+
+        java.util.Set<UUID> usuariosPremiumIds = suscripcionRepository
+                .findByUsuarioIdInAndEstado(usuarioIds, "ACTIVA").stream()
+                .map(s -> s.getUsuario().getId())
+                .collect(Collectors.toSet());
+
+        resultados.addAll(proveedoresCrudos.stream()
                 .map(p -> {
-                    boolean tieneSuscripcionActiva = suscripcionRepository
-                            .findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA").isPresent();
+                    boolean tieneSuscripcionActiva = usuariosPremiumIds.contains(p.getUsuario().getId());
 
                     return PerfilRespuestaDto.builder()
                         .id(p.getId())
@@ -226,9 +244,15 @@ public class DirectorioService {
     @Transactional(readOnly = true)
     public List<PerfilRespuestaDto> buscarCercanosMapa(double lat, double lon, double radioKm) {
         double radioMetros = radioKm * 1000;
+        if (radioMetros > MAX_RADIO_METROS) {
+            radioMetros = MAX_RADIO_METROS;
+        }
         List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
-        resultados.addAll(proveedorRepository.buscarCercanos(lat, lon, radioMetros).stream()
+        List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanos(lat, lon, radioMetros);
+        List<PerfilProveedor> proveedoresCrudos = proveedorIds.isEmpty() ? new ArrayList<>() : proveedorRepository.findByIdIn(proveedorIds);
+
+        resultados.addAll(proveedoresCrudos.stream()
                 .map(p -> PerfilRespuestaDto.builder()
                         .id(p.getId())
                         .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
@@ -246,7 +270,10 @@ public class DirectorioService {
                         .build())
                 .collect(Collectors.toList()));
 
-        resultados.addAll(empresaRepository.buscarCercanos(lat, lon, radioMetros).stream()
+        List<UUID> empresaIds = empresaRepository.buscarIdsCercanos(lat, lon, radioMetros);
+        List<PerfilEmpresa> empresasCrudas = empresaIds.isEmpty() ? new ArrayList<>() : empresaRepository.findByIdIn(empresaIds);
+
+        resultados.addAll(empresasCrudas.stream()
                 .map(e -> PerfilRespuestaDto.builder()
                         .id(e.getId())
                         .nombrePublico(e.getRazonSocial())

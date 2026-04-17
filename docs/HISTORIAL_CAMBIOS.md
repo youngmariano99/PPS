@@ -51,3 +51,12 @@
 * **Archivos Tocados:** `pom.xml`, `application.yml`, `CloudinaryConfig.java`
 * **Qué y Por Qué (1 oración clara):** Se añadió la dependencia `cloudinary-http44` y se creó `CloudinaryConfig` con sus variables de entorno en `application.yml` para posibilitar operaciones de gestión multimedia en backend.
 
+* **Fecha:** 2026-04-17
+* **Módulo/Tarea:** Sprint 2 / Auditoría de Arquitectura, CQS y N+1 Query
+* **Archivos Tocados:** `DirectorioController.java`, `DirectorioService.java`, `SuscripcionUsuarioRepository.java`, `ListadoProfesionales.jsx`, `BuscadorMapa.jsx`
+* **Qué y Por Qué (1 oración clara):** Se separó la vista estructurada (`/buscar/lista`) de la vista de mapa (`/buscar/mapa`) implementando el principio CQS, y se reparó una vulnerabilidad extrema de rendimiento (N+1 Query) en la serialización de suscripciones inyectando memoria por Batch Fetching con UUIDs en el `DirectorioService`.
+
+* **Fecha:** 2026-04-17
+* **Módulo/Tarea:** Refactorización Core / Blindaje de Rendimiento y Memoria (JPA + PostGIS)
+* **Archivos Tocados:** `PerfilProveedorRepository.java`, `PerfilEmpresaRepository.java`, `DirectorioService.java`
+* **Qué y Por Qué (1 oración clara):** Se re-inmplementaron las búsquedas geolocalizadas nativas aplicando una arquitectura de 2 pasos (`SELECT UUID` nativo + `@EntityGraph` JPQL) para erradicar totalmente las N+1 Queries ocultas (Lazy Loading) salvando latencia en alto tráfico, y se inyectó un `Hard Cap` estricto de 50km protegiendo a la JVM de fallos de memoria masivos por sobrecarga de peticiones.

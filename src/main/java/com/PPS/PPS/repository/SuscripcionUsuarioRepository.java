@@ -17,4 +17,9 @@ public interface SuscripcionUsuarioRepository extends JpaRepository<SuscripcionU
      * Requerido para procesar Webhooks.
      */
     Optional<SuscripcionUsuario> findByMpPreferenciaId(String mpPreferenciaId);
+
+    /**
+     * Resuelve problema de N+1 obteniendo las suscripciones en lote.
+     */
+    java.util.List<SuscripcionUsuario> findByUsuarioIdInAndEstado(java.util.List<UUID> usuarioIds, String estado);
 }

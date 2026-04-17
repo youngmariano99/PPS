@@ -15,10 +15,19 @@ public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UU
 
     Optional<PerfilEmpresa> findByUsuarioId(UUID usuarioId);
 
-    @Query(value = "SELECT * FROM perfiles_empresa p " +
+    /**
+     * Paso 1: Busca IDs usando PostGIS puro para performance.
+     */
+    @Query(value = "SELECT CAST(p.id AS VARCHAR) FROM perfiles_empresa p " +
                    "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true", 
            nativeQuery = true)
-    List<PerfilEmpresa> buscarCercanos(@Param("lat") double lat, 
-                                      @Param("lon") double lon, 
-                                      @Param("radioMetros") double radioMetros);
+    List<UUID> buscarIdsCercanos(@Param("lat") double lat, 
+                                 @Param("lon") double lon, 
+                                 @Param("radioMetros") double radioMetros);
+
+    /**
+     * Paso 2: Carga las entidades vinculadas en 1 sola consulta (LEFT JOIN FETCH automático).
+     */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"usuario", "rubroPrincipal"})
+    List<PerfilEmpresa> findByIdIn(List<UUID> ids);
 }

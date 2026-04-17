@@ -16,13 +16,18 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
     Optional<PerfilProveedor> findByUsuarioId(UUID usuarioId);
 
     /**
-     * Busca proveedores dentro de un radio en metros desde un punto dado.
-     * Utiliza ST_DWithin de PostGIS para precisión geográfica.
+     * Paso 1: Busca IDs usando PostGIS puro para performance.
      */
-    @Query(value = "SELECT * FROM perfiles_proveedor p " +
+    @Query(value = "SELECT CAST(p.id AS VARCHAR) FROM perfiles_proveedor p " +
                    "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true", 
            nativeQuery = true)
-    List<PerfilProveedor> buscarCercanos(@Param("lat") double lat, 
-                                        @Param("lon") double lon, 
-                                        @Param("radioMetros") double radioMetros);
+    List<UUID> buscarIdsCercanos(@Param("lat") double lat, 
+                                 @Param("lon") double lon, 
+                                 @Param("radioMetros") double radioMetros);
+
+    /**
+     * Paso 2: Carga las entidades vinculadas en 1 sola consulta (LEFT JOIN FETCH automático).
+     */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"usuario", "rubroPrincipal"})
+    List<PerfilProveedor> findByIdIn(List<UUID> ids);
 }

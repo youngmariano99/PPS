@@ -5,13 +5,39 @@ import { addPropertyControls, ControlType } from "framer"
 export default function ListadoProfesionales(props) {
     const { apiUrl, defaultLat, defaultLon, radioKm } = props
 
-    // Estados
+    // Estados Core
     const [rubros, setRubros] = useState([{ id: "todos", nombre: "Todos" }])
     const [rubroActivo, setRubroActivo] = useState("todos")
     const [profesionales, setProfesionales] = useState([])
     const [cargando, setCargando] = useState(false)
     const [paginaActual, setPaginaActual] = useState(0)
     const [haLlegadoAlFinal, setHaLlegadoAlFinal] = useState(false)
+
+    // Estados Geometría / GPS
+    const [usarCercanos, setUsarCercanos] = useState(true)
+    const [coordenadas, setCoordenadas] = useState({ lat: defaultLat, lon: defaultLon })
+    const [gpsPermitido, setGpsPermitido] = useState(null)
+
+    // 0. Motor GPS al montar Componente
+    useEffect(() => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setCoordenadas({
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                    })
+                    setGpsPermitido(true)
+                },
+                (err) => {
+                    // Si bloquea / falla, usamos las globales por defecto
+                    setGpsPermitido(false)
+                }
+            )
+        } else {
+            setGpsPermitido(false)
+        }
+    }, [defaultLat, defaultLon])
 
     // 1. Fetch de Rubros al montar
     useEffect(() => {
@@ -31,14 +57,14 @@ export default function ListadoProfesionales(props) {
         fetchRubros()
     }, [apiUrl])
 
-    // 2. Fetch de Profesionales al cambiar Rubro o Página (Paginación Dinámica)
+    // 2. Fetch de Profesionales
     useEffect(() => {
         const fetchProfesionales = async () => {
             setCargando(true)
             try {
-                // Actualmente el endpoint original requiere lat, lon y radioKm. 
-                // Añadimos rubro y página de forma preventiva para cuando el backend los soporte.
-                let queryUrl = `${apiUrl}/directorio/buscar/lista?lat=${defaultLat}&lon=${defaultLon}&radioKm=${radioKm}&page=${paginaActual}`
+                const radioEfectivo = usarCercanos ? radioKm : 99999;
+                
+                let queryUrl = `${apiUrl}/directorio/buscar/lista?lat=${coordenadas.lat}&lon=${coordenadas.lon}&radioKm=${radioEfectivo}&page=${paginaActual}`
                 if (rubroActivo !== "todos") {
                     queryUrl += `&rubro=${encodeURIComponent(rubroActivo)}`
                 }
@@ -50,15 +76,15 @@ export default function ListadoProfesionales(props) {
                     // Aseguramos que data sea un array
                     const nuevosResultados = Array.isArray(data) ? data : (data.content || [])
 
-                    if (nuevosResultados.length === 0) {
+                    // Si vienen menos de la cantidad solicitada (8), llegamos al final
+                    if (nuevosResultados.length < 8) {
                         setHaLlegadoAlFinal(true)
+                    } else {
+                        setHaLlegadoAlFinal(false)
                     }
 
-                    if (paginaActual === 0) {
-                        setProfesionales(nuevosResultados)
-                    } else {
-                        setProfesionales((prev) => [...prev, ...nuevosResultados])
-                    }
+                    // Reemplazamos la página entera en lugar de hacer append
+                    setProfesionales(nuevosResultados)
                 }
             } catch (err) {
                 console.error("Error cargando directorio:", err)
@@ -68,12 +94,18 @@ export default function ListadoProfesionales(props) {
         }
 
         fetchProfesionales()
-    }, [apiUrl, defaultLat, defaultLon, radioKm, rubroActivo, paginaActual])
+    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual, usarCercanos])
 
     // Handlers
     const handleRubroClick = (rubroId) => {
         setRubroActivo(rubroId)
-        setPaginaActual(0) // Reiniciamos paginación
+        setPaginaActual(0)
+        setHaLlegadoAlFinal(false)
+    }
+
+    const handleToggleCercanos = () => {
+        setUsarCercanos(!usarCercanos)
+        setPaginaActual(0)
         setHaLlegadoAlFinal(false)
     }
 
@@ -104,6 +136,20 @@ export default function ListadoProfesionales(props) {
         return coloresPasteles[index]
     }
 
+    const calcularDistanciaMetros = (lat1, lon1, lat2, lon2) => {
+        if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+        const R = 6371e3; // Radio de la Tierra en metros
+        const p1 = lat1 * Math.PI / 180;
+        const p2 = lat2 * Math.PI / 180;
+        const dp = (lat2 - lat1) * Math.PI / 180;
+        const dl = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dp/2) * Math.sin(dp/2) +
+                  Math.cos(p1) * Math.cos(p2) *
+                  Math.sin(dl/2) * Math.sin(dl/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return Math.floor(R * c);
+    }
+
     // Estilos base en objetos (Framer components adoran flexboxes y estilos en línea limpios)
     const containerStyle = {
         width: "100%",
@@ -125,13 +171,34 @@ export default function ListadoProfesionales(props) {
     }
 
     const gridStyle = {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-        gap: "24px"
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "24px",
+        justifyContent: "flex-start"
     }
 
     return (
         <div style={containerStyle}>
+            {/* Control GPS / Cercanía */}
+            <div style={{ padding: "16px", backgroundColor: "#F9FAFB", borderRadius: "12px", border: "1px solid #E5E7EB", marginBottom: "8px" }}>
+                <label style={{ display: "flex", alignItems: "center", cursor: "pointer", gap: "10px", fontWeight: "600", color: "#111827", fontSize: "15px" }}>
+                    <input 
+                        type="checkbox" 
+                        checked={usarCercanos} 
+                        onChange={handleToggleCercanos}
+                        style={{ width: "20px", height: "20px", accentColor: "#6366F1" }}
+                    />
+                    📍 Mostrar solo proveedores cercanos a mí ({radioKm}km)
+                </label>
+                
+                {/* Fallback de ubicación */}
+                {usarCercanos && gpsPermitido === false && (
+                    <p style={{ margin: "8px 0 0 30px", fontSize: "13px", color: "#D97706" }}>
+                        ⚠️ No detectamos tu ubicación. Mostrando referencia general.
+                    </p>
+                )}
+            </div>
+
             {/* Cabecera / Filtros (Pills) */}
             <div style={pillsContainerStyle}>
                 {rubros.map((rubro) => {
@@ -169,6 +236,9 @@ export default function ListadoProfesionales(props) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                         style={{
+                            flex: "1 1 calc(25% - 24px)", // Fuerza 4 columnas, restando el gap
+                            minWidth: "240px",            // Evita colapso en móviles
+                            maxWidth: "calc(25% - 24px)", // Previene que se estiren de más si sobran espacios
                             backgroundColor: "#FFFFFF",
                             borderRadius: "16px",
                             padding: "20px",
@@ -253,21 +323,28 @@ export default function ListadoProfesionales(props) {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
                             {/* ESTRELLAS Y RESEÑAS */}
                             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span style={{ color: "#F59E0B", fontSize: "16px" }}>★</span>
-                                <span style={{ fontWeight: "700", color: "#111827" }}>
-                                    {prof.promedioEstrellas ? prof.promedioEstrellas.toFixed(1) : "5.0"}
+                                <span style={{ color: prof.cantidadResenas > 0 ? "#F59E0B" : "#D1D5DB", fontSize: "16px" }}>★</span>
+                                <span style={{ fontWeight: "700", color: prof.cantidadResenas > 0 ? "#111827" : "#9CA3AF" }}>
+                                    {prof.cantidadResenas > 0 && prof.promedioEstrellas ? prof.promedioEstrellas.toFixed(1) : "0.0"}
                                 </span>
                                 <span style={{ color: "#9CA3AF" }}>
                                     ({prof.cantidadResenas || 0})
                                 </span>
                             </div>
-                            {/* UBICACIÓN */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#6B7280" }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                    <circle cx="12" cy="10" r="3"></circle>
-                                </svg>
-                                {prof.ciudad || "Global"}
+                            {/* UBICACIÓN Y DISTANCIA */}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", color: "#6B7280" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    {prof.ciudad || "Global"}
+                                </div>
+                                {usarCercanos && gpsPermitido && prof.latitud && prof.longitud && (
+                                    <span style={{ fontSize: "11px", fontWeight: "600", color: "#10B981" }}>
+                                        A {calcularDistanciaMetros(coordenadas.lat, coordenadas.lon, prof.latitud, prof.longitud)}m de ti
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -309,26 +386,49 @@ export default function ListadoProfesionales(props) {
                 </div>
             )}
 
-            {/* Paginación */}
-            {!cargando && !haLlegadoAlFinal && profesionales.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "center", marginTop: "16px" }}>
+            {/* Paginación Tradicional (Reemplazo) */}
+            {!cargando && profesionales.length > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", padding: "0 20px" }}>
                     <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleCargarMas}
+                        whileHover={paginaActual > 0 ? { scale: 1.05 } : {}}
+                        whileTap={paginaActual > 0 ? { scale: 0.95 } : {}}
+                        onClick={() => setPaginaActual(p => p - 1)}
+                        disabled={paginaActual === 0}
                         style={{
-                            padding: "12px 24px",
-                            backgroundColor: "#FFFFFF",
+                            padding: "10px 20px",
+                            backgroundColor: paginaActual === 0 ? "#F3F4F6" : "#FFFFFF",
                             border: "1px solid #E5E7EB",
                             borderRadius: "9999px",
-                            color: "#111827",
+                            color: paginaActual === 0 ? "#9CA3AF" : "#111827",
                             fontWeight: "600",
                             fontSize: "14px",
-                            cursor: "pointer",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                            cursor: paginaActual === 0 ? "not-allowed" : "pointer"
                         }}
                     >
-                        Ver más proveedores →
+                        ← Anterior
+                    </motion.button>
+                    
+                    <span style={{ fontSize: "14px", fontWeight: "600", color: "#6B7280" }}>
+                        Página {paginaActual + 1}
+                    </span>
+
+                    <motion.button
+                        whileHover={!haLlegadoAlFinal ? { scale: 1.05 } : {}}
+                        whileTap={!haLlegadoAlFinal ? { scale: 0.95 } : {}}
+                        onClick={() => setPaginaActual(p => p + 1)}
+                        disabled={haLlegadoAlFinal}
+                        style={{
+                            padding: "10px 20px",
+                            backgroundColor: haLlegadoAlFinal ? "#F3F4F6" : "#FFFFFF",
+                            border: "1px solid #E5E7EB",
+                            borderRadius: "9999px",
+                            color: haLlegadoAlFinal ? "#9CA3AF" : "#111827",
+                            fontWeight: "600",
+                            fontSize: "14px",
+                            cursor: haLlegadoAlFinal ? "not-allowed" : "pointer"
+                        }}
+                    >
+                        Siguiente →
                     </motion.button>
                 </div>
             )}

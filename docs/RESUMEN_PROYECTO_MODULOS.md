@@ -37,8 +37,10 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 - **Motor Espacial:** Búsquedas por radio de cercanía utilizando `ST_DWithin` (SRID 4326).
 - **Geocoding Integrado:** Uso de **Nominatim** para convertir direcciones en coordenadas `Point` de JTS al guardar perfiles.
 - **Refactorización CQS (Command Query Separation):**
-    - `/buscar/lista`: Vista paginada y ordenada por ranking (Premium > Completo > Estrellas).
-    - `/buscar/mapa`: Vista masiva optimizada para renderizado rápido de puntos.
+    - `/buscar/lista`: Vista paginada de alto rendimiento. Implementa una arquitectura de 2 pasos: primero se filtran y ordenan los IDs mediante SQL nativo (PostGIS) y luego se cargan las entidades completas con `@EntityGraph`.
+    - `/buscar/mapa`: Vista masiva optimizada para renderizado rápido de puntos, sin paginación.
+- **Ranking Geográfico Premium:** Implementación de un algoritmo de ranking híbrido (SQL + Java) que prioriza explícitamente el plan **Premium**, seguido por la distancia geográfica y reputación.
+- **Paginación del Lado del Servidor:** Integración completa de `Pageable` para manejar miles de registros sin degradación de rendimiento en el frontend.
 - **Blindaje de Rendimiento:** Eliminación de vulnerabilidades **N+1 Query** mediante Batch Fetching de suscripciones y consultas nativas de IDs seguidas de `@EntityGraph`.
 - **Hard Cap de Seguridad:** Límite estricto de 50km en búsquedas para prevenir ataques DoS por carga de memoria.
 
@@ -70,9 +72,9 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 
 1.  **Arquitectura Limpia:** Estructuración de paquetes siguiendo principios SOLID y Clean Architecture.
 2.  **Lógica en Español:** Todo el dominio de negocio (`Rubro`, `PerfilProveedor`, `DirectorioService`) está codificado en Español Latinoamericano.
-3.  **Optimización Extrema:** Implementación de un `Hard Cap` de 50km en búsquedas para proteger la memoria de la JVM.
-4.  **UI/UX Premium:** Desarrollo de componentes reactivos en Framer que permiten visualizar proveedores en tiempo real sobre el mapa con filtrado dinámico.
-5.  **Persistencia Robusta:** Esquema de base de datos que soporta perfiles duales (Empresas y Proveedores) compartiendo una base de geolocalización común.
+3.  **Optimización Extrema:** Implementación de un `Hard Cap` de 50km en búsquedas y arquitectura de paginación eficiente que reduce el tráfico de red y el consumo de memoria.
+4.  **UI/UX Premium en Framer:** Desarrollo de componentes reactivos con soporte para grilla dinámica (2-3 columnas), modo compacto profesional, fondos transparentes y filtros sincronizados con el backend.
+5.  **Persistencia Robusta:** Esquema de base de datos que soporta perfiles duales (Empresas y Proveedores) compartiendo una base de geolocalización común y gestión estricta de planes de suscripción.
 
 ---
 

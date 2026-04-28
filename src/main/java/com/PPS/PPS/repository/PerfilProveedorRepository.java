@@ -25,8 +25,8 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
                    "LEFT JOIN planes_suscripcion pl ON s.plan_id = pl.id " +
                    "LEFT JOIN rubros r ON p.rubro_principal_id = r.id " +
                    "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true " +
-                   "AND (:rubro IS NULL OR r.nombre ILIKE :rubro OR p.rubro_personalizado ILIKE :rubro) " +
-                   "ORDER BY (CASE WHEN pl.nombre ILIKE 'Premium' THEN 0 ELSE 1 END) ASC, " +
+                   "AND (:rubro IS NULL OR r.nombre ILIKE CONCAT('%', :rubro, '%') OR p.rubro_personalizado ILIKE CONCAT('%', :rubro, '%')) " +
+                   "ORDER BY (CASE WHEN pl.nombre ILIKE 'Premium' OR pl.nombre ILIKE 'PRO' THEN 0 ELSE 1 END) ASC, " +
                    "ST_Distance(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326)) ASC", 
            nativeQuery = true)
     List<UUID> buscarIdsCercanosOrdenados(@Param("lat") double lat, 

@@ -1,45 +1,44 @@
 # HISTORIAL DE CAMBIOS
 
 * **Fecha:** 2026-04-14
-* **MÃ³dulo/Tarea:** Sprint 0 / ConfiguraciÃ³n Base (Cimientos y Setup Inicial)
+* **Módulo/Tarea:** Sprint 0 / Configuración Base (Cimientos y Setup Inicial)
 * **Archivos Tocados:** `pom.xml`, `application.yml`, `OpenApiConfig.java`, `ErrorRespuestaDto.java`, `ManejadorGlobalExcepciones.java`, `RecursoNoEncontradoException.java`, `ValidacionNegocioException.java`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se estableciÃ³ la base del proyecto configurando PostGIS, Swagger con JWT y un manejador global de excepciones para estandarizar las respuestas del backend.
+* **Qué y Por Qué (1 oración clara):** Se estableció la base del proyecto configurando PostGIS, Swagger con JWT y un manejador global de excepciones para estandarizar las respuestas del backend.
 
 * **Fecha:** 2026-04-14
-* **MÃ³dulo/Tarea:** Sprint 1 / Seguridad y Usuarios (AutenticaciÃ³n y Perfiles Base)
+* **Módulo/Tarea:** Sprint 1 / Seguridad y Usuarios (Autenticación y Perfiles Base)
 * **Archivos Tocados:** `application.yml`, `Usuario.java`, `UsuarioRepository.java`, `AuthService.java`, `AuthController.java`, `RegistroSolicitudDto.java`, `LoginSolicitudDto.java`, `AuthRespuestaDto.java`, `authApi.js`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se implementÃ³ el flujo de registro y login integrando Supabase Auth (GoTrue) y sincronizando el UUID con la base de datos local, junto con sus contratos API para el frontend.
+* **Qué y Por Qué (1 oración clara):** Se implementó el flujo de registro y login integrando Supabase Auth (GoTrue) y sincronizando el UUID con la base de datos local, junto con sus contratos API para el frontend.
 
 * **Fecha:** 2026-04-14
-* **MÃ³dulo/Tarea:** Mantenimiento / EstabilizaciÃ³n de Arquitectura Backend
+* **Módulo/Tarea:** Mantenimiento / Estabilización de Arquitectura Backend
 * **Archivos Tocados:** `pom.xml`, `application.yml`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se migrÃ³ a Spring Boot 3.4.4 y se corrigieron nombres de starters oficiales para resolver conflictos de dependencias (Hibernate 6) y asegurar la compatibilidad con el ecosistema de Supabase y PostGIS.
+* **Qué y Por Qué (1 oración clara):** Se migró a Spring Boot 3.4.4 y se corrigieron nombres de starters oficiales para resolver conflictos de dependencias (Hibernate 6) y asegurar la compatibilidad con el ecosistema de Supabase y PostGIS.
 
 * **Fecha:** 2026-04-14
-* **MÃ³dulo/Tarea:** Debugging / RefactorizaciÃ³n de AuthService (Login)
+* **Módulo/Tarea:** Debugging / Refactorización de AuthService (Login)
 * **Archivos Tocados:** `AuthService.java`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se corrigiÃ³ un error 500 (NPE) mediante validaciones de nulidad en la respuesta de Supabase y se subsanÃ³ un error de compilaciÃ³n en el manejador de estados de RestClient, mejorando la transparencia de los mensajes de error para el usuario final.
+* **Qué y Por Qué (1 oración clara):** Se corrigió un error 500 (NPE) mediante validaciones de nulidad en la respuesta de Supabase y se subsanó un error de compilación en el manejador de estados de RestClient, mejorando la transparencia de los mensajes de error para el usuario final.
 
 * **Fecha:** 2026-04-14
-* **MÃ³dulo/Tarea:** Sprint 2 / Directorio y GeolocalizaciÃ³n (Core Marketplace)
+* **Módulo/Tarea:** Sprint 2 / Directorio y Geolocalización (Core Marketplace)
 * **Archivos Tocados:** `GeometryConfig.java`, `Rubro.java`, `PerfilProveedor.java`, `PerfilEmpresa.java`, `GeocodingService.java`, `DirectorioService.java`, `PerfilController.java`, `DirectorioController.java`, `directorioApi.js`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se implementÃ³ el motor de geoposicionamiento integrando PostGIS y Nominatim, permitiendo la creaciÃ³n de perfiles con coordenadas reales y la bÃºsqueda de servicios por radio de cercanÃ­a.
+* **Qué y Por Qué (1 oración clara):** Se implementó el motor de geoposicionamiento integrando PostGIS y Nominatim, permitiendo la creación de perfiles con coordenadas reales y la búsqueda de servicios por radio de cercanía.
 
 * **Fecha:** 2026-04-14
-* **MÃ³dulo/Tarea:** Debugging / EstabilizaciÃ³n de Registro y CORS
+* **Módulo/Tarea:** Debugging / Estabilización de Registro y CORS
 * **Archivos Tocados:** `AuthService.java`, `RestClientConfig.java`, `FormularioLogin.jsx`, `FormularioRegistro.jsx`, `FormularioPerfilEmpresa.jsx`, `FormularioPerfilProveedor.jsx`, `BuscadorMapa.jsx`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se resolviÃ³ el error 422 en el registro al robustecer la extracciÃ³n del ID de Supabase (soportando anidaciÃ³n en "user") y se eliminaron bloqueos de CORS mediante URLs absolutas y cabeceras de autorizaciÃ³n Bearer.
+* **Qué y Por Qué (1 oración clara):** Se resolvió el error 422 en el registro al robustecer la extracción del ID de Supabase (soportando anidación en "user") y se eliminaron bloqueos de CORS mediante URLs absolutas y cabeceras de autorización Bearer.
 
 * **Fecha:** 2026-04-15
-* **MÃ³dulo/Tarea:** Sprint 3 / MembresÃ­as y Suscripciones (Fase de DiseÃ±o MP)
+* **Módulo/Tarea:** Sprint 3 / Membresías y Suscripciones (Fase de Diseño MP)
 * **Archivos Tocados:** `docs/modulos/sprint_3_suscripciones_mp.md`
-* **QuÃ© y Por QuÃ© (1 oraciÃ³n clara):** Se documentÃ³ el flujo transaccional inicial y la arquitectura de integraciÃ³n con el Sandbox de Mercado Pago para permitir perfiles destacados en la plataforma.
+* **Qué y Por Qué (1 oración clara):** Se documentó el flujo transaccional inicial y la arquitectura de integración con el Sandbox de Mercado Pago para permitir perfiles destacados en la plataforma.
 
 * **Fecha:** 2026-04-15
-* **Mï¿½dulo/Tarea:** Sprint 3 / Persistencia de Suscripciones
+* **Módulo/Tarea:** Sprint 3 / Persistencia de Suscripciones
 * **Archivos Tocados:** `01_MODELO_DE_DATOS.md`, `docs/modulos/sprint_3_suscripciones_mp.md`
-* **Quï¿½ y Por Quï¿½ (1 oraciï¿½n clara):** Se crearon las tablas `planes_suscripcion` y `suscripciones_usuario` para la persistencia de Mercado Pago.
-
+* **Qué y Por Qué (1 oración clara):** Se crearon las tablas `planes_suscripcion` y `suscripciones_usuario` para la persistencia de Mercado Pago.
 
 * **Fecha:** 2026-04-15
 * **Módulo/Tarea:** Sprint 3 / Integración y Arquitectura Final de Suscripciones
@@ -60,3 +59,8 @@
 * **Módulo/Tarea:** Refactorización Core / Blindaje de Rendimiento y Memoria (JPA + PostGIS)
 * **Archivos Tocados:** `PerfilProveedorRepository.java`, `PerfilEmpresaRepository.java`, `DirectorioService.java`
 * **Qué y Por Qué (1 oración clara):** Se re-inmplementaron las búsquedas geolocalizadas nativas aplicando una arquitectura de 2 pasos (`SELECT UUID` nativo + `@EntityGraph` JPQL) para erradicar totalmente las N+1 Queries ocultas (Lazy Loading) salvando latencia en alto tráfico, y se inyectó un `Hard Cap` estricto de 50km protegiendo a la JVM de fallos de memoria masivos por sobrecarga de peticiones.
+
+* **Fecha:** 2026-04-28
+* **Módulo/Tarea:** Optimización de Ranking y Paginación (Fase de Producción)
+* **Archivos Tocados:** `DirectorioController.java`, `DirectorioService.java`, `PerfilProveedorRepository.java`, `PerfilRespuestaDto.java`, `ListadoProfesionales.jsx`
+* **Qué y Por Qué (1 oración clara):** Se implementó la paginación del lado del servidor y se unificó el ranking (Premium > Distancia) mediante una consulta SQL nativa optimizada y un refuerzo en Java, junto con un rediseño compacto y profesional del listado en Framer para soportar grillas multi-columna.

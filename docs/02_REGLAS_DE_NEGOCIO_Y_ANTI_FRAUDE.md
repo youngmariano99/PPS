@@ -38,10 +38,10 @@ Para maximizar la eficiencia en el proceso de reclutamiento:
 ## 6. Algoritmo de Ranking y Geolocalización (PostGIS)
 El orden en que se muestran los proveedores en el buscador no es al azar.
 * **Distancia Real:** El primer filtro siempre es espacial. La IA debe usar Hibernate Spatial y consultas como `ST_DWithin` para traer perfiles dentro de un radio en kilómetros basado en la ubicación (`GEOGRAPHY(Point, 4326)`).
-* **Ponderación de Relevancia (Cascada de 5 Niveles):** Una vez filtrados por distancia, el orden (`ORDER BY` en memoria) aplica estrictamente este orden:
-  1.  **Suscripción (isDestacado):** Los planes Premium siempre encabezan la lista.
-  2.  **Calidad (Promedio de Estrellas):** Reputación basada en reseñas verificadas.
-  3.  **Proximidad:** El sistema prioriza al profesional más cercano ante igual calidad.
+* **Ponderación de Relevancia (Cascada de 5 Niveles):** Una vez filtrados por distancia, el orden (`ORDER BY` nativo + Sort Java) aplica estrictamente este orden:
+  1.  **Suscripción Premium (Excluyente):** Los usuarios con plan 'Premium' ACTIVO siempre encabezan la lista, sin importar la distancia (dentro del radio).
+  2.  **Proximidad:** El sistema prioriza al profesional más cercano ante igual categoría de suscripción.
+  3.  **Calidad (Promedio de Estrellas):** Reputación basada en reseñas verificadas.
   4.  **Confianza Visual (isPerfilCompleto):** Perfiles con foto sobre los anónimos.
   5.  **Cantidad de Reseñas:** Volumen de trabajo verificado (desempate final).
 

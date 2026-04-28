@@ -229,7 +229,8 @@ public class DirectorioService {
 
         java.util.Set<UUID> usuariosPremiumIds = suscripcionRepository
                 .findByUsuarioIdInAndEstado(usuarioIds, "ACTIVA").stream()
-                .filter(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
+                .filter(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                             s.getPlan().getNombre().equalsIgnoreCase("PRO"))
                 .map(s -> s.getUsuario().getId())
                 .collect(Collectors.toSet());
 

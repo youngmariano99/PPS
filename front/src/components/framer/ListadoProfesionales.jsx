@@ -71,9 +71,12 @@ export default function ListadoProfesionales(props) {
         const fetchProfesionales = async () => {
             setCargando(true)
             try {
-                // Ahora usamos el radio real elegido por el usuario y la página actual
+                // Si 'Solo cercanos' está desactivado, enviamos un radio grande (50km es nuestro cap en backend)
+                // para que aparezcan todos los profesionales y el ranking premium funcione globalmente.
+                const radioFinal = usarCercanos ? radioKm : 50
+                
                 const base = (apiUrl || "").replace(/\/+$/, "")
-                let queryUrl = `${base}/directorio/buscar/lista?lat=${coordenadas.lat}&lon=${coordenadas.lon}&radioKm=${radioKm}&page=${paginaActual}&size=${ITEMS_POR_PAGINA}`
+                let queryUrl = `${base}/directorio/buscar/lista?lat=${coordenadas.lat}&lon=${coordenadas.lon}&radioKm=${radioFinal}&page=${paginaActual}&size=${ITEMS_POR_PAGINA}`
                 
                 if (rubroActivo !== "todos") {
                     queryUrl += `&rubro=${encodeURIComponent(rubroActivo)}`
@@ -96,7 +99,7 @@ export default function ListadoProfesionales(props) {
         }
 
         fetchProfesionales()
-    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual])
+    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual, usarCercanos])
 
     // 3. Ya no usamos relleno de placeholders para una UX más limpia
     useEffect(() => {

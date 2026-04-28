@@ -16,7 +16,8 @@ El sistema no otorga poder absoluto ni al cliente ni al proveedor, y categoriza 
 * **Trabajo Verificado:** Si la reseña pertenece a una solicitud COMPLETADA o CANCELADA post-aceptación, el flag `trabajo_verificado` será TRUE y tendrá gran destaque visual.
 * **Inmutabilidad del Cliente:** Una vez que un cliente publica una reseña, no puede editarla (para evitar extorsiones).
 * **Derecho a Réplica:** El proveedor evaluado no puede borrar la reseña, pero TIENE el derecho a responderla públicamente una única vez actualizando el campo `respuesta_proveedor`.
-* **Escudo Anti-Fraude (Bloqueo IP):** Al crear una reseña, el Backend (Service) DEBE validar imperativamente que la `direccion_ip` del cliente que reseña NO sea idéntica a la IP desde la cual se registró o generó el proveedor evaluado. Si coincide, se lanzará una `ValidacionNegocioException` por Astroturfing / auto-promoción.
+* **Escudo Anti-Fraude (Bloqueo IP):** Al crear una reseña, el Backend (`ResenaService`) valida que la `direccion_ip` del cliente NO sea idéntica a la IP del proveedor evaluado. 
+    *   *Estado:* Implementado. Actualmente utiliza stubs para la IP del proveedor hasta completar la integración con el sistema de logs de acceso.
 * **Sistema de Reportes:** Si el proveedor considera que la reseña es fraudulenta (ej. no hubo servicio real), usa la tabla `reportes_resenas`.
 * **Regla para la IA:** El endpoint de creación de reportes debe exigir obligatoriamente un `motivo` y permitir opcionalmente una `evidencia_url` (ej. captura de pantalla alojada en Supabase Storage).
 
@@ -37,18 +38,20 @@ Para maximizar la eficiencia en el proceso de reclutamiento:
 ## 6. Algoritmo de Ranking y Geolocalización (PostGIS)
 El orden en que se muestran los proveedores en el buscador no es al azar.
 * **Distancia Real:** El primer filtro siempre es espacial. La IA debe usar Hibernate Spatial y consultas como `ST_DWithin` para traer perfiles dentro de un radio en kilómetros basado en la ubicación (`GEOGRAPHY(Point, 4326)`).
-* **Ponderación de Relevancia:** Una vez filtrados por distancia, el orden (ORDER BY) debe considerar:
-  1. Promedio de estrellas en `resenas`.
-  2. Cantidad total de reseñas (para desempatar o premiar trayectoria).
-  3. Perfil completo (si tiene portafolio o no).
+* **Ponderación de Relevancia (Cascada de 5 Niveles):** Una vez filtrados por distancia, el orden (`ORDER BY` en memoria) aplica estrictamente este orden:
+  1.  **Suscripción (isDestacado):** Los planes Premium siempre encabezan la lista.
+  2.  **Calidad (Promedio de Estrellas):** Reputación basada en reseñas verificadas.
+  3.  **Proximidad:** El sistema prioriza al profesional más cercano ante igual calidad.
+  4.  **Confianza Visual (isPerfilCompleto):** Perfiles con foto sobre los anónimos.
+  5.  **Cantidad de Reseñas:** Volumen de trabajo verificado (desempate final).
 
 ## 7. Gestión Multimedia y Límites por Suscripción
 La plataforma monetiza mediante la visibilidad y capacidad de portafolio, protegiendo al mismo tiempo el almacenamiento del servidor y el esfuerzo del usuario.
 
 * **Suscripción como Única Fuente de Verdad:** Está estrictamente PROHIBIDO usar flags estáticos en la tabla de usuarios. El sistema DEBE consultar en tiempo real la tabla `suscripciones_usuario` filtrando por `estado = 'ACTIVA'`.
 * **Preservación de Datos (Graceful Downgrade):** Si un usuario Premium cancela su plan, sus recursos (hasta 20) NO se eliminan. Se mantienen en la base de datos para facilitar el regreso al plan de pago.
-* **Límites de Visibilidad Pública:** 
-    * **Premium:** Se muestran todas las fotos cargadas.
-    * **Gratuito:** Solo se muestran **5 fotos** del portafolio que tengan el flag `visible = true`. 
-* **Selección de Visibilidad:** El sistema debe permitir al usuario Gratuito elegir qué 5 fotos mostrar de su pool de fotos históricas. Por defecto, si el usuario no elige, se muestran las 5 más recientes.
+* **Límites de Visibilidad Pública (S4 - Validado):** 
+    * **Premium:** Se muestran todas las fotos cargadas (límite 20).
+    * **Gratuito:** Solo se muestran **5 fotos** del portafolio.
+* **Validación de Dominios de Video:** Solo se permiten enlaces de YouTube, TikTok, Instagram y Google Drive (validado por `VIDEO_PATTERN` en el Service).
 * **Regla para la IA:** El `DirectorioService` es el responsable de aplicar estos filtros de visibilidad en las consultas públicas.

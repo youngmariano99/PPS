@@ -17,14 +17,17 @@ public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UU
     Optional<PerfilEmpresa> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
     /**
-     * Paso 1: Busca IDs usando PostGIS puro para performance.
+     * Busca IDs cercanos aplicando un ranking inicial por Suscripción Premium y Distancia.
      */
     @Query(value = "SELECT CAST(p.id AS VARCHAR) FROM perfiles_empresa p " +
-                   "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true", 
+                   "LEFT JOIN suscripciones_usuario s ON p.usuario_id = s.usuario_id AND s.estado = 'ACTIVA' " +
+                   "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true " +
+                   "ORDER BY (s.id IS NOT NULL) DESC, " +
+                   "ST_Distance(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326)) ASC", 
            nativeQuery = true)
-    List<UUID> buscarIdsCercanos(@Param("lat") double lat, 
-                                 @Param("lon") double lon, 
-                                 @Param("radioMetros") double radioMetros);
+    List<UUID> buscarIdsCercanosOrdenados(@Param("lat") double lat, 
+                                          @Param("lon") double lon, 
+                                          @Param("radioMetros") double radioMetros);
 
     /**
      * Paso 2: Carga las entidades vinculadas en 1 sola consulta (LEFT JOIN FETCH automático).

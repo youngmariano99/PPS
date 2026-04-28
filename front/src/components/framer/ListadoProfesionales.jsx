@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import React, { useState, useEffect, useMemo } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
 export default function ListadoProfesionales(props) {
@@ -11,12 +11,19 @@ export default function ListadoProfesionales(props) {
     const [profesionales, setProfesionales] = useState([])
     const [cargando, setCargando] = useState(false)
     const [paginaActual, setPaginaActual] = useState(0)
-    const [haLlegadoAlFinal, setHaLlegadoAlFinal] = useState(false)
+    const [totalPaginas, setTotalPaginas] = useState(0)
+    const [todosLosProfesionales, setTodosLosProfesionales] = useState([])
 
     // Estados Geometría / GPS
     const [usarCercanos, setUsarCercanos] = useState(true)
-    const [coordenadas, setCoordenadas] = useState({ lat: defaultLat, lon: defaultLon })
+    const [coordenadas, setCoordenadas] = useState({
+        lat: defaultLat,
+        lon: defaultLon,
+    })
     const [gpsPermitido, setGpsPermitido] = useState(null)
+
+    // Constantes de paginación
+    const ITEMS_POR_PAGINA = 8 // 2x4 = 8
 
     // 0. Motor GPS al montar Componente
     useEffect(() => {
@@ -30,7 +37,6 @@ export default function ListadoProfesionales(props) {
                     setGpsPermitido(true)
                 },
                 (err) => {
-                    // Si bloquea / falla, usamos las globales por defecto
                     setGpsPermitido(false)
                 }
             )
@@ -46,25 +52,29 @@ export default function ListadoProfesionales(props) {
                 const res = await fetch(`${apiUrl}/rubros`)
                 if (res.ok) {
                     const data = await res.json()
-                    // Si la API devuelve un listado, ensamblamos el array
-                    const mapeoRubros = data.map((r) => ({ id: r.id || r.nombre, nombre: r.nombre }))
-                    setRubros([{ id: "todos", nombre: "Todos" }, ...mapeoRubros])
+                    const mapeoRubros = data.map((r) => ({
+                        id: r.id || r.nombre,
+                        nombre: r.nombre,
+                    }))
+                    setRubros([
+                        { id: "todos", nombre: "Todos" },
+                        ...mapeoRubros,
+                    ])
                 }
             } catch (err) {
                 console.error("Error cargando rubros:", err)
             }
         }
         fetchRubros()
-    }, [apiUrl])
-
-    // 2. Fetch de Profesionales
+    }, [apiUrl])    // 2. Fetch de Profesionales con Paginación Real (Backend-side)
     useEffect(() => {
         const fetchProfesionales = async () => {
             setCargando(true)
             try {
-                const radioEfectivo = usarCercanos ? radioKm : 99999;
+                // Ahora usamos el radio real elegido por el usuario y la página actual
+                const base = (apiUrl || "").replace(/\/+$/, "")
+                let queryUrl = `${base}/directorio/buscar/lista?lat=${coordenadas.lat}&lon=${coordenadas.lon}&radioKm=${radioKm}&page=${paginaActual}&size=${ITEMS_POR_PAGINA}`
                 
-                let queryUrl = `${apiUrl}/directorio/buscar/lista?lat=${coordenadas.lat}&lon=${coordenadas.lon}&radioKm=${radioEfectivo}&page=${paginaActual}`
                 if (rubroActivo !== "todos") {
                     queryUrl += `&rubro=${encodeURIComponent(rubroActivo)}`
                 }
@@ -72,19 +82,11 @@ export default function ListadoProfesionales(props) {
                 const res = await fetch(queryUrl)
                 if (res.ok) {
                     const data = await res.json()
-
-                    // Aseguramos que data sea un array
-                    const nuevosResultados = Array.isArray(data) ? data : (data.content || [])
-
-                    // Si vienen menos de la cantidad solicitada (8), llegamos al final
-                    if (nuevosResultados.length < 8) {
-                        setHaLlegadoAlFinal(true)
-                    } else {
-                        setHaLlegadoAlFinal(false)
-                    }
-
-                    // Reemplazamos la página entera en lugar de hacer append
-                    setProfesionales(nuevosResultados)
+                    
+                    // El backend ahora devuelve un objeto Page (content, totalElements, etc)
+                    const content = data.content || []
+                    setTodosLosProfesionales(content)
+                    setTotalPaginas(data.totalPages || 0)
                 }
             } catch (err) {
                 console.error("Error cargando directorio:", err)
@@ -94,23 +96,34 @@ export default function ListadoProfesionales(props) {
         }
 
         fetchProfesionales()
-    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual, usarCercanos])
+    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual])
+
+    // 3. Ya no usamos relleno de placeholders para una UX más limpia
+    useEffect(() => {
+        setProfesionales(todosLosProfesionales)
+    }, [todosLosProfesionales])
 
     // Handlers
     const handleRubroClick = (rubroId) => {
         setRubroActivo(rubroId)
         setPaginaActual(0)
-        setHaLlegadoAlFinal(false)
     }
 
     const handleToggleCercanos = () => {
         setUsarCercanos(!usarCercanos)
         setPaginaActual(0)
-        setHaLlegadoAlFinal(false)
     }
 
-    const handleCargarMas = () => {
-        setPaginaActual((prev) => prev + 1)
+    const handlePaginaAnterior = () => {
+        if (paginaActual > 0) {
+            setPaginaActual(paginaActual - 1)
+        }
+    }
+
+    const handlePaginaSiguiente = () => {
+        if (paginaActual < totalPaginas - 1) {
+            setPaginaActual(paginaActual + 1)
+        }
     }
 
     // Funciones Auxiliares UI
@@ -122,340 +135,409 @@ export default function ListadoProfesionales(props) {
         return nombre.substring(0, 2).toUpperCase()
     }
 
-    const getRandomColor = (id) => {
-        // Generador de colores pasteles basados en el Hash del ID o Nombre para mantener consistencia
-        const coloresPasteles = [
-            "#FFD1DC", "#FFDFD3", "#F4C2C2", "#C1E1C1",
-            "#AEC6CF", "#B39EB5", "#FFB7B2", "#E2F0CB"
+    const getAvatarColor = (id) => {
+        const colores = [
+            "#E0E7FF", "#FCE7F3", "#D1FAE5", "#FEF3C7",
+            "#E0F2FE", "#F3E8FF", "#FFE4E6", "#CCFBF1"
         ]
         let hash = 0
-        for (let i = 0; i < id.length; i++) {
-            hash = id.charCodeAt(i) + ((hash << 5) - hash)
+        const str = String(id)
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash)
         }
-        const index = Math.abs(hash) % coloresPasteles.length
-        return coloresPasteles[index]
+        return colores[Math.abs(hash) % colores.length]
     }
 
-    const calcularDistanciaMetros = (lat1, lon1, lat2, lon2) => {
-        if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-        const R = 6371e3; // Radio de la Tierra en metros
-        const p1 = lat1 * Math.PI / 180;
-        const p2 = lat2 * Math.PI / 180;
-        const dp = (lat2 - lat1) * Math.PI / 180;
-        const dl = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dp/2) * Math.sin(dp/2) +
-                  Math.cos(p1) * Math.cos(p2) *
-                  Math.sin(dl/2) * Math.sin(dl/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return Math.floor(R * c);
-    }
+    // --- SUB-COMPONENTES MODULARES (Mejoran la legibilidad y mantenimiento) ---
 
-    // Estilos base en objetos (Framer components adoran flexboxes y estilos en línea limpios)
-    const containerStyle = {
-        width: "100%",
-        maxWidth: "1120px",
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: "24px",
-        padding: "20px",
-        fontFamily: "'Inter', sans-serif"
-    }
+    const ProfessionalCard = ({ prof }) => {
+        if (prof.esPlaceholder) {
+            return (
+                <div style={{
+                    background: "rgba(255,255,255,0.4)",
+                    borderRadius: "12px",
+                    height: "200px",
+                    border: "1px dashed #E2E8F0"
+                }} />
+            )
+        }
 
-    const pillsContainerStyle = {
-        display: "flex",
-        gap: "12px",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        marginBottom: "16px"
-    }
+        // Soporte para ambos formatos de casing por si Jackson lo altera
+        const distVal = prof.distanciaMetros ?? prof.distancia_metros;
+        const distText = (distVal !== null && distVal !== undefined)
+            ? (distVal < 1000 ? `${distVal}m` : `${(distVal/1000).toFixed(1)}km`)
+            : null;
 
-    const gridStyle = {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "24px",
-        justifyContent: "flex-start"
-    }
-
-    return (
-        <div style={containerStyle}>
-            {/* Control GPS / Cercanía */}
-            <div style={{ padding: "16px", backgroundColor: "#F9FAFB", borderRadius: "12px", border: "1px solid #E5E7EB", marginBottom: "8px" }}>
-                <label style={{ display: "flex", alignItems: "center", cursor: "pointer", gap: "10px", fontWeight: "600", color: "#111827", fontSize: "15px" }}>
-                    <input 
-                        type="checkbox" 
-                        checked={usarCercanos} 
-                        onChange={handleToggleCercanos}
-                        style={{ width: "20px", height: "20px", accentColor: "#6366F1" }}
-                    />
-                    📍 Mostrar solo proveedores cercanos a mí ({radioKm}km)
-                </label>
-                
-                {/* Fallback de ubicación */}
-                {usarCercanos && gpsPermitido === false && (
-                    <p style={{ margin: "8px 0 0 30px", fontSize: "13px", color: "#D97706" }}>
-                        ⚠️ No detectamos tu ubicación. Mostrando referencia general.
-                    </p>
+        return (
+            <motion.div
+                whileHover={{ y: -4, boxShadow: "0 12px 20px -8px rgba(0, 0, 0, 0.1)" }}
+                style={{
+                    background: "#FFFFFF",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    position: "relative",
+                    border: prof.destacado ? "2px solid #6366F1" : "1px solid #F1F5F9",
+                    transition: "all 0.2s ease",
+                    height: "100%",
+                    boxSizing: "border-box"
+                }}
+            >
+                {/* Badge Premium Compacto */}
+                {prof.destacado && (
+                    <div style={{
+                        position: "absolute",
+                        top: "12px",
+                        right: "12px",
+                        background: "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
+                        color: "white",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontSize: "9px",
+                        fontWeight: "800",
+                        letterSpacing: "0.5px",
+                        textTransform: "uppercase",
+                        boxShadow: "0 4px 6px -1px rgba(99, 102, 241, 0.4)"
+                    }}>
+                        Premium
+                    </div>
                 )}
-            </div>
 
-            {/* Cabecera / Filtros (Pills) */}
-            <div style={pillsContainerStyle}>
-                {rubros.map((rubro) => {
-                    const isActive = rubroActivo === rubro.id
-                    return (
-                        <motion.button
-                            key={rubro.id}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleRubroClick(rubro.id)}
+                {/* Header Compacto */}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                    <div style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "10px",
+                        background: getAvatarColor(prof.id),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        color: "#1E293B",
+                        flexShrink: 0
+                    }}>
+                        {obtenerIniciales(prof.nombrePublico)}
+                    </div>
+                    <div style={{ overflow: "hidden" }}>
+                        <h3 style={{ 
+                            margin: 0, 
+                            fontSize: "15px", 
+                            fontWeight: "700", 
+                            color: "#1E293B",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                        }}>
+                            {prof.nombrePublico}
+                        </h3>
+                        <span style={{ fontSize: "12px", color: "#6366F1", fontWeight: "600" }}>
+                            {prof.rubro}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Descripción Corta */}
+                <p style={{ 
+                    margin: "0 0 16px 0", 
+                    fontSize: "13px", 
+                    color: "#64748B", 
+                    lineHeight: "1.4",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    flex: 1
+                }}>
+                    {prof.descripcion || "Profesional verificado."}
+                </p>
+
+                {/* Footer Compacto */}
+                <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "center",
+                    paddingTop: "12px",
+                    borderTop: "1px solid #F1F5F9"
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                            <span style={{ color: "#F59E0B", fontSize: "14px" }}>★</span>
+                            <span style={{ fontWeight: "700", color: "#1E293B", fontSize: "12px" }}>
+                                {prof.promedioEstrellas > 0 ? prof.promedioEstrellas.toFixed(1) : "—"}
+                            </span>
+                        </div>
+                        {distText && (
+                            <div style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "500" }}>
+                                • {distText}
+                            </div>
+                        )}
+                    </div>
+                    
+                    <button style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#6366F1",
+                        fontWeight: "700",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        padding: "4px",
+                    }}>
+                        Perfil →
+                    </button>
+                </div>
+            </motion.div>
+        )
+    }
+
+    const Pagination = () => {
+        if (totalPaginas <= 1) return null;
+        
+        return (
+            <div style={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                gap: "12px", 
+                marginTop: "40px",
+                padding: "20px 0"
+            }}>
+                <button 
+                    onClick={handlePaginaAnterior}
+                    disabled={paginaActual === 0}
+                    style={{
+                        padding: "8px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #E2E8F0",
+                        background: paginaActual === 0 ? "#F8FAFC" : "white",
+                        color: paginaActual === 0 ? "#CBD5E1" : "#475569",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        cursor: paginaActual === 0 ? "not-allowed" : "pointer",
+                        transition: "all 0.2s"
+                    }}
+                >
+                    Anterior
+                </button>
+
+                <div style={{ display: "flex", gap: "6px" }}>
+                    {[...Array(totalPaginas)].map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setPaginaActual(i)}
                             style={{
-                                padding: "8px 16px",
-                                borderRadius: "9999px",
-                                border: isActive ? "1px solid #111827" : "1px solid #E5E7EB",
-                                backgroundColor: isActive ? "#111827" : "#FFFFFF",
-                                color: isActive ? "#FFFFFF" : "#6B7280",
-                                fontWeight: "500",
-                                fontSize: "14px",
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: paginaActual === i ? "#6366F1" : "transparent",
+                                color: paginaActual === i ? "white" : "#64748B",
+                                fontSize: "13px",
+                                fontWeight: "700",
                                 cursor: "pointer",
                                 transition: "all 0.2s"
                             }}
                         >
-                            {rubro.nombre}
-                        </motion.button>
-                    )
-                })}
-            </div>
+                            {i + 1}
+                        </button>
+                    ))}
+                </div>
 
-            {/* Listado de Tarjetas */}
-            <div style={gridStyle}>
-                {profesionales.map((prof, index) => (
-                    <motion.div
-                        key={prof.id || index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        style={{
-                            flex: "1 1 calc(25% - 24px)", // Fuerza 4 columnas, restando el gap
-                            minWidth: "240px",            // Evita colapso en móviles
-                            maxWidth: "calc(25% - 24px)", // Previene que se estiren de más si sobran espacios
-                            backgroundColor: "#FFFFFF",
-                            borderRadius: "16px",
-                            padding: "20px",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "16px",
-                            position: "relative"
+                <button 
+                    onClick={handlePaginaSiguiente}
+                    disabled={paginaActual === totalPaginas - 1}
+                    style={{
+                        padding: "8px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #E2E8F0",
+                        background: paginaActual === totalPaginas - 1 ? "#F8FAFC" : "white",
+                        color: paginaActual === totalPaginas - 1 ? "#CBD5E1" : "#475569",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        cursor: paginaActual === totalPaginas - 1 ? "not-allowed" : "pointer",
+                        transition: "all 0.2s"
+                    }}
+                >
+                    Siguiente
+                </button>
+            </div>
+        )
+    }
+
+    // --- RENDER PRINCIPAL ---
+
+    const containerStyle = {
+        width: "100%",
+        minHeight: "100vh",
+        background: "transparent",
+        fontFamily: "'Inter', sans-serif",
+        color: "#1E293B",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+        paddingBottom: "100px"
+    }
+
+    return (
+        <div style={containerStyle}>
+            {/* Filtros e Intro */}
+            <div style={{ padding: "24px 24px 0 24px", maxWidth: "1400px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px" }}>
+                    <div>
+                        <h1 style={{ margin: "0 0 4px 0", fontSize: "22px", fontWeight: "800", letterSpacing: "-0.025em" }}>
+                            Encontrá tu profesional
+                        </h1>
+                        <p style={{ margin: 0, color: "#64748B", fontSize: "13px" }}>
+                            Conectando expertos verificados cerca de tu ubicación.
+                        </p>
+                        {usarCercanos && (
+                            <div style={{ marginTop: "8px", fontSize: "12px", color: "#6366F1", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#6366F1" }} />
+                                Mostrando resultados dentro de {radioKm}km a la redonda
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Toggle Cercanos Minimalista */}
+                    <div 
+                        onClick={handleToggleCercanos}
+                        style={{ 
+                            display: "flex", 
+                            alignItems: "center", 
+                            gap: "8px", 
+                            cursor: "pointer",
+                            padding: "8px 12px",
+                            borderRadius: "10px",
+                            background: usarCercanos ? "#EEF2FF" : "transparent",
+                            transition: "all 0.2s"
                         }}
                     >
-                        {/* Highlights (Background diferencial si es destacado) */}
-                        {prof.destacado && (
-                            <div style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: "100%",
-                                borderRadius: "16px",
-                                border: "2px solid #F59E0B",
-                                pointerEvents: "none"
-                            }} />
-                        )}
-
-                        {/* Status Dot */}
                         <div style={{
-                            position: "absolute",
-                            top: "20px",
-                            right: "20px",
-                            width: "10px",
-                            height: "10px",
-                            borderRadius: "50%",
-                            backgroundColor: "#10B981" // Verde de status
-                        }} />
-
-                        {/* Cabecera Tarjeta */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            {/* Avatar */}
-                            <div style={{
-                                width: "48px",
-                                height: "48px",
-                                borderRadius: "50%",
-                                backgroundColor: getRandomColor(prof.id || prof.nombrePublico),
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "18px",
-                                fontWeight: "600",
-                                color: "#111827"
-                            }}>
-                                {obtenerIniciales(prof.nombrePublico)}
-                            </div>
-
-                            {/* Nombres y Profesión */}
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: "16px", color: "#111827", fontWeight: "700" }}>
-                                    {prof.nombrePublico}
-                                    {prof.destacado && <span style={{ fontSize: "12px", marginLeft: "6px", backgroundColor: "#FEF3C7", color: "#D97706", padding: "2px 6px", borderRadius: "4px" }}>⭐ Destacado</span>}
-                                    {prof.trabajoVerificado && <span style={{ fontSize: "12px", marginLeft: "4px" }}>✅</span>}
-                                </h3>
-                                <span style={{ fontSize: "14px", color: "#6366F1", fontWeight: "500" }}>
-                                    {prof.rubro}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Cuerpo (Descripción) */}
-                        <p style={{
-                            margin: 0,
-                            fontSize: "14px",
-                            color: "#4B5563",
-                            lineHeight: "1.5",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden"
+                            width: "32px",
+                            height: "18px",
+                            background: usarCercanos ? "#6366F1" : "#CBD5E1",
+                            borderRadius: "20px",
+                            position: "relative",
+                            transition: "all 0.2s"
                         }}>
-                            {prof.descripcion || "Experto sin descripción disponible adicional."}
-                        </p>
-
-                        {/* Footer Info (Calificación y Ubicación) */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
-                            {/* ESTRELLAS Y RESEÑAS */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span style={{ color: prof.cantidadResenas > 0 ? "#F59E0B" : "#D1D5DB", fontSize: "16px" }}>★</span>
-                                <span style={{ fontWeight: "700", color: prof.cantidadResenas > 0 ? "#111827" : "#9CA3AF" }}>
-                                    {prof.cantidadResenas > 0 && prof.promedioEstrellas ? prof.promedioEstrellas.toFixed(1) : "0.0"}
-                                </span>
-                                <span style={{ color: "#9CA3AF" }}>
-                                    ({prof.cantidadResenas || 0})
-                                </span>
-                            </div>
-                            {/* UBICACIÓN Y DISTANCIA */}
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", color: "#6B7280" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                        <circle cx="12" cy="10" r="3"></circle>
-                                    </svg>
-                                    {prof.ciudad || "Global"}
-                                </div>
-                                {usarCercanos && gpsPermitido && prof.latitud && prof.longitud && (
-                                    <span style={{ fontSize: "11px", fontWeight: "600", color: "#10B981" }}>
-                                        A {calcularDistanciaMetros(coordenadas.lat, coordenadas.lon, prof.latitud, prof.longitud)}m de ti
-                                    </span>
-                                )}
-                            </div>
+                            <div style={{
+                                width: "14px",
+                                height: "14px",
+                                background: "white",
+                                borderRadius: "50%",
+                                position: "absolute",
+                                top: "2px",
+                                left: usarCercanos ? "16px" : "2px",
+                                transition: "all 0.2s"
+                            }} />
                         </div>
+                        <span style={{ fontSize: "13px", fontWeight: "600", color: usarCercanos ? "#4F46E5" : "#64748B" }}>
+                            Solo cercanos
+                        </span>
+                    </div>
+                </div>
 
-                        {/* Botón Acción */}
-                        <motion.button
-                            whileHover={{ backgroundColor: "#E5E7EB" }}
-                            whileTap={{ scale: 0.98 }}
+                {/* Rubros Pills */}
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "40px" }}>
+                    {rubros.map((rubro) => (
+                        <button
+                            key={rubro.id}
+                            onClick={() => handleRubroClick(rubro.id)}
                             style={{
-                                width: "100%",
-                                padding: "10px",
-                                backgroundColor: "#F3F4F6",
+                                padding: "8px 16px",
+                                borderRadius: "10px",
                                 border: "none",
-                                borderRadius: "8px",
-                                color: "#111827",
+                                background: rubroActivo === rubro.id ? "#1E293B" : "white",
+                                color: rubroActivo === rubro.id ? "white" : "#64748B",
+                                fontSize: "13px",
                                 fontWeight: "600",
-                                fontSize: "14px",
                                 cursor: "pointer",
-                                marginTop: "auto"
+                                transition: "all 0.2s",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                             }}
                         >
-                            Ver Perfil
-                        </motion.button>
-                    </motion.div>
-                ))}
+                            {rubro.nombre}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* Loader */}
-            {cargando && (
-                <div style={{ textAlign: "center", color: "#6B7280", padding: "20px" }}>
-                    Cargando proveedores...
-                </div>
-            )}
+            {/* Grid de Profesionales */}
+            <div style={{ 
+                flex: 1,
+                padding: "0 16px",
+                maxWidth: "1400px",
+                margin: "0 auto",
+                width: "100%",
+                boxSizing: "border-box"
+            }}>
+                <AnimatePresence mode="wait">
+                    {cargando ? (
+                        <motion.div 
+                            key="loading"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{ textAlign: "center", padding: "60px 0", color: "#64748B" }}
+                        >
+                            Cargando profesionales...
+                        </motion.div>
+                    ) : (
+                        <motion.div 
+                            key="grid"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                                gap: "20px",
+                                width: "100%"
+                            }}
+                        >
+                            {profesionales.map((prof) => (
+                                <ProfessionalCard key={prof.id} prof={prof} />
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <Pagination />
+            </div>
 
             {/* Empty State */}
-            {!cargando && profesionales.length === 0 && (
-                <div style={{ textAlign: "center", color: "#6B7280", padding: "40px" }}>
-                    <p style={{fontSize: "18px", fontWeight: "600", color: "#111827"}}>Aún no hay proveedores por aquí</p>
-                    <p>Prueba ampliando el radio de búsqueda o seleccionando otro rubro.</p>
-                </div>
-            )}
-
-            {/* Paginación Tradicional (Reemplazo) */}
-            {!cargando && profesionales.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", padding: "0 20px" }}>
-                    <motion.button
-                        whileHover={paginaActual > 0 ? { scale: 1.05 } : {}}
-                        whileTap={paginaActual > 0 ? { scale: 0.95 } : {}}
-                        onClick={() => setPaginaActual(p => p - 1)}
-                        disabled={paginaActual === 0}
-                        style={{
-                            padding: "10px 20px",
-                            backgroundColor: paginaActual === 0 ? "#F3F4F6" : "#FFFFFF",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: "9999px",
-                            color: paginaActual === 0 ? "#9CA3AF" : "#111827",
-                            fontWeight: "600",
-                            fontSize: "14px",
-                            cursor: paginaActual === 0 ? "not-allowed" : "pointer"
-                        }}
-                    >
-                        ← Anterior
-                    </motion.button>
-                    
-                    <span style={{ fontSize: "14px", fontWeight: "600", color: "#6B7280" }}>
-                        Página {paginaActual + 1}
-                    </span>
-
-                    <motion.button
-                        whileHover={!haLlegadoAlFinal ? { scale: 1.05 } : {}}
-                        whileTap={!haLlegadoAlFinal ? { scale: 0.95 } : {}}
-                        onClick={() => setPaginaActual(p => p + 1)}
-                        disabled={haLlegadoAlFinal}
-                        style={{
-                            padding: "10px 20px",
-                            backgroundColor: haLlegadoAlFinal ? "#F3F4F6" : "#FFFFFF",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: "9999px",
-                            color: haLlegadoAlFinal ? "#9CA3AF" : "#111827",
-                            fontWeight: "600",
-                            fontSize: "14px",
-                            cursor: haLlegadoAlFinal ? "not-allowed" : "pointer"
-                        }}
-                    >
-                        Siguiente →
-                    </motion.button>
+            {!cargando && profesionales.every(p => p.esPlaceholder) && (
+                <div style={{ textAlign: "center", padding: "100px 32px", color: "#94A3B8" }}>
+                    <p style={{ fontSize: "16px", fontWeight: "600" }}>No se encontraron profesionales</p>
+                    <p style={{ fontSize: "14px" }}>Intentá ajustando el radio de búsqueda o cambiando de rubro.</p>
                 </div>
             )}
         </div>
     )
 }
 
-// Expone Controles para Framer UI (Panel Derecho)
 addPropertyControls(ListadoProfesionales, {
     apiUrl: {
         type: ControlType.String,
         title: "API Base URL",
-        defaultValue: "http://localhost:8080/api/v1"
+        defaultValue: "https://pps-sk7p.onrender.com/api/v1",
     },
     defaultLat: {
         type: ControlType.Number,
         title: "Latitud Default",
-        defaultValue: -34.6037
+        defaultValue: -34.6037,
     },
     defaultLon: {
         type: ControlType.Number,
         title: "Longitud Default",
-        defaultValue: -58.3816
+        defaultValue: -58.3816,
     },
     radioKm: {
         type: ControlType.Number,
         title: "Radio(Km)",
-        defaultValue: 1
-    }
+        defaultValue: 1,
+        min: 1,
+        max: 100,
+    },
 })

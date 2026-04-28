@@ -39,7 +39,7 @@ public class DirectorioService {
 
     private static final Pattern VIDEO_PATTERN = Pattern.compile(
             "^(https?://)?(www\\.)?(youtube\\.com|youtu\\.be|instagram\\.com|tiktok\\.com|drive\\.google\\.com)/.*$");
-            
+
     private static final double MAX_RADIO_METROS = 50000.0;
 
     @Transactional
@@ -175,72 +175,106 @@ public class DirectorioService {
             portafolioRepository.saveAll(items);
         }
     }
+
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<PerfilRespuestaDto> buscarCercanosLista(double lat, double lon, double radioKm, int page, int size) {
+    public org.springframework.data.domain.Page<PerfilRespuestaDto> buscarCercanosLista(double lat, double lon,
+            double radioKm, String rubro, int page, int size) {
         double radioMetros = radioKm * 1000;
         if (radioMetros > MAX_RADIO_METROS) {
             radioMetros = MAX_RADIO_METROS;
         }
 
-        List<PerfilRespuestaDto> resultados = new ArrayList<>();
+        Point puntoUsuario = geometryFactory.createPoint(new Coordinate(lon, lat));
 
-        List<UUID> idsCercanos = proveedorRepository.buscarIdsCercanos(lat, lon, radioMetros);
-        List<PerfilProveedor> proveedoresCrudos = idsCercanos.isEmpty() ? new ArrayList<>() : proveedorRepository.findByIdIn(idsCercanos);
+        // 1. Obtener todos los IDs cercanos ya ordenados por SQL (Premium > Distancia)
+        // Si rubro es "todos", pasamos null para que no filtre por rubro
+        String rubroFiltro = (rubro == null || rubro.equalsIgnoreCase("todos")) ? null : rubro;
+        List<UUID> idsOrdenados = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, rubroFiltro);
 
-        // Batch Fetching: Extracción masiva para evitar N+1
-        List<UUID> usuarioIds = proveedoresCrudos.stream()
+        if (idsOrdenados.isEmpty()) {
+            return new org.springframework.data.domain.PageImpl<>(new ArrayList<>(),
+                    org.springframework.data.domain.PageRequest.of(page, size), 0);
+        }
+
+        // 2. Aplicar paginación a los IDs (esto es ultra eficiente)
+        int totalElementos = idsOrdenados.size();
+        int start = Math.min(page * size, totalElementos);
+        int end = Math.min((page + 1) * size, totalElementos);
+
+        if (start >= totalElementos) {
+            return new org.springframework.data.domain.PageImpl<>(new ArrayList<>(),
+                    org.springframework.data.domain.PageRequest.of(page, size), totalElementos);
+        }
+
+        List<UUID> idsPaginaActual = idsOrdenados.subList(start, end);
+
+        // 3. Solo traemos las entidades completas de los 8 (o el 'size') IDs de la
+        // página actual
+        List<PerfilProveedor> proveedoresPagina = proveedorRepository.findByIdIn(idsPaginaActual);
+
+        // Volver a ordenar proveedoresPagina para que coincida con el orden de
+        // idsPaginaActual (findByIdIn no garantiza orden)
+        java.util.Map<UUID, PerfilProveedor> mapaProveedores = proveedoresPagina.stream()
+                .collect(Collectors.toMap(PerfilProveedor::getId, java.util.function.Function.identity()));
+
+        List<PerfilProveedor> proveedoresOrdenados = idsPaginaActual.stream()
+                .map(mapaProveedores::get)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // 4. Batch Fetching de suscripciones solo para los de la página
+        List<UUID> usuarioIds = proveedoresOrdenados.stream()
                 .map(p -> p.getUsuario().getId())
                 .collect(Collectors.toList());
 
         java.util.Set<UUID> usuariosPremiumIds = suscripcionRepository
                 .findByUsuarioIdInAndEstado(usuarioIds, "ACTIVA").stream()
+                .filter(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
                 .map(s -> s.getUsuario().getId())
                 .collect(Collectors.toSet());
 
-        resultados.addAll(proveedoresCrudos.stream()
+        // 5. Mapear a DTO
+        List<PerfilRespuestaDto> dtoList = proveedoresOrdenados.stream()
                 .map(p -> {
-                    boolean tieneSuscripcionActiva = usuariosPremiumIds.contains(p.getUsuario().getId());
+                    boolean esPremiumReal = usuariosPremiumIds.contains(p.getUsuario().getId());
+
+                    // Calculamos la distancia en metros de forma más robusta
+                    double distGrados = p.getUbicacion().distance(puntoUsuario);
+                    double distancia = distGrados * 111319.9;
 
                     return PerfilRespuestaDto.builder()
-                        .id(p.getId())
-                        .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
-                        .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
-                                : p.getRubroPersonalizado())
-                        .descripcion(p.getDescripcionProfesional())
-                        .ciudad(p.getCiudad())
-                        .latitud(p.getUbicacion().getY())
-                        .longitud(p.getUbicacion().getX())
-                        .tipo("PROVEEDOR")
-                        .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                        .promedioEstrellas(0.0) // TODO: Mapear cuando ResenaRepository esté disponible
-                        .cantidadResenas(0) // TODO: Mapear cuando ResenaRepository esté disponible
-                        .destacado(tieneSuscripcionActiva)
-                        .build();
+                            .id(p.getId())
+                            .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                            .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
+                                    : p.getRubroPersonalizado())
+                            .descripcion(p.getDescripcionProfesional())
+                            .ciudad(p.getCiudad())
+                            .latitud(p.getUbicacion().getY())
+                            .longitud(p.getUbicacion().getX())
+                            .tipo("PROVEEDOR")
+                            .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
+                            .promedioEstrellas(0.0)
+                            .cantidadResenas(0)
+                            .distanciaMetros((int) distancia)
+                            .destacado(esPremiumReal)
+                            .build();
                 })
-                .collect(Collectors.toList()));
-
-        // Las Empresas quedan omitidas temporalmente ("solo traiga proveedores")
-
-        java.util.Comparator<PerfilRespuestaDto> rankingCriterio = java.util.Comparator
-                .comparing(PerfilRespuestaDto::isDestacado).reversed()
-                .thenComparing(PerfilRespuestaDto::isPerfilCompleto).reversed()
-                .thenComparing(java.util.Comparator.comparingDouble(PerfilRespuestaDto::getPromedioEstrellas).reversed())
-                .thenComparing(java.util.Comparator.comparingInt(PerfilRespuestaDto::getCantidadResenas).reversed());
-
-        List<PerfilRespuestaDto> sortedResultados = resultados.stream()
-                .sorted(rankingCriterio)
+                .sorted((a, b) -> {
+                    // Ranking: Premium (true) antes que no Premium (false)
+                    if (a.isDestacado() != b.isDestacado()) {
+                        return a.isDestacado() ? -1 : 1;
+                    }
+                    // Si ambos son iguales en premium, desempatar por distancia
+                    int distA = a.getDistanciaMetros() != null ? a.getDistanciaMetros() : 999999;
+                    int distB = b.getDistanciaMetros() != null ? b.getDistanciaMetros() : 999999;
+                    return Integer.compare(distA, distB);
+                })
                 .collect(Collectors.toList());
 
-        // Paginación en Memoria
-        int start = Math.min(page * size, sortedResultados.size());
-        int end = Math.min((page + 1) * size, sortedResultados.size());
-        List<PerfilRespuestaDto> paginatedList = sortedResultados.subList(start, end);
-
         return new org.springframework.data.domain.PageImpl<>(
-                paginatedList, 
-                org.springframework.data.domain.PageRequest.of(page, size), 
-                sortedResultados.size()
-        );
+                dtoList,
+                org.springframework.data.domain.PageRequest.of(page, size),
+                totalElementos);
     }
 
     @Transactional(readOnly = true)
@@ -251,8 +285,9 @@ public class DirectorioService {
         }
         List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
-        List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanos(lat, lon, radioMetros);
-        List<PerfilProveedor> proveedoresCrudos = proveedorIds.isEmpty() ? new ArrayList<>() : proveedorRepository.findByIdIn(proveedorIds);
+        List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, null);
+        List<PerfilProveedor> proveedoresCrudos = proveedorIds.isEmpty() ? new ArrayList<>()
+                : proveedorRepository.findByIdIn(proveedorIds);
 
         resultados.addAll(proveedoresCrudos.stream()
                 .map(p -> PerfilRespuestaDto.builder()
@@ -266,14 +301,15 @@ public class DirectorioService {
                         .longitud(p.getUbicacion().getX())
                         .tipo("PROVEEDOR")
                         .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                        .promedioEstrellas(0.0) 
-                        .cantidadResenas(0) 
+                        .promedioEstrellas(0.0)
+                        .cantidadResenas(0)
                         .destacado(false) // Optimizado para mapa masivo
                         .build())
                 .collect(Collectors.toList()));
 
-        List<UUID> empresaIds = empresaRepository.buscarIdsCercanos(lat, lon, radioMetros);
-        List<PerfilEmpresa> empresasCrudas = empresaIds.isEmpty() ? new ArrayList<>() : empresaRepository.findByIdIn(empresaIds);
+        List<UUID> empresaIds = empresaRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros);
+        List<PerfilEmpresa> empresasCrudas = empresaIds.isEmpty() ? new ArrayList<>()
+                : empresaRepository.findByIdIn(empresaIds);
 
         resultados.addAll(empresasCrudas.stream()
                 .map(e -> PerfilRespuestaDto.builder()
@@ -298,16 +334,16 @@ public class DirectorioService {
 
     public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
         log.info("Obteniendo detalle de proveedor para ID: {}", id);
-        
+
         // Buscamos primero por usuario_id (el ID de Supabase que suele mandar el front)
         // Si no, buscamos por el ID propio del perfil (PK)
         PerfilProveedor p = proveedorRepository.findByUsuarioId(id)
                 .orElseGet(() -> proveedorRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Proveedor no encontrado para ID: {}", id);
-                    return new RecursoNoEncontradoException("Proveedor no encontrado");
-                }));
-        
+                        .orElseThrow(() -> {
+                            log.error("Proveedor no encontrado para ID: {}", id);
+                            return new RecursoNoEncontradoException("Proveedor no encontrado");
+                        }));
+
         boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
                 .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
                 .orElse(false);
@@ -316,7 +352,8 @@ public class DirectorioService {
         if (esPremium) {
             multimedia = portafolioRepository.findAllByUsuarioIdOrderByFechaCreacionDesc(p.getUsuario().getId());
         } else {
-            multimedia = portafolioRepository.findVisibleByUsuarioId(p.getUsuario().getId(), org.springframework.data.domain.PageRequest.of(0, 5));
+            multimedia = portafolioRepository.findVisibleByUsuarioId(p.getUsuario().getId(),
+                    org.springframework.data.domain.PageRequest.of(0, 5));
         }
 
         return PerfilDetalleDto.builder()
@@ -347,7 +384,7 @@ public class DirectorioService {
 
     public UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId) {
         log.info("Descubriendo perfil para usuario ID: {}", usuarioId);
-        
+
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> {
                     log.error("Usuario con ID {} no encontrado en base de datos local", usuarioId);
@@ -356,7 +393,7 @@ public class DirectorioService {
 
         boolean esProveedor = proveedorRepository.findByUsuarioId(usuarioId).isPresent();
         boolean esEmpresa = empresaRepository.findByUsuarioId(usuarioId).isPresent();
-        
+
         String rol = esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO");
         log.info("Usuario {} identificado con rol: {}", usuarioId, rol);
 
@@ -384,7 +421,7 @@ public class DirectorioService {
     @Transactional
     public void actualizarPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
         log.info("Actualizando perfil profesional para usuario: {}", usuarioId);
-        
+
         PerfilProveedor perfil = proveedorRepository.findByUsuarioId(usuarioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Perfil profesional no encontrado"));
 
@@ -397,8 +434,8 @@ public class DirectorioService {
         perfil.setLinkedinUrl(dto.getLinkedinUrl());
 
         // Si hay cambio de dirección, re-geocodificar
-        if (!perfil.getCalle().equals(dto.getCalle()) || !perfil.getNumero().equals(dto.getNumero()) || 
-            !perfil.getCiudad().equals(dto.getCiudad())) {
+        if (!perfil.getCalle().equals(dto.getCalle()) || !perfil.getNumero().equals(dto.getNumero()) ||
+                !perfil.getCiudad().equals(dto.getCiudad())) {
             perfil.setCalle(dto.getCalle());
             perfil.setNumero(dto.getNumero());
             perfil.setCiudad(dto.getCiudad());
@@ -416,9 +453,12 @@ public class DirectorioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
-        if (dto.getNombre() != null) usuario.setNombre(dto.getNombre());
-        if (dto.getApellido() != null) usuario.setApellido(dto.getApellido());
-        if (dto.getTelefono() != null) usuario.setTelefono(dto.getTelefono());
+        if (dto.getNombre() != null)
+            usuario.setNombre(dto.getNombre());
+        if (dto.getApellido() != null)
+            usuario.setApellido(dto.getApellido());
+        if (dto.getTelefono() != null)
+            usuario.setTelefono(dto.getTelefono());
 
         usuarioRepository.save(usuario);
     }

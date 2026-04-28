@@ -29,9 +29,10 @@ public class DirectorioController {
             @RequestParam double lat,
             @RequestParam double lon,
             @RequestParam(defaultValue = "1") double radioKm,
+            @RequestParam(required = false) String rubro,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size) {
-        return ResponseEntity.ok(directorioService.buscarCercanosLista(lat, lon, radioKm, page, size));
+        return ResponseEntity.ok(directorioService.buscarCercanosLista(lat, lon, radioKm, rubro, page, size));
     }
 
     @GetMapping("/buscar/mapa")

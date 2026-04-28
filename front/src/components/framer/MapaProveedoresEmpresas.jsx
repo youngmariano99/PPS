@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
 import {
     Map,
@@ -7,73 +7,112 @@ import {
     ZoomControl,
 } from "https://esm.sh/pigeon-maps@0.21.3?external=react,react-dom"
 
+// Constantes para mejorar mantenibilidad
+const METROS_POR_KM = 1000
+const RADIO_MAXIMO_BUSQUEDA = 100 // km para la API
+const ZOOM_POR_DISTANCIA = {
+    0.5: 15,
+    1: 14,
+    5: 13,
+    15: 12,
+    30: 11,
+} // Rangos de zoom optimizados
+
 export default function BuscadorDirectorioFinal(props) {
     const { apiUrl, primaryColor, alturaMapa, distanciasPredeterminadas } =
         props
 
+    // Estados principales
     const [perfiles, setPerfiles] = useState([])
     const [perfilesFiltrados, setPerfilesFiltrados] = useState([])
     const [loading, setLoading] = useState(false)
-    const [radio, setRadio] = useState(1000) // SIEMPRE en metros internamente
-    const [unidad, setUnidad] = useState("m") // "m" o "km" - solo para display
+    const [error, setError] = useState(null)
+
+    // Estado de geolocalización y coordenadas
     const [coords, setCoords] = useState({ lat: -34.6037, lon: -58.3816 })
     const [ubicacionObtenida, setUbicacionObtenida] = useState(false)
+    const [geolocalizacionError, setGeolocalizacionError] = useState(null)
+
+    // Estado de filtros de distancia (siempre en metros internamente)
+    const [radio, setRadio] = useState(5000) // 5km por defecto
+    const [distanciaSeleccionada, setDistanciaSeleccionada] = useState(null) // Para tracking visual
+
+    // Estado del modal y mapa
     const [perfilSeleccionado, setPerfilSeleccionado] = useState(null)
     const [modalPosition, setModalPosition] = useState(null)
-    const [valorPersonalizado, setValorPersonalizado] = useState("")
     const mapRef = useRef(null)
 
-    // Convertir distancias predeterminadas a metros
-    const distanciasMetros = distanciasPredeterminadas.map((d) =>
-        d.unidad === "km" ? d.valor * 1000 : d.valor
-    )
-
+    // Inicializar con la primera distancia predeterminada
     useEffect(() => {
-        // Inyectar estilos solo en el cliente
-        if (typeof document !== "undefined") {
-            const styleSheet = document.createElement("style")
-            styleSheet.textContent = `
-                .horizontal-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                    border-color: #cbd5e1;
-                }
-                
-                .action-button:hover, .quick-button:hover, .unit-button:hover {
-                    opacity: 0.9;
-                }
-                
-                .custom-input:focus {
-                    border-color: #7c3aed;
-                    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-                }
-                
-                * {
-                    box-sizing: border-box;
-                }
-            `
-            document.head.appendChild(styleSheet)
-
-            return () => {
-                if (styleSheet.parentNode) {
-                    styleSheet.parentNode.removeChild(styleSheet)
-                }
-            }
+        if (distanciasPredeterminadas.length > 0) {
+            const primeraDistancia = distanciasPredeterminadas[0]
+            const valorInicial =
+                primeraDistancia.unidad === "km"
+                    ? primeraDistancia.valor * METROS_POR_KM
+                    : primeraDistancia.valor
+            setRadio(valorInicial)
+            setDistanciaSeleccionada(0)
         }
     }, [])
 
+    // Memorización de distancias predeterminadas convertidas
+    const distanciasMetros = React.useMemo(() => {
+        return distanciasPredeterminadas.map((d) =>
+            d.unidad === "km" ? d.valor * METROS_POR_KM : d.valor
+        )
+    }, [distanciasPredeterminadas])
+
+    // Inyección de estilos CSS (optimizada)
+    useEffect(() => {
+        if (typeof document === "undefined") return
+
+        const styleSheet = document.createElement("style")
+        styleSheet.textContent = `
+            .directorio-card-horizontal:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                border-color: #cbd5e1;
+            }
+            
+            .directorio-button:hover {
+                filter: brightness(0.95);
+                transform: translateY(-1px);
+            }
+            
+            .directorio-button:active {
+                transform: translateY(0);
+            }
+            
+            .directorio-marker:hover {
+                transform: scale(1.2);
+                cursor: pointer;
+            }
+            
+            * {
+                box-sizing: border-box;
+            }
+        `
+        document.head.appendChild(styleSheet)
+
+        return () => {
+            document.head.removeChild(styleSheet)
+        }
+    }, [])
+
+    // Obtener ubicación al montar el componente
     useEffect(() => {
         obtenerUbicacion()
     }, [])
 
+    // Filtrar perfiles cuando cambia el radio o los perfiles
     useEffect(() => {
-        // Filtrar perfiles por distancia cuando cambia el radio
         if (perfiles.length > 0) {
             filtrarPerfilesPorDistancia()
         }
     }, [radio, perfiles])
 
-    const calcularDistancia = (lat1, lon1, lat2, lon2) => {
+    // Cálculo de distancia usando la fórmula de Haversine (optimizada)
+    const calcularDistancia = useCallback((lat1, lon1, lat2, lon2) => {
         const R = 6371e3 // Radio de la Tierra en metros
         const φ1 = (lat1 * Math.PI) / 180
         const φ2 = (lat2 * Math.PI) / 180
@@ -81,196 +120,220 @@ export default function BuscadorDirectorioFinal(props) {
         const Δλ = ((lon2 - lon1) * Math.PI) / 180
 
         const a =
-            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+            Math.sin(Δφ / 2) ** 2 +
+            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
-        return R * c // Distancia en metros
-    }
+        return R * c
+    }, [])
 
-    const filtrarPerfilesPorDistancia = () => {
-        const filtrados = perfiles.filter((perfil) => {
-            const distancia = calcularDistancia(
-                coords.lat,
-                coords.lon,
-                perfil.latitud,
-                perfil.longitud
-            )
-            perfil.distancia = distancia // Guardamos la distancia para mostrarla
-            return distancia <= radio // radio siempre está en metros
-        })
+    // Filtrado de perfiles por distancia (optimizado con useCallback)
+    const filtrarPerfilesPorDistancia = useCallback(() => {
+        const filtrados = perfiles
+            .map((perfil) => ({
+                ...perfil,
+                distancia: calcularDistancia(
+                    coords.lat,
+                    coords.lon,
+                    perfil.latitud,
+                    perfil.longitud
+                ),
+            }))
+            .filter((perfil) => perfil.distancia <= radio)
+            .sort((a, b) => a.distancia - b.distancia)
 
-        // Ordenar por distancia
-        filtrados.sort((a, b) => a.distancia - b.distancia)
         setPerfilesFiltrados(filtrados)
-    }
+    }, [perfiles, coords, radio, calcularDistancia])
 
-    const obtenerUbicacion = () => {
-        if (typeof navigator !== "undefined" && "geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const newCoords = {
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude,
-                    }
-                    setCoords(newCoords)
-                    setUbicacionObtenida(true)
-                    buscarServicios(newCoords.lat, newCoords.lon)
-                },
-                () => buscarServicios(coords.lat, coords.lon)
-            )
-        } else {
+    // Obtención de geolocalización (con mejor manejo de errores)
+    const obtenerUbicacion = useCallback(() => {
+        if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+            setGeolocalizacionError("Geolocalización no soportada")
             buscarServicios(coords.lat, coords.lon)
+            return
         }
-    }
 
-    const buscarServicios = async (lat, lon) => {
-        setLoading(true)
-        const api = apiUrl.replace(/\/+$/, "")
-        try {
-            // Buscar con radio máximo para tener todos los datos
-            const res = await fetch(
-                `${api}/directorio/buscar/mapa?lat=${lat}&lon=${lon}&radioKm=100`
-            )
-            if (res.ok) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const newCoords = {
+                    lat: pos.coords.latitude,
+                    lon: pos.coords.longitude,
+                }
+                setCoords(newCoords)
+                setUbicacionObtenida(true)
+                setGeolocalizacionError(null)
+                buscarServicios(newCoords.lat, newCoords.lon)
+            },
+            (error) => {
+                const errorMessages = {
+                    1: "Permiso de ubicación denegado",
+                    2: "Ubicación no disponible",
+                    3: "Tiempo de espera agotado",
+                }
+                setGeolocalizacionError(
+                    errorMessages[error.code] || "Error desconocido"
+                )
+                setUbicacionObtenida(false)
+                buscarServicios(coords.lat, coords.lon)
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000,
+            }
+        )
+    }, [coords])
+
+    // Búsqueda de servicios desde la API
+    const buscarServicios = useCallback(
+        async (lat, lon) => {
+            setLoading(true)
+            setError(null)
+
+            try {
+                const api = apiUrl.replace(/\/+$/, "")
+                const url = `${api}/directorio/buscar/mapa?lat=${lat}&lon=${lon}&radioKm=${RADIO_MAXIMO_BUSQUEDA}`
+
+                const res = await fetch(url)
+
+                if (!res.ok) {
+                    throw new Error(`Error ${res.status}: ${res.statusText}`)
+                }
+
                 const data = await res.json()
+
+                if (!Array.isArray(data)) {
+                    throw new Error("Formato de datos inválido")
+                }
+
                 setPerfiles(data)
+            } catch (e) {
+                console.error("Error al buscar servicios:", e)
+                setError("No se pudieron cargar los datos")
+                setPerfiles([])
+            } finally {
+                setLoading(false)
             }
-        } catch (e) {
-            console.error(e)
-        } finally {
-            setLoading(false)
+        },
+        [apiUrl]
+    )
+
+    // Distancia seleccionada
+    const handleDistanciaSeleccionada = useCallback((metros, index) => {
+        setRadio(metros)
+        setDistanciaSeleccionada(index)
+    }, [])
+
+    // Zoom del mapa según radio
+    const getZoomLevel = useCallback(() => {
+        const radioKm = radio / METROS_POR_KM
+
+        for (const [distancia, zoom] of Object.entries(ZOOM_POR_DISTANCIA)) {
+            if (radioKm <= parseFloat(distancia)) return zoom
         }
-    }
-
-    const handleRadioChange = (e) => {
-        let val = parseFloat(e.target.value)
-        // El valor del slider siempre viene en la unidad seleccionada
-        // Convertir a metros si es necesario
-        if (unidad === "km") {
-            val = val * 1000
-        }
-        setRadio(val)
-        setValorPersonalizado("")
-    }
-
-    const handleUnidadChange = (nuevaUnidad) => {
-        if (unidad === "m" && nuevaUnidad === "km") {
-            // Convertir de metros a km
-            setRadio(radio / 1000)
-        } else if (unidad === "km" && nuevaUnidad === "m") {
-            // Convertir de km a metros
-            setRadio(radio * 1000)
-        }
-        setUnidad(nuevaUnidad)
-    }
-
-    const handleDistanciaRapida = (metros) => {
-        setRadio(metros) // Ya viene en metros
-        setUnidad(metros >= 1000 ? "km" : "m")
-        setValorPersonalizado("")
-    }
-
-    const handleValorPersonalizado = (e) => {
-        const val = e.target.value
-        setValorPersonalizado(val)
-        if (val && !isNaN(val)) {
-            let metros =
-                unidad === "km" ? parseFloat(val) * 1000 : parseInt(val)
-            if (metros > 0) {
-                setRadio(metros)
-            }
-        }
-    }
-
-    const getZoomLevel = () => {
-        const radioKm = radio / 1000 // Convertir a km para el zoom
-        if (radioKm <= 0.5) return 15
-        if (radioKm <= 1) return 14
-        if (radioKm <= 5) return 13
-        if (radioKm <= 15) return 12
-        if (radioKm <= 30) return 11
         return 10
-    }
+    }, [radio])
 
-    const formatearDistancia = (metros) => {
-        if (metros < 1000) {
-            return `${Math.round(metros)} m`
+    // Formateo de distancia para display
+    const formatearDistancia = useCallback((metros) => {
+        if (metros == null || isNaN(metros)) return "Distancia desconocida"
+
+        return metros < METROS_POR_KM
+            ? `${Math.round(metros)} m`
+            : `${(metros / METROS_POR_KM).toFixed(1)} km`
+    }, [])
+
+    // Manejo del click en marker
+    const handleMarkerClick = useCallback((perfil, event) => {
+        event.stopPropagation()
+
+        // Calcular posición del modal considerando los límites del mapa
+        const mapElement = event.currentTarget.closest(
+            '[style*="position: relative"]'
+        )
+        if (mapElement) {
+            const rect = mapElement.getBoundingClientRect()
+            const x = Math.min(
+                Math.max(event.clientX - rect.left, 150),
+                rect.width - 10
+            )
+            const y = Math.min(
+                Math.max(event.clientY - rect.top - 200, 10),
+                rect.height - 10
+            )
+
+            setModalPosition({ x, y })
         } else {
-            return `${(metros / 1000).toFixed(1)} km`
+            setModalPosition({
+                x: event.clientX,
+                y: event.clientY - 200,
+            })
         }
-    }
 
-    const handleMarkerClick = (perfil, event) => {
         setPerfilSeleccionado(perfil)
-        // Posicionar el modal cerca del marcador
-        setModalPosition({
-            x: event.clientX,
-            y: event.clientY,
-        })
-    }
+    }, [])
 
-    const handleCerrarModal = () => {
+    // Cierre del modal
+    const handleCerrarModal = useCallback(() => {
         setPerfilSeleccionado(null)
         setModalPosition(null)
-    }
-
-    const getRadioDisplay = () => {
-        // Convertir el radio interno (metros) a la unidad de display
-        if (unidad === "km") {
-            return radio / 1000
-        } else {
-            return radio
-        }
-    }
-
-    const getSliderValue = () => {
-        // El slider siempre muestra el valor en la unidad actual
-        return getRadioDisplay()
-    }
+    }, [])
 
     return (
-        <div style={mainContainer}>
+        <div style={styles.mainContainer}>
             {/* HEADER COMPACTO */}
-            <div style={compactHeader}>
-                <div style={headerLeft}>
-                    <h2 style={compactTitle}>📍 Directorio Regional</h2>
-                    {ubicacionObtenida && (
-                        <span style={compactBadge}>✓ Ubicación actual</span>
+            <div style={styles.header}>
+                <div style={styles.headerLeft}>
+                    <h2 style={styles.title}>📍 Directorio Regional</h2>
+                    {ubicacionObtenida ? (
+                        <span style={styles.successBadge}>
+                            ✓ Ubicación actual
+                        </span>
+                    ) : geolocalizacionError ? (
+                        <span style={styles.errorBadge}>
+                            ⚠ {geolocalizacionError}
+                        </span>
+                    ) : (
+                        <span style={styles.loadingBadge}>○ Ubicando...</span>
                     )}
                 </div>
 
-                <div style={headerRight}>
-                    <div style={radiusControls}>
-                        {/* Distancias rápidas */}
-                        <div style={quickDistances}>
+                <div style={styles.headerRight}>
+                    {/* Controles de distancia con botones predefinidos */}
+                    <div style={styles.distanceControls}>
+                        <span style={styles.distanceLabel}>Distancia:</span>
+                        <div style={styles.distanceButtons}>
                             {distanciasPredeterminadas.map((dist, idx) => {
                                 const valorEnMetros =
                                     dist.unidad === "km"
-                                        ? dist.valor * 1000
+                                        ? dist.valor * METROS_POR_KM
                                         : dist.valor
+                                const isActive = distanciaSeleccionada === idx
+
                                 return (
                                     <button
                                         key={idx}
-                                        className="quick-button"
+                                        className="directorio-button"
                                         style={{
-                                            ...quickButton,
-                                            backgroundColor:
-                                                Math.abs(
-                                                    radio - valorEnMetros
-                                                ) < 1
-                                                    ? primaryColor
-                                                    : "#f1f5f9",
-                                            color:
-                                                Math.abs(
-                                                    radio - valorEnMetros
-                                                ) < 1
-                                                    ? "white"
-                                                    : "#64748b",
+                                            ...styles.distanceButton,
+                                            backgroundColor: isActive
+                                                ? primaryColor
+                                                : "#f1f5f9",
+                                            color: isActive
+                                                ? "white"
+                                                : "#64748b",
+                                            borderColor: isActive
+                                                ? primaryColor
+                                                : "#e2e8f0",
                                         }}
                                         onClick={() =>
-                                            handleDistanciaRapida(valorEnMetros)
+                                            handleDistanciaSeleccionada(
+                                                valorEnMetros,
+                                                idx
+                                            )
                                         }
+                                        title={`Buscar en ${dist.valor}${dist.unidad} a la redonda`}
+                                        aria-pressed={isActive}
                                     >
                                         {dist.valor}
                                         {dist.unidad}
@@ -278,101 +341,27 @@ export default function BuscadorDirectorioFinal(props) {
                                 )
                             })}
                         </div>
-
-                        {/* Control de radio */}
-                        <div style={radiusSliderContainer}>
-                            <div style={radiusInfo}>
-                                <span style={radiusLabel}>
-                                    Radio: {getRadioDisplay()} {unidad}
-                                </span>
-                                <div style={unitToggle}>
-                                    <button
-                                        className="unit-button"
-                                        style={{
-                                            ...unitButton,
-                                            backgroundColor:
-                                                unidad === "m"
-                                                    ? primaryColor
-                                                    : "#e2e8f0",
-                                            color:
-                                                unidad === "m"
-                                                    ? "white"
-                                                    : "#64748b",
-                                        }}
-                                        onClick={() => handleUnidadChange("m")}
-                                    >
-                                        m
-                                    </button>
-                                    <button
-                                        className="unit-button"
-                                        style={{
-                                            ...unitButton,
-                                            backgroundColor:
-                                                unidad === "km"
-                                                    ? primaryColor
-                                                    : "#e2e8f0",
-                                            color:
-                                                unidad === "km"
-                                                    ? "white"
-                                                    : "#64748b",
-                                        }}
-                                        onClick={() => handleUnidadChange("km")}
-                                    >
-                                        km
-                                    </button>
-                                </div>
-                            </div>
-
-                            <input
-                                type="range"
-                                min={unidad === "km" ? "0.1" : "50"}
-                                max={unidad === "km" ? "100" : "100000"}
-                                step={unidad === "km" ? "0.1" : "50"}
-                                value={getSliderValue()}
-                                onChange={handleRadioChange}
-                                style={{
-                                    ...compactSlider,
-                                    accentColor: primaryColor,
-                                }}
-                            />
-
-                            {/* Input personalizado */}
-                            <div style={customInputContainer}>
-                                <input
-                                    type="number"
-                                    placeholder="Personalizado"
-                                    value={valorPersonalizado}
-                                    onChange={handleValorPersonalizado}
-                                    min={unidad === "km" ? "0.1" : "50"}
-                                    max={unidad === "km" ? "100" : "100000"}
-                                    step={unidad === "km" ? "0.1" : "50"}
-                                    style={customInput}
-                                    className="custom-input"
-                                />
-                                <span style={inputUnit}>{unidad}</span>
-                            </div>
-                        </div>
                     </div>
 
+                    {/* Contador de resultados */}
                     <div
                         style={{
-                            ...resultsCount,
-                            backgroundColor: primaryColor,
+                            ...styles.resultsCount,
+                            backgroundColor: error ? "#ef4444" : primaryColor,
                         }}
+                        title={`${perfilesFiltrados.length} resultados encontrados`}
                     >
-                        {loading ? "..." : perfilesFiltrados.length}
+                        {loading
+                            ? "..."
+                            : error
+                                ? "!"
+                                : perfilesFiltrados.length}
                     </div>
                 </div>
             </div>
 
             {/* MAPA */}
-            <div
-                style={{
-                    ...mapWrapper,
-                    height: alturaMapa,
-                    position: "relative",
-                }}
-            >
+            <div style={{ ...styles.mapWrapper, height: alturaMapa }}>
                 <Map
                     ref={mapRef}
                     height={alturaMapa}
@@ -381,15 +370,45 @@ export default function BuscadorDirectorioFinal(props) {
                     provider={(x, y, z) =>
                         `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`
                     }
+                    attribution={
+                        <a
+                            href="https://www.openstreetmap.org/copyright"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            © OpenStreetMap contributors
+                        </a>
+                    }
                 >
                     <ZoomControl />
 
                     {/* Marcador de ubicación actual */}
-                    <Marker
-                        width={35}
-                        anchor={[coords.lat, coords.lon]}
-                        color="#3b82f6"
-                    />
+                    {ubicacionObtenida && (
+                        <Marker
+                            width={40}
+                            anchor={[coords.lat, coords.lon]}
+                            color="#3b82f6"
+                            payload="Ubicación actual"
+                        />
+                    )}
+
+                    {/* Círculo de radio de búsqueda */}
+                    {ubicacionObtenida && (
+                        <Overlay
+                            anchor={[coords.lat, coords.lon]}
+                            offset={[0, 0]}
+                        >
+                            <div
+                                style={{
+                                    ...styles.radiusCircle,
+                                    width: `${radio * 2}px`,
+                                    height: `${radio * 2}px`,
+                                    border: `2px solid ${primaryColor}40`,
+                                    backgroundColor: `${primaryColor}10`,
+                                }}
+                            />
+                        </Overlay>
+                    )}
 
                     {/* Marcadores de perfiles filtrados */}
                     {perfilesFiltrados.map((p) => (
@@ -399,28 +418,17 @@ export default function BuscadorDirectorioFinal(props) {
                             offset={[14, 28]}
                         >
                             <div
+                                className="directorio-marker"
                                 onClick={(e) => handleMarkerClick(p, e)}
-                                style={{
-                                    cursor: "pointer",
-                                    transition: "transform 0.2s",
-                                }}
-                                onMouseEnter={(e) =>
-                                (e.currentTarget.style.transform =
-                                    "scale(1.1)")
-                                }
-                                onMouseLeave={(e) =>
-                                (e.currentTarget.style.transform =
-                                    "scale(1)")
-                                }
+                                style={styles.markerContainer}
+                                title={`${p.nombrePublico} - ${formatearDistancia(p.distancia)}`}
                             >
                                 <svg
                                     viewBox="0 0 24 24"
                                     fill={primaryColor}
                                     width="28px"
                                     height="28px"
-                                    style={{
-                                        filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
-                                    }}
+                                    style={styles.markerSvg}
                                 >
                                     <path
                                         d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
@@ -437,16 +445,18 @@ export default function BuscadorDirectorioFinal(props) {
                 {perfilSeleccionado && modalPosition && (
                     <div
                         style={{
-                            ...mapModal,
-                            left: modalPosition.x - 150,
-                            top: modalPosition.y - 200,
+                            ...styles.mapModal,
+                            left: modalPosition.x,
+                            top: modalPosition.y,
                         }}
+                        role="dialog"
+                        aria-label={`Información de ${perfilSeleccionado.nombrePublico}`}
                     >
-                        <div style={modalHeader}>
+                        <div style={styles.modalHeader}>
                             <span
                                 style={{
-                                    ...modalCategory,
-                                    backgroundColor: `${primaryColor}15`,
+                                    ...styles.modalCategory,
+                                    backgroundColor: `${primaryColor}20`,
                                     color: primaryColor,
                                 }}
                             >
@@ -454,35 +464,38 @@ export default function BuscadorDirectorioFinal(props) {
                             </span>
                             <button
                                 onClick={handleCerrarModal}
-                                style={modalClose}
+                                style={styles.modalClose}
+                                aria-label="Cerrar información"
                             >
                                 ✕
                             </button>
                         </div>
 
-                        <h3 style={modalTitle}>
-                            {perfilSeleccionado.nombrePublico}
+                        <h3 style={styles.modalTitle}>
+                            {perfilSeleccionado.nombrePublico || "Sin nombre"}
                         </h3>
 
-                        <p style={modalDescription}>
+                        <p style={styles.modalDescription}>
                             {perfilSeleccionado.descripcion ||
-                                "Sin descripción"}
+                                "Sin descripción disponible"}
                         </p>
 
-                        <div style={modalInfo}>
-                            <span style={modalDistance}>
+                        <div style={styles.modalInfo}>
+                            <span style={styles.modalDistance}>
                                 📍{" "}
                                 {formatearDistancia(
                                     perfilSeleccionado.distancia
                                 )}{" "}
-                                • {perfilSeleccionado.ciudad}
+                                •{" "}
+                                {perfilSeleccionado.ciudad ||
+                                    "Ubicación no especificada"}
                             </span>
                         </div>
 
                         <button
-                            className="action-button"
+                            className="directorio-button"
                             style={{
-                                ...modalButton,
+                                ...styles.modalButton,
                                 backgroundColor: primaryColor,
                             }}
                         >
@@ -493,402 +506,543 @@ export default function BuscadorDirectorioFinal(props) {
             </div>
 
             {/* GRID DE TARJETAS */}
-            <div style={scrollContainer}>
-                <div style={horizontalGrid}>
-                    {perfilesFiltrados.length === 0 && !loading ? (
-                        <div style={emptyState}>
-                            <span>
-                                🔍 No hay resultados en{" "}
-                                {formatearDistancia(radio)}
-                            </span>
-                        </div>
-                    ) : (
-                        perfilesFiltrados.map((p) => (
-                            <div
-                                key={p.id}
-                                style={horizontalCard}
-                                className="horizontal-card"
-                            >
-                                <div style={cardContent}>
-                                    <div style={cardHeader}>
-                                        <span
-                                            style={{
-                                                ...categoryTag,
-                                                backgroundColor: `${primaryColor}15`,
-                                                color: primaryColor,
-                                            }}
-                                        >
-                                            {p.rubro || "General"}
-                                        </span>
-                                        <span style={distanceBadge}>
-                                            {formatearDistancia(p.distancia)}
-                                        </span>
-                                    </div>
-
-                                    <h3 style={cardTitle}>
-                                        {p.nombrePublico || "Sin nombre"}
-                                    </h3>
-
-                                    <p style={cardDesc}>
-                                        {p.descripcion
-                                            ? p.descripcion.substring(0, 40) +
-                                            (p.descripcion.length > 40
-                                                ? "..."
-                                                : "")
-                                            : "Sin descripción"}
-                                    </p>
-
-                                    <div style={cardFooter}>
-                                        <span style={cityTag}>
-                                            📍 {p.ciudad || "Sin ubicación"}
-                                        </span>
-                                        <button
-                                            className="action-button"
-                                            style={{
-                                                ...actionButton,
-                                                backgroundColor: primaryColor,
-                                            }}
-                                        >
-                                            Ver
-                                        </button>
-                                    </div>
+            <div style={styles.scrollContainer}>
+                {error ? (
+                    <div style={styles.errorState}>
+                        <span style={styles.errorIcon}>⚠️</span>
+                        <span style={styles.errorText}>{error}</span>
+                        <button
+                            className="directorio-button"
+                            style={{
+                                ...styles.retryButton,
+                                backgroundColor: primaryColor,
+                            }}
+                            onClick={() =>
+                                buscarServicios(coords.lat, coords.lon)
+                            }
+                        >
+                            Reintentar
+                        </button>
+                    </div>
+                ) : loading ? (
+                    <div style={styles.loadingState}>
+                        <span style={styles.loadingText}>
+                            Cargando resultados...
+                        </span>
+                    </div>
+                ) : (
+                    <div style={styles.horizontalGrid}>
+                        {perfilesFiltrados.length === 0 ? (
+                            <div style={styles.emptyStateContainer}>
+                                <span style={styles.emptyStateIcon}>🔍</span>
+                                <span style={styles.emptyStateText}>
+                                    No hay resultados en{" "}
+                                    {formatearDistancia(radio)}
+                                </span>
+                                <span style={styles.emptyStateHint}>
+                                    Intenta aumentar la distancia de búsqueda
+                                </span>
+                                <div style={styles.emptyStateButtons}>
+                                    {distanciasPredeterminadas
+                                        .slice(0, 3)
+                                        .map((dist, idx) => {
+                                            const valorEnMetros =
+                                                dist.unidad === "km"
+                                                    ? dist.valor * METROS_POR_KM
+                                                    : dist.valor
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    className="directorio-button"
+                                                    style={{
+                                                        ...styles.emptyStateButton,
+                                                        backgroundColor:
+                                                            primaryColor,
+                                                    }}
+                                                    onClick={() =>
+                                                        handleDistanciaSeleccionada(
+                                                            valorEnMetros,
+                                                            idx
+                                                        )
+                                                    }
+                                                >
+                                                    {dist.valor}
+                                                    {dist.unidad}
+                                                </button>
+                                            )
+                                        })}
                                 </div>
                             </div>
-                        ))
-                    )}
-                </div>
+                        ) : (
+                            perfilesFiltrados.map((p) => (
+                                <div
+                                    key={p.id}
+                                    style={styles.horizontalCard}
+                                    className="directorio-card-horizontal"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`${p.nombrePublico} - ${formatearDistancia(p.distancia)}`}
+                                >
+                                    <div style={styles.cardContent}>
+                                        <div style={styles.cardHeader}>
+                                            <span
+                                                style={{
+                                                    ...styles.categoryTag,
+                                                    backgroundColor: `${primaryColor}20`,
+                                                    color: primaryColor,
+                                                }}
+                                            >
+                                                {p.rubro || "General"}
+                                            </span>
+                                            <span style={styles.distanceBadge}>
+                                                {formatearDistancia(
+                                                    p.distancia
+                                                )}
+                                            </span>
+                                        </div>
+
+                                        <h3 style={styles.cardTitle}>
+                                            {p.nombrePublico || "Sin nombre"}
+                                        </h3>
+
+                                        <p style={styles.cardDesc}>
+                                            {p.descripcion
+                                                ? `${p.descripcion.substring(0, 60)}${p.descripcion.length > 60 ? "..." : ""}`
+                                                : "Sin descripción"}
+                                        </p>
+
+                                        <div style={styles.cardFooter}>
+                                            <span style={styles.cityTag}>
+                                                📍 {p.ciudad || "Sin ubicación"}
+                                            </span>
+                                            <button
+                                                className="directorio-button"
+                                                style={{
+                                                    ...styles.actionButton,
+                                                    backgroundColor:
+                                                        primaryColor,
+                                                }}
+                                            >
+                                                Ver
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
 }
 
-// ESTILOS
-const mainContainer = {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    background: "#f8fafc",
-    fontFamily:
-        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+// Estilos mejorados con sistema de diseño consistente
+const styles = {
+    mainContainer: {
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "#f8fafc",
+        fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        overflow: "hidden",
+    },
+
+    header: {
+        padding: "12px 16px",
+        background: "linear-gradient(to bottom, white, #fafbfc)",
+        borderBottom: "1px solid #e2e8f0",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexShrink: 0,
+        gap: "16px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+    },
+
+    headerLeft: {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        flexShrink: 0,
+    },
+
+    title: {
+        margin: 0,
+        fontSize: "16px",
+        fontWeight: "700",
+        color: "#1e293b",
+        whiteSpace: "nowrap",
+    },
+
+    successBadge: {
+        padding: "3px 10px",
+        background: "#10b981",
+        color: "white",
+        borderRadius: "12px",
+        fontSize: "10px",
+        fontWeight: "600",
+        whiteSpace: "nowrap",
+        boxShadow: "0 1px 2px rgba(16, 185, 129, 0.3)",
+    },
+
+    errorBadge: {
+        padding: "3px 10px",
+        background: "#ef4444",
+        color: "white",
+        borderRadius: "12px",
+        fontSize: "10px",
+        fontWeight: "600",
+        whiteSpace: "nowrap",
+        boxShadow: "0 1px 2px rgba(239, 68, 68, 0.3)",
+    },
+
+    loadingBadge: {
+        padding: "3px 10px",
+        background: "#f59e0b",
+        color: "white",
+        borderRadius: "12px",
+        fontSize: "10px",
+        fontWeight: "600",
+        whiteSpace: "nowrap",
+        boxShadow: "0 1px 2px rgba(245, 158, 11, 0.3)",
+    },
+
+    headerRight: {
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        flex: 1,
+        justifyContent: "flex-end",
+    },
+
+    distanceControls: {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+    },
+
+    distanceLabel: {
+        fontSize: "13px",
+        fontWeight: "600",
+        color: "#64748b",
+        whiteSpace: "nowrap",
+    },
+
+    distanceButtons: {
+        display: "flex",
+        gap: "6px",
+        flexWrap: "wrap",
+    },
+
+    distanceButton: {
+        padding: "6px 14px",
+        borderRadius: "20px",
+        border: "2px solid",
+        fontSize: "13px",
+        fontWeight: "600",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        whiteSpace: "nowrap",
+        backgroundColor: "#f1f5f9",
+        color: "#64748b",
+        borderColor: "#e2e8f0",
+    },
+
+    resultsCount: {
+        padding: "6px 14px",
+        color: "white",
+        borderRadius: "20px",
+        fontSize: "14px",
+        fontWeight: "700",
+        minWidth: "50px",
+        textAlign: "center",
+        flexShrink: 0,
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    },
+
+    mapWrapper: {
+        width: "100%",
+        flexShrink: 0,
+        position: "relative",
+        backgroundColor: "#e2e8f0",
+        borderBottom: "1px solid #cbd5e1",
+    },
+
+    radiusCircle: {
+        borderRadius: "50%",
+        position: "absolute",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+    },
+
+    markerContainer: {
+        cursor: "pointer",
+        transition: "transform 0.2s",
+        display: "inline-block",
+    },
+
+    markerSvg: {
+        filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+        transition: "transform 0.2s",
+    },
+
+    mapModal: {
+        position: "absolute",
+        width: "280px",
+        background: "white",
+        borderRadius: "12px",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+        padding: "16px",
+        zIndex: 1000,
+        pointerEvents: "auto",
+        animation: "fadeIn 0.2s",
+    },
+
+    modalHeader: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "12px",
+    },
+
+    modalCategory: {
+        padding: "3px 8px",
+        borderRadius: "6px",
+        fontSize: "10px",
+        fontWeight: "700",
+        textTransform: "uppercase",
+    },
+
+    modalClose: {
+        width: "24px",
+        height: "24px",
+        borderRadius: "6px",
+        border: "none",
+        background: "#f1f5f9",
+        color: "#64748b",
+        fontSize: "14px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.2s",
+    },
+
+    modalTitle: {
+        margin: "0 0 8px 0",
+        fontSize: "16px",
+        fontWeight: "700",
+        color: "#1e293b",
+    },
+
+    modalDescription: {
+        margin: "0 0 12px 0",
+        fontSize: "13px",
+        color: "#64748b",
+        lineHeight: "1.5",
+    },
+
+    modalInfo: {
+        marginBottom: "16px",
+    },
+
+    modalDistance: {
+        fontSize: "12px",
+        color: "#64748b",
+        fontWeight: "500",
+    },
+
+    modalButton: {
+        width: "100%",
+        padding: "8px",
+        borderRadius: "8px",
+        border: "none",
+        color: "white",
+        fontSize: "13px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
+
+    scrollContainer: {
+        flex: 1,
+        overflowY: "auto",
+        overflowX: "hidden",
+        padding: "16px",
+        background: "#f8fafc",
+    },
+
+    horizontalGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: "12px",
+    },
+
+    horizontalCard: {
+        background: "white",
+        borderRadius: "12px",
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        transition: "all 0.2s ease",
+        cursor: "pointer",
+    },
+
+    cardContent: {
+        padding: "14px",
+    },
+
+    cardHeader: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "8px",
+    },
+
+    categoryTag: {
+        padding: "3px 8px",
+        borderRadius: "6px",
+        fontSize: "10px",
+        fontWeight: "700",
+        textTransform: "uppercase",
+        letterSpacing: "0.3px",
+    },
+
+    distanceBadge: {
+        fontSize: "11px",
+        color: "#64748b",
+        fontWeight: "600",
+        background: "#f1f5f9",
+        padding: "2px 8px",
+        borderRadius: "12px",
+    },
+
+    cardTitle: {
+        margin: "0 0 6px 0",
+        fontSize: "14px",
+        fontWeight: "700",
+        color: "#1e293b",
+        lineHeight: "1.3",
+    },
+
+    cardDesc: {
+        margin: "0 0 12px 0",
+        fontSize: "12px",
+        color: "#64748b",
+        lineHeight: "1.4",
+        minHeight: "34px",
+    },
+
+    cardFooter: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+
+    cityTag: {
+        fontSize: "11px",
+        color: "#64748b",
+        fontWeight: "500",
+    },
+
+    actionButton: {
+        padding: "5px 14px",
+        borderRadius: "6px",
+        border: "none",
+        color: "white",
+        fontSize: "11px",
+        fontWeight: "600",
+        cursor: "pointer",
+        transition: "filter 0.2s",
+    },
+
+    emptyStateContainer: {
+        gridColumn: "1 / -1",
+        textAlign: "center",
+        padding: "40px 20px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "16px",
+    },
+
+    emptyStateIcon: {
+        fontSize: "48px",
+        marginBottom: "8px",
+    },
+
+    emptyStateText: {
+        color: "#64748b",
+        fontSize: "16px",
+        fontWeight: "600",
+    },
+
+    emptyStateHint: {
+        color: "#94a3b8",
+        fontSize: "13px",
+    },
+
+    emptyStateButtons: {
+        display: "flex",
+        gap: "8px",
+        marginTop: "8px",
+    },
+
+    emptyStateButton: {
+        padding: "6px 14px",
+        borderRadius: "16px",
+        border: "none",
+        color: "white",
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
+
+    errorState: {
+        gridColumn: "1 / -1",
+        textAlign: "center",
+        padding: "40px 20px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "16px",
+    },
+
+    errorIcon: {
+        fontSize: "48px",
+    },
+
+    errorText: {
+        color: "#64748b",
+        fontSize: "14px",
+        fontWeight: "500",
+    },
+
+    loadingState: {
+        gridColumn: "1 / -1",
+        textAlign: "center",
+        padding: "40px 20px",
+    },
+
+    loadingText: {
+        color: "#64748b",
+        fontSize: "14px",
+        fontWeight: "500",
+    },
+
+    retryButton: {
+        padding: "8px 16px",
+        borderRadius: "8px",
+        border: "none",
+        color: "white",
+        fontSize: "13px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
 }
 
-const compactHeader = {
-    padding: "12px 16px",
-    background: "white",
-    borderBottom: "1px solid #e2e8f0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    flexShrink: 0,
-    gap: "16px",
-}
-
-const headerLeft = {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    flexShrink: 0,
-}
-
-const compactTitle = {
-    margin: 0,
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#1e293b",
-}
-
-const compactBadge = {
-    padding: "2px 8px",
-    background: "#10b981",
-    color: "white",
-    borderRadius: "12px",
-    fontSize: "10px",
-    fontWeight: "600",
-}
-
-const headerRight = {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "16px",
-    flex: 1,
-    justifyContent: "flex-end",
-}
-
-const radiusControls = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    flex: 1,
-    maxWidth: "400px",
-}
-
-const quickDistances = {
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-}
-
-const quickButton = {
-    padding: "4px 12px",
-    borderRadius: "16px",
-    border: "none",
-    fontSize: "12px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.2s",
-}
-
-const radiusSliderContainer = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-}
-
-const radiusInfo = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-}
-
-const radiusLabel = {
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#64748b",
-}
-
-const unitToggle = {
-    display: "flex",
-    gap: "4px",
-}
-
-const unitButton = {
-    padding: "2px 8px",
-    borderRadius: "12px",
-    border: "none",
-    fontSize: "11px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.2s",
-}
-
-const compactSlider = {
-    width: "100%",
-    height: "4px",
-    borderRadius: "2px",
-}
-
-const customInputContainer = {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-}
-
-const customInput = {
-    flex: 1,
-    padding: "4px 8px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
-    fontSize: "12px",
-    outline: "none",
-}
-
-const inputUnit = {
-    fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "600",
-}
-
-const resultsCount = {
-    padding: "4px 12px",
-    color: "white",
-    borderRadius: "20px",
-    fontSize: "13px",
-    fontWeight: "700",
-    minWidth: "50px",
-    textAlign: "center",
-}
-
-const mapWrapper = {
-    width: "100%",
-    flexShrink: 0,
-    position: "relative",
-    backgroundColor: "#e2e8f0",
-}
-
-const mapModal = {
-    position: "absolute",
-    width: "280px",
-    background: "white",
-    borderRadius: "12px",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
-    padding: "16px",
-    zIndex: 1000,
-    pointerEvents: "auto",
-}
-
-const modalHeader = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "12px",
-}
-
-const modalCategory = {
-    padding: "3px 8px",
-    borderRadius: "6px",
-    fontSize: "10px",
-    fontWeight: "700",
-    textTransform: "uppercase",
-}
-
-const modalClose = {
-    width: "24px",
-    height: "24px",
-    borderRadius: "6px",
-    border: "none",
-    background: "#f1f5f9",
-    color: "#64748b",
-    fontSize: "14px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-}
-
-const modalTitle = {
-    margin: "0 0 8px 0",
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#1e293b",
-}
-
-const modalDescription = {
-    margin: "0 0 12px 0",
-    fontSize: "13px",
-    color: "#64748b",
-    lineHeight: "1.5",
-}
-
-const modalInfo = {
-    marginBottom: "16px",
-}
-
-const modalDistance = {
-    fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "500",
-}
-
-const modalButton = {
-    width: "100%",
-    padding: "8px",
-    borderRadius: "8px",
-    border: "none",
-    color: "white",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
-}
-
-const scrollContainer = {
-    flex: 1,
-    overflowY: "auto",
-    overflowX: "hidden",
-    padding: "16px",
-    background: "#f8fafc",
-}
-
-const horizontalGrid = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "12px",
-}
-
-const horizontalCard = {
-    background: "white",
-    borderRadius: "12px",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-    transition: "all 0.2s ease",
-    cursor: "pointer",
-}
-
-const cardContent = {
-    padding: "14px",
-}
-
-const cardHeader = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "8px",
-}
-
-const categoryTag = {
-    padding: "3px 8px",
-    borderRadius: "6px",
-    fontSize: "10px",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: "0.3px",
-}
-
-const distanceBadge = {
-    fontSize: "11px",
-    color: "#64748b",
-    fontWeight: "600",
-    background: "#f1f5f9",
-    padding: "2px 8px",
-    borderRadius: "12px",
-}
-
-const cardTitle = {
-    margin: "0 0 6px 0",
-    fontSize: "14px",
-    fontWeight: "700",
-    color: "#1e293b",
-    lineHeight: "1.3",
-}
-
-const cardDesc = {
-    margin: "0 0 12px 0",
-    fontSize: "12px",
-    color: "#64748b",
-    lineHeight: "1.4",
-}
-
-const cardFooter = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-}
-
-const cityTag = {
-    fontSize: "11px",
-    color: "#64748b",
-    fontWeight: "500",
-}
-
-const actionButton = {
-    padding: "5px 14px",
-    borderRadius: "6px",
-    border: "none",
-    color: "white",
-    fontSize: "11px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "opacity 0.2s",
-}
-
-const emptyState = {
-    gridColumn: "1 / -1",
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "#64748b",
-    fontSize: "14px",
-}
-
+// Property Controls mejorados
 addPropertyControls(BuscadorDirectorioFinal, {
     apiUrl: {
         type: ControlType.String,
@@ -902,18 +1056,24 @@ addPropertyControls(BuscadorDirectorioFinal, {
     },
     alturaMapa: {
         type: ControlType.Number,
-        title: "Alto del Mapa",
-        defaultValue: 300,
+        title: "Altura del Mapa (px)",
+        defaultValue: 350,
         min: 200,
-        max: 500,
+        max: 600,
+        step: 50,
     },
     distanciasPredeterminadas: {
         type: ControlType.Array,
-        title: "Distancias Rápidas",
+        title: "Distancias de Búsqueda",
         control: {
             type: ControlType.Object,
             controls: {
-                valor: { type: ControlType.Number, title: "Valor" },
+                valor: {
+                    type: ControlType.Number,
+                    title: "Valor",
+                    min: 0.1,
+                    max: 100,
+                },
                 unidad: {
                     type: ControlType.Enum,
                     title: "Unidad",
@@ -923,11 +1083,12 @@ addPropertyControls(BuscadorDirectorioFinal, {
             },
         },
         defaultValue: [
-            { valor: 200, unidad: "m" },
+            { valor: 500, unidad: "m" },
             { valor: 1, unidad: "km" },
             { valor: 5, unidad: "km" },
-            { valor: 10, unidad: "km" },
-            { valor: 25, unidad: "km" },
+            { valor: 15, unidad: "km" },
+            { valor: 30, unidad: "km" },
         ],
+        maxCount: 5,
     },
 })

@@ -17,17 +17,25 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
     Optional<PerfilProveedor> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
     /**
-     * Paso 1: Busca IDs usando PostGIS puro para performance.
+     * Busca IDs cercanos aplicando un ranking inicial por Suscripción Premium y Distancia.
+     * Permite filtrar por Rubro (nombre del rubro principal o personalizado).
      */
     @Query(value = "SELECT CAST(p.id AS VARCHAR) FROM perfiles_proveedor p " +
-                   "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true", 
+                   "LEFT JOIN suscripciones_usuario s ON p.usuario_id = s.usuario_id AND s.estado = 'ACTIVA' " +
+                   "LEFT JOIN planes_suscripcion pl ON s.plan_id = pl.id " +
+                   "LEFT JOIN rubros r ON p.rubro_principal_id = r.id " +
+                   "WHERE ST_DWithin(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326), :radioMetros) = true " +
+                   "AND (:rubro IS NULL OR r.nombre ILIKE :rubro OR p.rubro_personalizado ILIKE :rubro) " +
+                   "ORDER BY (CASE WHEN pl.nombre ILIKE 'Premium' THEN 0 ELSE 1 END) ASC, " +
+                   "ST_Distance(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326)) ASC", 
            nativeQuery = true)
-    List<UUID> buscarIdsCercanos(@Param("lat") double lat, 
-                                 @Param("lon") double lon, 
-                                 @Param("radioMetros") double radioMetros);
+    List<UUID> buscarIdsCercanosOrdenados(@Param("lat") double lat, 
+                                          @Param("lon") double lon, 
+                                          @Param("radioMetros") double radioMetros,
+                                          @Param("rubro") String rubro);
 
     /**
-     * Paso 2: Carga las entidades vinculadas en 1 sola consulta (LEFT JOIN FETCH automático).
+     * Paso 2: Carga las entidades vinculadas en 1 sola consulta para los IDs de la página actual.
      */
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"usuario", "rubroPrincipal"})
     List<PerfilProveedor> findByIdIn(List<UUID> ids);

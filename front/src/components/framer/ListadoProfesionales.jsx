@@ -279,15 +279,24 @@ export default function ListadoProfesionales(props) {
                         )}
                     </div>
                     
-                    <button style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#6366F1",
-                        fontWeight: "700",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        padding: "4px",
-                    }}>
+                    <button 
+                        onClick={() => {
+                            if (props.providerProfileUrl) {
+                                window.location.href = `${props.providerProfileUrl}?id=${prof.id}`;
+                            } else {
+                                console.warn("providerProfileUrl no está definida en las propiedades");
+                            }
+                        }}
+                        style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#6366F1",
+                            fontWeight: "700",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            padding: "4px",
+                        }}
+                    >
                         Perfil →
                     </button>
                 </div>
@@ -542,5 +551,10 @@ addPropertyControls(ListadoProfesionales, {
         defaultValue: 1,
         min: 1,
         max: 100,
+    },
+    providerProfileUrl: {
+        type: ControlType.String,
+        title: "URL Perfil Prov",
+        defaultValue: "https://vibrant-concept-745262.framer.app/perfil-profesional",
     },
 })

@@ -30,9 +30,10 @@ public class DirectorioController {
             @RequestParam double lon,
             @RequestParam(defaultValue = "1") double radioKm,
             @RequestParam(required = false) String rubro,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size) {
-        return ResponseEntity.ok(directorioService.buscarCercanosLista(lat, lon, radioKm, rubro, page, size));
+        return ResponseEntity.ok(directorioService.buscarCercanosLista(lat, lon, radioKm, rubro, q, page, size));
     }
 
     @GetMapping("/buscar/mapa")
@@ -40,8 +41,9 @@ public class DirectorioController {
     public ResponseEntity<List<PerfilRespuestaDto>> buscarMapa(
             @RequestParam double lat,
             @RequestParam double lon,
-            @RequestParam(defaultValue = "10") double radioKm) {
-        return ResponseEntity.ok(directorioService.buscarCercanosMapa(lat, lon, radioKm));
+            @RequestParam(defaultValue = "10") double radioKm,
+            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(directorioService.buscarCercanosMapa(lat, lon, radioKm, q));
     }
 
     @GetMapping("/proveedor/{id}")

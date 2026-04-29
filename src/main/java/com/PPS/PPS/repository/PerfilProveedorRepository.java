@@ -21,6 +21,7 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
      * Permite filtrar por Rubro (nombre del rubro principal o personalizado).
      */
     @Query(value = "SELECT CAST(p.id AS VARCHAR) FROM perfiles_proveedor p " +
+                   "JOIN usuarios u ON p.usuario_id = u.id " +
                    "LEFT JOIN suscripciones_usuario s ON p.usuario_id = s.usuario_id AND s.estado = 'ACTIVA' " +
                    "LEFT JOIN planes_suscripcion pl ON s.plan_id = pl.id " +
                    "LEFT JOIN rubros r ON p.rubro_principal_id = r.id " +
@@ -28,13 +29,19 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
                    "AND (:rubro IS NULL " +
                    "     OR REPLACE(REPLACE(r.nombre, 'ñ', 'n'), 'Ñ', 'N') ILIKE CONCAT('%', REPLACE(REPLACE(:rubro, 'ñ', 'n'), 'Ñ', 'N'), '%') " +
                    "     OR REPLACE(REPLACE(p.rubro_personalizado, 'ñ', 'n'), 'Ñ', 'N') ILIKE CONCAT('%', REPLACE(REPLACE(:rubro, 'ñ', 'n'), 'Ñ', 'N'), '%')) " +
+                   "AND (:q IS NULL " +
+                   "     OR u.nombre ILIKE CONCAT('%', :q, '%') " +
+                   "     OR u.apellido ILIKE CONCAT('%', :q, '%') " +
+                   "     OR p.ciudad ILIKE CONCAT('%', :q, '%') " +
+                   "     OR p.descripcion_profesional ILIKE CONCAT('%', :q, '%')) " +
                    "ORDER BY (CASE WHEN pl.nombre ILIKE 'Premium' OR pl.nombre ILIKE 'PRO' THEN 0 ELSE 1 END) ASC, " +
                    "ST_Distance(p.ubicacion, ST_SetSRID(ST_Point(:lon, :lat), 4326)) ASC", 
            nativeQuery = true)
     List<UUID> buscarIdsCercanosOrdenados(@Param("lat") double lat, 
                                           @Param("lon") double lon, 
                                           @Param("radioMetros") double radioMetros,
-                                          @Param("rubro") String rubro);
+                                          @Param("rubro") String rubro,
+                                          @Param("q") String q);
 
     /**
      * Paso 2: Carga las entidades vinculadas en 1 sola consulta para los IDs de la página actual.

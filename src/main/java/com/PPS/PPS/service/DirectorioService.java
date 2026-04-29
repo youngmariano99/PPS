@@ -178,7 +178,7 @@ public class DirectorioService {
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<PerfilRespuestaDto> buscarCercanosLista(double lat, double lon,
-            double radioKm, String rubro, int page, int size) {
+            double radioKm, String rubro, String q, int page, int size) {
         double radioMetros = radioKm * 1000;
         if (radioMetros > MAX_RADIO_METROS) {
             radioMetros = MAX_RADIO_METROS;
@@ -189,7 +189,7 @@ public class DirectorioService {
         // 1. Obtener todos los IDs cercanos ya ordenados por SQL (Premium > Distancia)
         // Si rubro es "todos", pasamos null para que no filtre por rubro
         String rubroFiltro = (rubro == null || rubro.equalsIgnoreCase("todos")) ? null : rubro;
-        List<UUID> idsOrdenados = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, rubroFiltro);
+        List<UUID> idsOrdenados = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, rubroFiltro, q);
 
         if (idsOrdenados.isEmpty()) {
             return new org.springframework.data.domain.PageImpl<>(new ArrayList<>(),
@@ -280,14 +280,14 @@ public class DirectorioService {
     }
 
     @Transactional(readOnly = true)
-    public List<PerfilRespuestaDto> buscarCercanosMapa(double lat, double lon, double radioKm) {
+    public List<PerfilRespuestaDto> buscarCercanosMapa(double lat, double lon, double radioKm, String q) {
         double radioMetros = radioKm * 1000;
         if (radioMetros > MAX_RADIO_METROS) {
             radioMetros = MAX_RADIO_METROS;
         }
         List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
-        List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, null);
+        List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, null, q);
         List<PerfilProveedor> proveedoresCrudos = proveedorIds.isEmpty() ? new ArrayList<>()
                 : proveedorRepository.findByIdIn(proveedorIds);
 

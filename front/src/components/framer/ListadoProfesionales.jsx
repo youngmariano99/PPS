@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
+import { Search, MapPin, X } from "lucide-react"
 
 export default function ListadoProfesionales(props) {
     const { apiUrl, defaultLat, defaultLon, radioKm } = props
@@ -13,6 +14,7 @@ export default function ListadoProfesionales(props) {
     const [paginaActual, setPaginaActual] = useState(0)
     const [totalPaginas, setTotalPaginas] = useState(0)
     const [todosLosProfesionales, setTodosLosProfesionales] = useState([])
+    const [busqueda, setBusqueda] = useState("")
 
     // Estados Geometría / GPS
     const [usarCercanos, setUsarCercanos] = useState(true)
@@ -81,6 +83,10 @@ export default function ListadoProfesionales(props) {
                 if (rubroActivo !== "todos") {
                     queryUrl += `&rubro=${encodeURIComponent(rubroActivo)}`
                 }
+                
+                if (busqueda) {
+                    queryUrl += `&q=${encodeURIComponent(busqueda)}`
+                }
 
                 const res = await fetch(queryUrl)
                 if (res.ok) {
@@ -99,7 +105,7 @@ export default function ListadoProfesionales(props) {
         }
 
         fetchProfesionales()
-    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual, usarCercanos])
+    }, [apiUrl, coordenadas, radioKm, rubroActivo, paginaActual, usarCercanos, busqueda])
 
     // 3. Ya no usamos relleno de placeholders para una UX más limpia
     useEffect(() => {
@@ -420,21 +426,64 @@ export default function ListadoProfesionales(props) {
     return (
         <div style={containerStyle}>
             {/* Filtros e Intro */}
-            <div style={{ padding: "24px 24px 0 24px", maxWidth: "1400px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px" }}>
-                    <div>
-                        <h1 style={{ margin: "0 0 4px 0", fontSize: "22px", fontWeight: "800", letterSpacing: "-0.025em" }}>
-                            Encontrá tu profesional
-                        </h1>
-                        <p style={{ margin: 0, color: "#64748B", fontSize: "13px" }}>
-                            Conectando expertos verificados cerca de tu ubicación.
-                        </p>
-                        {usarCercanos && (
-                            <div style={{ marginTop: "8px", fontSize: "12px", color: "#6366F1", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
-                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#6366F1" }} />
-                                Mostrando resultados dentro de {radioKm}km a la redonda
-                            </div>
-                        )}
+            <div style={{ padding: "40px 24px 0 24px", maxWidth: "1400px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", gap: "24px", flexWrap: "wrap" }}>
+                    
+                    {/* Buscador Profesional */}
+                    <div style={{ 
+                        flex: 1, 
+                        minWidth: "300px",
+                        display: "flex", 
+                        alignItems: "center", 
+                        background: "white", 
+                        borderRadius: "16px", 
+                        padding: "4px 8px",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+                        border: "1px solid #F1F5F9"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", flex: 1, padding: "0 12px", borderRight: "1px solid #F1F5F9" }}>
+                            <Search size={18} color="#94A3B8" style={{ marginRight: "12px" }} />
+                            <input 
+                                type="text"
+                                placeholder="Nombre o rubro..."
+                                value={busqueda}
+                                onChange={(e) => {
+                                    setBusqueda(e.target.value)
+                                    setPaginaActual(0)
+                                }}
+                                style={{ 
+                                    width: "100%", 
+                                    border: "none", 
+                                    outline: "none", 
+                                    fontSize: "14px", 
+                                    fontWeight: "500",
+                                    color: "#1E293B",
+                                    padding: "10px 0"
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", flex: 0.8, padding: "0 12px" }}>
+                            <MapPin size={18} color="#94A3B8" style={{ marginRight: "12px" }} />
+                            <input 
+                                type="text"
+                                placeholder="Pringles, Buenos Aires..."
+                                onChange={(e) => {
+                                    // Podemos usar el mismo busqueda state o uno separado para localidad
+                                    // Por ahora, el backend busca q en ciudad también.
+                                    setBusqueda(e.target.value)
+                                    setPaginaActual(0)
+                                }}
+                                style={{ 
+                                    width: "100%", 
+                                    border: "none", 
+                                    outline: "none", 
+                                    fontSize: "14px", 
+                                    fontWeight: "500",
+                                    color: "#1E293B",
+                                    padding: "10px 0"
+                                }}
+                            />
+                        </div>
                     </div>
                     
                     {/* Toggle Cercanos Minimalista */}

@@ -2,6 +2,7 @@ package com.PPS.PPS.controller;
 
 import com.PPS.PPS.dto.AuthRespuestaDto;
 import com.PPS.PPS.dto.LoginSolicitudDto;
+import com.PPS.PPS.dto.RegistroCompletoSolicitudDto;
 import com.PPS.PPS.dto.RegistroSolicitudDto;
 import com.PPS.PPS.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,12 @@ public class AuthController {
     @PostMapping("/registro")
     public ResponseEntity<AuthRespuestaDto> registrar(@Valid @RequestBody RegistroSolicitudDto solicitud) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registrar(solicitud));
+    }
+
+    @Operation(summary = "Registro completo (Usuario + Perfil) Atómico")
+    @PostMapping("/registro-completo")
+    public ResponseEntity<AuthRespuestaDto> registrarCompleto(@Valid @RequestBody RegistroCompletoSolicitudDto solicitud) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.registrarCompleto(solicitud));
     }
 
     @Operation(summary = "Inicio de sesión")

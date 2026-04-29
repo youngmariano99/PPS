@@ -1,178 +1,292 @@
-import React, { useState } from "react"
-import { addPropertyControls, ControlType } from "framer"
+import React, { useState, useEffect } from "react"
+import { addPropertyControls, ControlType, motion, AnimatePresence } from "framer"
 import { createClient } from "https://esm.sh/@supabase/supabase-js"
 
 /**
- * COMPONENTE DE LOGIN PARA FRAMER
- * ------------------------------
- * Este componente permite iniciar sesión contra el backend de Spring Boot
- * y sincronizar la sesión con Supabase para manejar el JWT.
+ * COMPONENTE DE LOGIN PREMIUM PARA FRAMER
+ * --------------------------------------
+ * Rediseño estético con Glassmorphism y seguridad reforzada.
  */
 
-// NOTA: En Framer, puedes inyectar las claves como Properties o dejarlas hardcodeadas aquí
 const supabase = createClient(
     "https://qlciljbuexklxjzxgitk.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
 )
 
 export default function FormularioLogin(props) {
-    const { apiUrl, btnColor, btnText, textColor, borderRadius } = props
+    const { apiUrl, btnText, borderRadius, showGlass } = props
+
+    // Estados
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [intentos, setIntentos] = useState(0)
+    const [bloqueado, setBloqueado] = useState(false)
+
+    // Seguridad: Manejo de intentos locales
+    useEffect(() => {
+        if (intentos >= 5) {
+            setBloqueado(true)
+            setError("Demasiados intentos. Por seguridad, el formulario se ha bloqueado temporalmente.")
+            const timer = setTimeout(() => {
+                setBloqueado(false)
+                setIntentos(0)
+                setError(null)
+            }, 30000) // Bloqueo de 30 segundos
+            return () => clearTimeout(timer)
+        }
+    }, [intentos])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (bloqueado) return
+
         setLoading(true)
         setError(null)
 
-        // Limpieza de URL para evitar dobles barras
-        const cleanApiUrl = apiUrl.replace(/\/+$/, "")
-        const fullUrl = `${cleanApiUrl}/auth/login`
+        // Sanitización básica
+        const cleanEmail = email.trim()
+        const cleanPassword = password.trim()
 
-        console.log("🚀 Llamando a:", fullUrl)
+        const base = (apiUrl || "").replace(/\/+$/, "")
+        const fullUrl = `${base}/auth/login`
 
         try {
-            // Paso 1: Llamada al backend de Spring Boot
+            // Paso 1: Backend Spring Boot
             const response = await fetch(fullUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
+            }).catch(fetchErr => {
+                // Manejo de error de red (servidor apagado o sin internet)
+                throw new Error("NETWORK_ERROR")
             })
-
-            const text = await response.text()
-            console.log("📦 RAW RESPONSE:", text)
 
             let data
             try {
-                data = JSON.parse(text)
-            } catch (e) {
-                throw new Error("Respuesta no es JSON válido: " + text)
+                data = await response.json()
+            } catch (jsonErr) {
+                throw new Error("SERVER_ERROR")
             }
 
-            if (!response.ok)
-                throw new Error(data.mensaje || "Credenciales incorrectas")
+            if (!response.ok) {
+                setIntentos(prev => prev + 1)
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error("INVALID_CREDENTIALS")
+                }
+                throw new Error(data.mensaje || "SERVER_ERROR")
+            }
 
-            // Paso 2: Autenticación en Supabase para obtener sesión local (JWT)
-            // Esto es necesario si usamos funciones de Supabase como Storage o RLS
+            // Paso 2: Supabase Auth
             const { error: sbError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+                email: cleanEmail,
+                password: cleanPassword,
             })
-            if (sbError) throw sbError
+            if (sbError) {
+                if (sbError.message.includes("Invalid login credentials")) throw new Error("INVALID_CREDENTIALS")
+                throw sbError
+            }
 
-            //Guardar usuario en localStorage (CLAVE para el botón de pago)
-            localStorage.setItem(
-                "usuario",
-                JSON.stringify({
-                    id: data.usuarioId,
-                    nombre: data.nombre,
-                    email: data.email,
-                })
-            )
+            // Persistencia Local
+            localStorage.setItem("usuario", JSON.stringify({
+                id: data.usuarioId,
+                nombre: data.nombre,
+                email: data.email,
+            }))
 
-            alert(`¡Hola ${data.nombre}! Ingreso exitoso.`)
-
-            // Aquí podrías disparar un evento de Framer para navegar a otra página
             if (props.onLoginSuccess) props.onLoginSuccess(data)
+
         } catch (err) {
-            setError(err.message)
+            // Mapeo de errores técnicos a mensajes amigables
+            const errorMap = {
+                "NETWORK_ERROR": "No pudimos conectar con el servidor. Por favor, revisa tu conexión a internet o intenta más tarde.",
+                "INVALID_CREDENTIALS": "El correo o la contraseña no son correctos. Por favor, verifícalos e intenta de nuevo.",
+                "SERVER_ERROR": "Hubo un inconveniente técnico en nuestro sistema. Estamos trabajando para solucionarlo.",
+                "auth/invalid-email": "El formato del correo electrónico no es válido.",
+                "Too many requests": "Has realizado demasiados intentos. Por seguridad, espera unos minutos."
+            }
+
+            setError(errorMap[err.message] || errorMap[err.code] || "Ocurrió un error inesperado. Por favor, contacta a soporte.")
+            console.error("DEBUG LOGIN:", err)
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <div style={containerStyle}>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+                ...containerStyle,
+                background: showGlass ? "rgba(255, 255, 255, 0.05)" : "transparent",
+                backdropFilter: showGlass ? "blur(12px)" : "none",
+                borderRadius: `${borderRadius}px`,
+                border: showGlass ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
+            }}
+        >
             <form onSubmit={handleSubmit} style={formStyle}>
-                <input
-                    type="email"
-                    placeholder="Tu correo electrónico"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={{ ...inputStyle, borderRadius: `${borderRadius}px` }}
-                    required
-                />
-                <input
-                    type="password"
-                    placeholder="Tu contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{ ...inputStyle, borderRadius: `${borderRadius}px` }}
-                    required
-                />
-                {error && <p style={errorStyle}>{error}</p>}
-                <button
+                <div style={inputGroupStyle}>
+                    <input
+                        type="email"
+                        placeholder="Correo electrónico"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        style={{ ...inputStyle, borderRadius: `${borderRadius}px` }}
+                        required
+                        disabled={bloqueado}
+                    />
+                </div>
+
+                <div style={inputGroupStyle}>
+                    <input
+                        type="password"
+                        placeholder="Contraseña"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        style={{ ...inputStyle, borderRadius: `${borderRadius}px` }}
+                        required
+                        disabled={bloqueado}
+                    />
+                </div>
+
+                <AnimatePresence>
+                    {error && (
+                        <motion.p
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            style={errorStyle}
+                        >
+                            {error}
+                        </motion.p>
+                    )}
+                </AnimatePresence>
+
+                <motion.button
+                    whileHover={!bloqueado && !loading ? { scale: 1.02, boxShadow: "0 10px 20px -10px rgba(99, 102, 241, 0.5)" } : {}}
+                    whileTap={!bloqueado && !loading ? { scale: 0.98 } : {}}
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || bloqueado}
                     style={{
                         ...buttonStyle,
-                        backgroundColor: btnColor,
-                        color: textColor,
+                        background: bloqueado ? "#475569" : "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
                         borderRadius: `${borderRadius}px`,
+                        opacity: loading ? 0.8 : 1,
                     }}
                 >
-                    {loading ? "Verificando..." : btnText}
-                </button>
+                    {loading ? (
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                            style={loaderStyle}
+                        />
+                    ) : btnText}
+                </motion.button>
+
+                <p style={footerStyle}>
+                    ¿No tienes cuenta? <span style={{ color: "#818CF8", cursor: "pointer", fontWeight: "600" }}>Regístrate</span>
+                </p>
             </form>
-        </div>
+        </motion.div>
     )
 }
 
-// Controles para el panel de Framer
+// Estilos
+const containerStyle = {
+    width: "100%",
+    maxWidth: "400px",
+    padding: "32px",
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
+    fontFamily: "'Inter', system-ui, sans-serif",
+}
+
+const formStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+}
+
+const inputGroupStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+}
+
+const inputStyle = {
+    padding: "14px 16px",
+    background: "#0A0A0B", // Negro profundo como en la imagen
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    color: "#FFFFFF",
+    fontSize: "14px",
+    outline: "none",
+    transition: "all 0.2s ease",
+    boxSizing: "border-box",
+}
+
+const buttonStyle = {
+    padding: "14px",
+    border: "none",
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: "15px",
+    cursor: "pointer",
+    marginTop: "10px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    transition: "background 0.3s ease",
+}
+
+const errorStyle = {
+    color: "#F87171",
+    fontSize: "13px",
+    textAlign: "center",
+    margin: "0",
+    fontWeight: "500",
+    lineHeight: "1.4"
+}
+
+const footerStyle = {
+    color: "#94A3B8",
+    fontSize: "13px",
+    textAlign: "center",
+    marginTop: "10px",
+}
+
+const loaderStyle = {
+    width: "18px",
+    height: "18px",
+    border: "2px solid rgba(255,255,255,0.3)",
+    borderTop: "2px solid #FFFFFF",
+    borderRadius: "50%",
+}
+
+// Controles para Framer
 addPropertyControls(FormularioLogin, {
     apiUrl: {
         type: ControlType.String,
-        title: "URL del Backend",
+        title: "URL Backend",
         defaultValue: "https://pps-sk7p.onrender.com/api/v1",
     },
     btnText: {
         type: ControlType.String,
-        title: "Texto",
+        title: "Botón",
         defaultValue: "Ingresar",
-    },
-    btnColor: {
-        type: ControlType.Color,
-        title: "Color Fondo",
-        defaultValue: "#0070f3",
-    },
-    textColor: {
-        type: ControlType.Color,
-        title: "Color Texto",
-        defaultValue: "#FFFFFF",
     },
     borderRadius: {
         type: ControlType.Number,
         title: "Esquinas",
-        defaultValue: 8,
+        defaultValue: 12,
         min: 0,
-        max: 20,
+        max: 30,
+    },
+    showGlass: {
+        type: ControlType.Boolean,
+        title: "Efecto Cristal",
+        defaultValue: true,
     },
 })
-
-const containerStyle = {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-}
-const formStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    padding: "10px",
-}
-const inputStyle = {
-    padding: "12px",
-    border: "1px solid #333",
-    background: "#000",
-    color: "white",
-}
-const buttonStyle = {
-    padding: "12px",
-    border: "none",
-    fontWeight: "bold",
-    cursor: "pointer",
-}
-const errorStyle = { color: "#ff4d4d", fontSize: "14px", textAlign: "center" }

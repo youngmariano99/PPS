@@ -1,5 +1,10 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-04-28
+* **Módulo/Tarea:** Rediseño Premium de Autenticación y Registro Atómico
+* **Archivos Tocados:** `AuthService.java`, `AuthController.java`, `RegistroCompletoSolicitudDto.java`, `FormularioLogin.jsx`, `RegirstroFormWizard.jsx`
+* **Qué y Por Qué (1 oración clara):** Se implementó una arquitectura de registro atómico (Todo o Nada) con un nuevo endpoint transaccional en el backend y un rediseño completo del frontend bajo estética Glassmorphism, incluyendo validaciones de seguridad avanzadas para contraseñas y navegación persistente.
+
 * **Fecha:** 2026-04-14
 * **Módulo/Tarea:** Sprint 0 / Configuración Base (Cimientos y Setup Inicial)
 * **Archivos Tocados:** `pom.xml`, `application.yml`, `OpenApiConfig.java`, `ErrorRespuestaDto.java`, `ManejadorGlobalExcepciones.java`, `RecursoNoEncontradoException.java`, `ValidacionNegocioException.java`
@@ -63,4 +68,4 @@
 * **Fecha:** 2026-04-28
 * **Módulo/Tarea:** Optimización de Ranking y Paginación (Fase de Producción)
 * **Archivos Tocados:** `DirectorioController.java`, `DirectorioService.java`, `PerfilProveedorRepository.java`, `PerfilRespuestaDto.java`, `ListadoProfesionales.jsx`
-* **Qué y Por Qué (1 oración clara):** Se implementó la paginación del lado del servidor y se unificó el ranking (Premium > Distancia) mediante una consulta SQL nativa optimizada y un refuerzo en Java, junto con un rediseño compacto y profesional del listado en Framer para soportar grillas multi-columna.
+* **Qué y Por Qué (1 oración clara):** Se implementó la paginación del lado del servidor, se optimizó el rendimiento mediante `@EntityGraph` (reducción drástica de latencia al cargar entidades en una sola consulta), se normalizó el filtro de rubros para ignorar la diferencia entre 'ñ' y 'n', y se unificó el ranking (Premium > Distancia).

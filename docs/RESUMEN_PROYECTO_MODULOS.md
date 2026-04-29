@@ -29,9 +29,11 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 - **Manejo Global de Excepciones:** Estandarización de respuestas de error.
 - **Documentación API:** Acceso vía `/swagger-ui.html` con soporte para Bearer Token.
 
-### Módulo B: Seguridad y Usuarios (Sprint 1)
-- **Sincronización Dual:** El registro se delega a Supabase y se sincroniza automáticamente con la base de datos local mediante UUIDs.
-- **Perfiles Base:** Definición de la entidad `Usuario` como eje central del sistema.
+### Módulo B: Seguridad e Identidad (Sprint 1)
+- **Registro Atómico (Todo o Nada):** Implementación de un flujo transaccional que crea Usuario y Perfil en una sola operación, evitando estados inconsistentes.
+- **Wizard de Onboarding Premium:** Interfaz de 4 pasos con validación en tiempo real, persistencia de progreso y estética Glassmorphism.
+- **Seguridad de Contraseñas:** Validador de fortaleza de contraseña integrado en UI y forzado por Regex en el Backend (mínimo 8 caracteres, mayúscula, número y símbolo).
+- **Mapeo de Errores Intuitivo:** Traducción de errores técnicos a lenguaje natural (Español Arg) para una UX empática.
 
 ### Módulo C: Directorio y Geolocalización (Sprint 2 - Core)
 - **Motor Espacial:** Búsquedas por radio de cercanía utilizando `ST_DWithin` (SRID 4326).
@@ -39,9 +41,10 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 - **Refactorización CQS (Command Query Separation):**
     - `/buscar/lista`: Vista paginada de alto rendimiento. Implementa una arquitectura de 2 pasos: primero se filtran y ordenan los IDs mediante SQL nativo (PostGIS) y luego se cargan las entidades completas con `@EntityGraph`.
     - `/buscar/mapa`: Vista masiva optimizada para renderizado rápido de puntos, sin paginación.
-- **Ranking Geográfico Premium:** Implementación de un algoritmo de ranking híbrido (SQL + Java) que prioriza explícitamente el plan **Premium**, seguido por la distancia geográfica y reputación.
-- **Paginación del Lado del Servidor:** Integración completa de `Pageable` para manejar miles de registros sin degradación de rendimiento en el frontend.
-- **Blindaje de Rendimiento:** Eliminación de vulnerabilidades **N+1 Query** mediante Batch Fetching de suscripciones y consultas nativas de IDs seguidas de `@EntityGraph`.
+- **Ranking Geográfico Premium:** Algoritmo híbrido que prioriza explícitamente planes 'PRO' y 'Premium'.
+- **Paginación del Lado del Servidor:** Integración de `Pageable` para manejo masivo de registros.
+- **Blindaje de Rendimiento (EntityGraph):** Eliminación de latencia mediante la carga de `Usuario` y `Rubro` en una sola consulta SQL, evitando el problema de N+1 queries.
+- **Motor de Búsqueda Tolerante:** Normalización automática de caracteres especiales (ej: `ñ` vs `n`) en el filtrado por rubro para mejorar la experiencia de búsqueda.
 - **Hard Cap de Seguridad:** Límite estricto de 50km en búsquedas para prevenir ataques DoS por carga de memoria.
 
 ### Módulo D: Suscripciones y Monetización (Sprint 3)

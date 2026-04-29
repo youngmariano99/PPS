@@ -2,12 +2,22 @@ package com.PPS.PPS.service;
 
 import com.PPS.PPS.dto.AuthRespuestaDto;
 import com.PPS.PPS.dto.LoginSolicitudDto;
+import com.PPS.PPS.dto.RegistroCompletoSolicitudDto;
 import com.PPS.PPS.dto.RegistroSolicitudDto;
+import com.PPS.PPS.entity.PerfilEmpresa;
+import com.PPS.PPS.entity.PerfilProveedor;
+import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.entity.Usuario;
 import com.PPS.PPS.exception.ValidacionNegocioException;
+import com.PPS.PPS.repository.PerfilEmpresaRepository;
+import com.PPS.PPS.repository.PerfilProveedorRepository;
+import com.PPS.PPS.repository.RubroRepository;
 import com.PPS.PPS.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -28,6 +38,11 @@ import java.util.UUID;
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PerfilProveedorRepository perfilProveedorRepository;
+    private final PerfilEmpresaRepository perfilEmpresaRepository;
+    private final RubroRepository rubroRepository;
+    private final GeocodingService geocodingService;
+    private final GeometryFactory geometryFactory;
     private final RestClient supabaseRestClient;
 
     /**
@@ -72,22 +87,15 @@ public class AuthService {
 
         String supabaseIdStr = null;
 
-        // Caso 1: Supabase devuelve el ID directamente en la raíz (Versiones antiguas o
-        // configuraciones específicas)
         if (respuestaSupabase.containsKey("id")) {
             supabaseIdStr = (String) respuestaSupabase.get("id");
-        }
-        // Caso 2: Supabase devuelve el ID anidado dentro del objeto "user" (Versiones
-        // modernas)
-        else if (respuestaSupabase.containsKey("user")) {
+        } else if (respuestaSupabase.containsKey("user")) {
             Map<String, Object> userObj = (Map<String, Object>) respuestaSupabase.get("user");
             if (userObj != null && userObj.containsKey("id")) {
                 supabaseIdStr = (String) userObj.get("id");
             }
         }
 
-        // Si después de buscar por todos lados no encontramos el ID, ahí sí tiramos
-        // error
         if (supabaseIdStr == null) {
             throw new ValidacionNegocioException(
                     "No se pudo extraer el ID. Respuesta de Supabase: " + respuestaSupabase);
@@ -114,6 +122,82 @@ public class AuthService {
                 .nombre(dto.getNombre())
                 .apellido(dto.getApellido())
                 .build();
+    }
+
+    /**
+     * Registra un nuevo usuario y su perfil profesional en una sola transacción atómica.
+     */
+    @Transactional
+    public AuthRespuestaDto registrarCompleto(RegistroCompletoSolicitudDto dto) {
+        log.info("Iniciando registro completo para: {}", dto.getEmail());
+
+        // 1. Registro en Supabase (Si falla, lanza excepción y hace rollback de lo local)
+        AuthRespuestaDto authBase = registrar(new RegistroSolicitudDto(
+            dto.getNombre(), dto.getApellido(), dto.getEmail(), dto.getPassword(), dto.getTelefono()
+        ));
+        
+        UUID usuarioId = authBase.getUsuarioId();
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElseThrow();
+
+        // 2. Preparar Ubicación (Geocoding)
+        String direccionCompleta = String.format("%s %s, %s, %s, Argentina", 
+            dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia());
+        
+        Point puntoUbicacion = null;
+        double[] coords = geocodingService.obtenerCoordenadas(direccionCompleta);
+        if (coords != null) {
+            puntoUbicacion = geometryFactory.createPoint(new Coordinate(coords[0], coords[1]));
+        }
+
+        // 3. Obtener Rubro
+        Rubro rubro = null;
+        if (dto.getRubroId() != null) {
+            rubro = rubroRepository.findById(dto.getRubroId()).orElse(null);
+        }
+
+        // 4. Crear Perfil según Rol
+        if ("PROVEEDOR".equalsIgnoreCase(dto.getTipo())) {
+            PerfilProveedor perfil = PerfilProveedor.builder()
+                .usuario(usuario)
+                .rubroPrincipal(rubro)
+                .rubroPersonalizado(dto.getRubroPersonalizado())
+                .descripcionProfesional(dto.getDescripcion())
+                .dni(dto.getDniCuit())
+                .matricula(dto.getMatricula())
+                .fotoPerfilUrl(dto.getFotoPerfilUrl())
+                .pais("Argentina")
+                .provincia(dto.getProvincia())
+                .ciudad(dto.getCiudad())
+                .calle(dto.getCalle())
+                .numero(Integer.parseInt(dto.getNumero()))
+                .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
+                .ubicacion(puntoUbicacion)
+                .build();
+            perfilProveedorRepository.save(perfil);
+        } else if ("EMPRESA".equalsIgnoreCase(dto.getTipo())) {
+            PerfilEmpresa perfil = PerfilEmpresa.builder()
+                .usuario(usuario)
+                .rubroPrincipal(rubro)
+                .rubroPersonalizado(dto.getRubroPersonalizado())
+                .descripcionEmpresa(dto.getDescripcion())
+                .razonSocial(dto.getNombre()) // En empresas el nombre suele ser la razón social
+                .cuit(dto.getDniCuit())
+                .logoUrl(dto.getFotoPerfilUrl())
+                .pais("Argentina")
+                .provincia(dto.getProvincia())
+                .ciudad(dto.getCiudad())
+                .calle(dto.getCalle())
+                .numero(Integer.parseInt(dto.getNumero()))
+                .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
+                .ubicacion(puntoUbicacion)
+                .build();
+            perfilEmpresaRepository.save(perfil);
+        } else {
+            log.info("Usuario registrado como rol básico (SIN PERFIL): {}", usuarioId);
+        }
+
+        log.info("Registro completo exitoso para usuario: {}", usuarioId);
+        return authBase;
     }
 
     /**

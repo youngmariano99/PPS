@@ -53,7 +53,7 @@ export default function ListadoProfesionales(props) {
                 if (res.ok) {
                     const data = await res.json()
                     const mapeoRubros = data.map((r) => ({
-                        id: r.id || r.nombre,
+                        id: r.nombre, // Usamos el nombre como ID para que el filtro sea por texto
                         nombre: r.nombre,
                     }))
                     setRubros([

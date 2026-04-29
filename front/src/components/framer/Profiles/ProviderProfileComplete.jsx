@@ -33,18 +33,33 @@ export default function ProviderProfileComplete(props) {
     const [loading, setLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
     const [saving, setSaving] = useState(false)
+    const [isOwner, setIsOwner] = useState(false)
     const [editForm, setEditForm] = useState({})
     const [error, setError] = useState(null)
 
     const discoverAndFetch = async () => {
         setLoading(true)
+        setError(null)
+        
+        const params = new URLSearchParams(window.location.search)
+        const externalId = params.get("id")
+        
         const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
+        
+        // El ID que vamos a buscar: Prioridad el de la URL, sino el del usuario logueado
+        const targetId = externalId || (user ? user.id : null)
+
+        if (targetId) {
             try {
+                // Si es su propio perfil (o no hay user logueado pero coincide el ID), habilitamos edición
+                setIsOwner(user && user.id === targetId)
+
                 const { data: { session } } = await supabase.auth.getSession()
-                const response = await fetch(`${apiUrl}/directorio/proveedor/${user.id}`, {
-                    headers: { "Authorization": `Bearer ${session.access_token}`, "X-User-Id": user.id }
-                })
+                const headers = { "X-User-Id": targetId }
+                if (session) headers["Authorization"] = `Bearer ${session.access_token}`
+
+                const response = await fetch(`${apiUrl}/directorio/proveedor/${targetId}`, { headers })
+                
                 if (response.ok) {
                     const res = await response.json()
                     const mapped = {
@@ -53,17 +68,23 @@ export default function ProviderProfileComplete(props) {
                         address: res.direccion || "", city: res.ciudad || "", province: res.provincia || "",
                         rating: res.promedioEstrellas || 0, isPro: res.esPremium,
                         avatar: res.fotoPerfilUrl, portfolio: res.fotosPortafolio || [],
-                        phone: res.telefono || "", email: res.email || user.email,
+                        phone: res.telefono || "", email: res.email || (user && user.id === targetId ? user.email : ""),
                         matricula: res.matricula || "",
                         instagram: res.instagramUrl || "", facebook: res.facebookUrl || "", linkedin: res.linkedinUrl || ""
                     }
                     setData(mapped)
                     setEditForm(mapped)
+                } else if (response.status === 404) {
+                    setError("Perfil no encontrado.")
+                } else {
+                    setError("Error al cargar el perfil.")
                 }
             } catch (err) { setError("Error de conexión.") }
         } else if (enableDemoMode) {
              const demo = { name: "Juan Perez", category: "Gasista", description: "Exp. 10 años", location: "Mendoza", rating: 4.8, isPro: true, phone: "261445566", email: "demo@pps.com", matricula: "123", portfolio: [] }
-             setData(demo); setEditForm(demo)
+             setData(demo); setEditForm(demo); setIsOwner(true)
+        } else {
+            setError("No se especificó un perfil.")
         }
         setLoading(false)
     }
@@ -156,17 +177,19 @@ export default function ProviderProfileComplete(props) {
                             </div>
                         </div>
                         <div style={hS.actions}>
-                             {!isEditing ? (
-                                <motion.button whileHover={{ scale: 1.02 }} onClick={() => setIsEditing(true)} style={hS.btnEdit}>
-                                    <Edit3 size={16} /> <span>Editar Perfil</span>
-                                </motion.button>
-                             ) : (
-                                <div style={{ display: "flex", gap: "10px" }}>
-                                    <button onClick={() => setIsEditing(false)} style={hS.btnCancel} disabled={saving}><X size={16} /></button>
-                                    <button onClick={handleSave} style={{...hS.btnSave, backgroundColor: primaryColor}} disabled={saving}>
-                                        {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} <span>Guardar</span>
-                                    </button>
-                                </div>
+                             {isOwner && (
+                                 !isEditing ? (
+                                    <motion.button whileHover={{ scale: 1.02 }} onClick={() => setIsEditing(true)} style={hS.btnEdit}>
+                                        <Edit3 size={16} /> <span>Editar Perfil</span>
+                                    </motion.button>
+                                 ) : (
+                                    <div style={{ display: "flex", gap: "10px" }}>
+                                        <button onClick={() => setIsEditing(false)} style={hS.btnCancel} disabled={saving}><X size={16} /></button>
+                                        <button onClick={handleSave} style={{...hS.btnSave, backgroundColor: primaryColor}} disabled={saving}>
+                                            {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} <span>Guardar</span>
+                                        </button>
+                                    </div>
+                                 )
                              )}
                         </div>
                     </div>

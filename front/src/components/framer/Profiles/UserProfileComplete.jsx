@@ -31,52 +31,9 @@ export default function UserProfileComplete(props) {
 
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [isOwner, setIsOwner] = useState(false)
     const [error, setError] = useState(null)
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            setLoading(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            
-            if (user) {
-                try {
-                    const { data: { session } } = await supabase.auth.getSession()
-                    const response = await fetch(`${apiUrl}/usuarios/me`, {
-                        headers: {
-                            "Authorization": `Bearer ${session.access_token}`,
-                            "X-User-Id": user.id
-                        }
-                    })
-
-                    if (response.ok) {
-                        const res = await response.json()
-                        setData({
-                            name: `${res.nombre} ${res.apellido}`,
-                            email: res.email,
-                            phone: res.telefono || "No registrado",
-                            location: demoLoc, 
-                            date: res.fechaRegistro || demoDate,
-                            avatar: demoAvatar,
-                            rol: res.rol || "Usuario"
-                        })
-                    } else {
-                        setError("No pudimos obtener tus datos.")
-                    }
-                } catch (err) {
-                    setError("Error de conexión.")
-                }
-            } else if (enableDemoMode) {
-                setData({
-                    name: demoName, email: demoEmail, location: demoLoc,
-                    date: demoDate, avatar: demoAvatar, rol: "Usuario (Demo)", phone: "261445566"
-                })
-            } else {
-                setError("Debes iniciar sesión.")
-            }
-            setLoading(false)
-        }
-        fetchUserData()
-    }, [apiUrl, enableDemoMode])
 
     if (loading) return <div style={s.loader}><RefreshCw size={32} color={primaryColor} className="spin" /></div>
 
@@ -114,32 +71,34 @@ export default function UserProfileComplete(props) {
                     </div>
                 </div>
 
-                <div style={s.grid}>
-                    <div style={s.section}>
-                        <h3 style={s.label}>Mi Actividad</h3>
-                        <motion.button whileHover={{ y: -2 }} style={s.card}>
-                            <div style={s.row}>
-                                <div style={s.iconTitle}><Briefcase size={20} color={primaryColor} /> <div><h4>Mis Postulaciones</h4><p>Estado de tus empleos solicitados</p></div></div>
-                                <ChevronRight size={18} color="#cbd5e1" />
-                            </div>
-                        </motion.button>
-                    </div>
+                {isOwner && (
+                    <div style={s.grid}>
+                        <div style={s.section}>
+                            <h3 style={s.label}>Mi Actividad</h3>
+                            <motion.button whileHover={{ y: -2 }} style={s.card}>
+                                <div style={s.row}>
+                                    <div style={s.iconTitle}><Briefcase size={20} color={primaryColor} /> <div><h4>Mis Postulaciones</h4><p>Estado de tus empleos solicitados</p></div></div>
+                                    <ChevronRight size={18} color="#cbd5e1" />
+                                </div>
+                            </motion.button>
+                        </div>
 
-                    <div style={s.section}>
-                        <h3 style={s.label}>Oportunidades PRO</h3>
-                        <motion.div whileHover={{ y: -2 }} style={{ ...s.card, border: `1px solid ${primaryColor}33`, backgroundColor: `${primaryColor}05` }}>
-                            <div style={s.row}>
-                                <div style={s.iconTitle}><Shield size={20} color={primaryColor} /> <div><h4>Ser Profesional</h4><p>Publica tus servicios gratis hoy</p></div></div>
-                                <button 
-                                    onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}
-                                    style={{ ...s.mainBtn, backgroundColor: primaryColor, padding: "8px 16px", fontSize: "13px" }}
-                                >
-                                    ¡Comenzar!
-                                </button>
-                            </div>
-                        </motion.div>
+                        <div style={s.section}>
+                            <h3 style={s.label}>Oportunidades PRO</h3>
+                            <motion.div whileHover={{ y: -2 }} style={{ ...s.card, border: `1px solid ${primaryColor}33`, backgroundColor: `${primaryColor}05` }}>
+                                <div style={s.row}>
+                                    <div style={s.iconTitle}><Shield size={20} color={primaryColor} /> <div><h4>Ser Profesional</h4><p>Publica tus servicios gratis hoy</p></div></div>
+                                    <button 
+                                        onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}
+                                        style={{ ...s.mainBtn, backgroundColor: primaryColor, padding: "8px 16px", fontSize: "13px" }}
+                                    >
+                                        ¡Comenzar!
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
             <div style={{ height: "100px" }} />
         </div>

@@ -555,6 +555,6 @@ addPropertyControls(ListadoProfesionales, {
     providerProfileUrl: {
         type: ControlType.String,
         title: "URL Perfil Prov",
-        defaultValue: "https://vibrant-concept-745262.framer.app/perfil-profesional",
+        defaultValue: "https://overly-mindset-259417.framer.app/perfiles-prov",
     },
 })

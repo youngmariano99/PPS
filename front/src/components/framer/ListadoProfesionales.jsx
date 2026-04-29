@@ -171,6 +171,9 @@ export default function ListadoProfesionales(props) {
             ? (distVal < 1000 ? `${distVal}m` : `${(distVal/1000).toFixed(1)}km`)
             : null;
 
+        // Soporte para ambos formatos de casing para la foto
+        const fotoUrl = prof.fotoPerfilUrl || prof.foto_perfil_url;
+
         return (
             <motion.div
                 whileHover={{ y: -4, boxShadow: "0 12px 20px -8px rgba(0, 0, 0, 0.1)" }}
@@ -213,16 +216,20 @@ export default function ListadoProfesionales(props) {
                         width: "40px",
                         height: "40px",
                         borderRadius: "10px",
-                        background: getAvatarColor(prof.id),
+                        backgroundColor: fotoUrl ? "transparent" : getAvatarColor(prof.id),
+                        backgroundImage: fotoUrl ? `url("${fotoUrl}")` : "none",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: "14px",
                         fontWeight: "700",
                         color: "#1E293B",
-                        flexShrink: 0
+                        flexShrink: 0,
+                        border: fotoUrl ? "1px solid #E2E8F0" : "none"
                     }}>
-                        {obtenerIniciales(prof.nombrePublico)}
+                        {!fotoUrl && obtenerIniciales(prof.nombrePublico)}
                     </div>
                     <div style={{ overflow: "hidden" }}>
                         <h3 style={{ 
@@ -312,67 +319,85 @@ export default function ListadoProfesionales(props) {
                 display: "flex", 
                 justifyContent: "center", 
                 alignItems: "center", 
-                gap: "12px", 
+                gap: "16px", 
                 marginTop: "40px",
-                padding: "20px 0"
+                padding: "20px 0",
+                fontFamily: "'Inter', sans-serif"
             }}>
+                {/* Botón Anterior */}
                 <button 
                     onClick={handlePaginaAnterior}
                     disabled={paginaActual === 0}
                     style={{
-                        padding: "8px 16px",
+                        width: "36px",
+                        height: "36px",
                         borderRadius: "10px",
                         border: "1px solid #E2E8F0",
                         background: paginaActual === 0 ? "#F8FAFC" : "white",
                         color: paginaActual === 0 ? "#CBD5E1" : "#475569",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         cursor: paginaActual === 0 ? "not-allowed" : "pointer",
+                        fontSize: "18px",
+                        fontWeight: "bold",
                         transition: "all 0.2s"
                     }}
                 >
-                    Anterior
+                    ‹
                 </button>
 
-                <div style={{ display: "flex", gap: "6px" }}>
-                    {[...Array(totalPaginas)].map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setPaginaActual(i)}
-                            style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "8px",
-                                border: "none",
-                                background: paginaActual === i ? "#6366F1" : "transparent",
-                                color: paginaActual === i ? "white" : "#64748B",
-                                fontSize: "13px",
-                                fontWeight: "700",
-                                cursor: "pointer",
-                                transition: "all 0.2s"
-                            }}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
+                {/* Control Central: Input / Total */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748B", fontSize: "14px", fontWeight: "600" }}>
+                    <input 
+                        type="number"
+                        min="1"
+                        max={totalPaginas}
+                        value={paginaActual + 1}
+                        onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val >= 1 && val <= totalPaginas) {
+                                setPaginaActual(val - 1);
+                            }
+                        }}
+                        style={{
+                            width: "45px",
+                            height: "36px",
+                            textAlign: "center",
+                            borderRadius: "8px",
+                            border: "1px solid #E2E8F0",
+                            background: "white",
+                            color: "#1E293B",
+                            fontWeight: "700",
+                            fontSize: "14px",
+                            outline: "none"
+                        }}
+                    />
+                    <span>/</span>
+                    <span style={{ color: "#94A3B8" }}>{totalPaginas}</span>
                 </div>
 
+                {/* Botón Siguiente */}
                 <button 
                     onClick={handlePaginaSiguiente}
                     disabled={paginaActual === totalPaginas - 1}
                     style={{
-                        padding: "8px 16px",
+                        width: "36px",
+                        height: "36px",
                         borderRadius: "10px",
                         border: "1px solid #E2E8F0",
                         background: paginaActual === totalPaginas - 1 ? "#F8FAFC" : "white",
                         color: paginaActual === totalPaginas - 1 ? "#CBD5E1" : "#475569",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         cursor: paginaActual === totalPaginas - 1 ? "not-allowed" : "pointer",
+                        fontSize: "18px",
+                        fontWeight: "bold",
                         transition: "all 0.2s"
                     }}
                 >
-                    Siguiente
+                    ›
                 </button>
             </div>
         )

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { addPropertyControls, ControlType, motion, AnimatePresence } from "framer"
 
 /**
@@ -26,6 +26,7 @@ export default function WizardOnboarding(props) {
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
         provincia: "", codigoPostal: "",
+        fotosPortafolio: [], urlsVideos: [""] 
     })
 
     useEffect(() => {
@@ -69,6 +70,9 @@ export default function WizardOnboarding(props) {
         if (s === 4 && formData.tipo !== "CLIENTE") {
             if (!formData.calle || !formData.numero || !formData.ciudad) return "Completá tu dirección para aparecer en el mapa."
         }
+        if (s === 5 && formData.tipo !== "CLIENTE") {
+            if (!formData.fotoPerfilUrl) return "Subí una foto de perfil para que los clientes te reconozcan."
+        }
         return null
     }
 
@@ -82,7 +86,7 @@ export default function WizardOnboarding(props) {
             return
         }
 
-        if (step < 4) setStep(prev => prev + 1)
+        if (step < (formData.tipo === "CLIENTE" ? 2 : 5)) setStep(prev => prev + 1)
         else await submitFinal()
     }
 
@@ -122,8 +126,8 @@ export default function WizardOnboarding(props) {
         <div style={wizardWrapper}>
             <div style={glassCard(borderRadius)}>
                 <div style={headerWizard}>
-                    <span style={stepLabel}>Paso {step} de {formData.tipo === "CLIENTE" ? 2 : 4}</span>
-                    <div style={barBg}><motion.div style={barFill} animate={{ width: `${(step / (formData.tipo === "CLIENTE" ? 2 : 4)) * 100}%` }} /></div>
+                    <span style={stepLabel}>Paso {step} de {formData.tipo === "CLIENTE" ? 2 : 5}</span>
+                    <div style={barBg}><motion.div style={barFill} animate={{ width: `${(step / (formData.tipo === "CLIENTE" ? 2 : 5)) * 100}%` }} /></div>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -195,6 +199,65 @@ export default function WizardOnboarding(props) {
                             </div>
                         </motion.div>
                     )}
+
+                    {step === 5 && (
+                        <motion.div key="p5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={stepBox}>
+                            <h2 style={titleStyleDark}>Tu Imagen Profesional</h2>
+                            <p style={subTitleStyleDark}>Las fotos y videos ayudan a generar confianza con tus clientes.</p>
+                            
+                            <div style={mediaGrid}>
+                                <div style={uploadBox}>
+                                    <label style={labelStyle}>Foto de Perfil *</label>
+                                    <CloudinaryWidget 
+                                        cloudName="denfvu7zy" 
+                                        uploadPreset="unsigned_preset" 
+                                        buttonText={formData.fotoPerfilUrl ? "Cambiar Foto" : "Subir Foto"}
+                                        onUpload={(url) => setFormData({...formData, fotoPerfilUrl: url})}
+                                    />
+                                    {formData.fotoPerfilUrl && <img src={formData.fotoPerfilUrl} style={previewThumb} alt="Perfil" />}
+                                </div>
+
+                                <div style={uploadBox}>
+                                    <label style={labelStyle}>Portafolio (Imágenes)</label>
+                                    <CloudinaryWidget 
+                                        cloudName="denfvu7zy" 
+                                        uploadPreset="unsigned_preset" 
+                                        buttonText="Agregar al Portafolio"
+                                        isMultiple={true}
+                                        onUpload={(url) => setFormData(prev => ({...prev, fotosPortafolio: [...prev.fotosPortafolio, url]}))}
+                                    />
+                                    <div style={galleryPreview}>
+                                        {formData.fotosPortafolio.map((url, i) => (
+                                            <div key={i} style={miniThumb}>
+                                                <img src={url} style={{width: "100%", height: "100%", objectFit: "cover"}} />
+                                                <button onClick={() => setFormData(prev => ({...prev, fotosPortafolio: prev.fotosPortafolio.filter((_, idx) => idx !== i)}))} style={deleteMini}>×</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={videoSection}>
+                                <label style={labelStyle}>Videos o Redes Sociales (URLs)</label>
+                                {formData.urlsVideos.map((url, i) => (
+                                    <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+                                        <Input 
+                                            placeholder="https://instagram.com/p/..." 
+                                            value={url} 
+                                            onChange={(e) => {
+                                                const newUrls = [...formData.urlsVideos]
+                                                newUrls[i] = e.target.value
+                                                setFormData({...formData, urlsVideos: newUrls})
+                                            }} 
+                                        />
+                                        {i === formData.urlsVideos.length - 1 && (
+                                            <button onClick={() => setFormData({...formData, urlsVideos: [...formData.urlsVideos, ""]})} style={addBtn}>+</button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
 
                 <div style={wizardFooter}>
@@ -202,7 +265,7 @@ export default function WizardOnboarding(props) {
                     <div style={btnRow}>
                         {step > 1 && <button onClick={() => setStep(s => s - 1)} style={secondaryBtn}>Atrás</button>}
                         <button onClick={handleAction} disabled={loading} style={primaryBtn}>
-                            {loading ? "Procesando..." : (step === (formData.tipo === "CLIENTE" ? 2 : 4) ? "Finalizar" : "Continuar")}
+                            {loading ? "Procesando..." : (step === (formData.tipo === "CLIENTE" ? 2 : 5) ? "Finalizar" : "Continuar")}
                         </button>
                     </div>
                 </div>
@@ -267,8 +330,82 @@ const btnRow = { display: "flex", gap: "12px" }
 const primaryBtn = { flex: 1, padding: "16px", background: "#4F46E5", border: "none", borderRadius: "12px", color: "#FFFFFF", fontWeight: "700", cursor: "pointer" }
 const secondaryBtn = { padding: "16px 24px", background: "#F1F5F9", border: "none", borderRadius: "12px", color: "#475569", fontWeight: "600", cursor: "pointer" }
 
+const mediaGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "10px" }
+const uploadBox = { display: "flex", flexDirection: "column", gap: "8px" }
+const labelStyle = { fontSize: "12px", fontWeight: "700", color: "#475569" }
+const previewThumb = { width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover", marginTop: "8px", border: "2px solid #6366F1" }
+const galleryPreview = { display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }
+const miniThumb = { width: "40px", height: "40px", borderRadius: "8px", overflow: "hidden", position: "relative" }
+const deleteMini = { position: "absolute", top: "0", right: "0", background: "rgba(239, 68, 68, 0.8)", border: "none", color: "white", cursor: "pointer", fontSize: "10px", padding: "0 4px" }
+const videoSection = { marginTop: "16px" }
+const addBtn = { width: "45px", background: "#E2E8F0", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }
+
 const successCard = (br) => ({ ...glassCard(br), alignItems: "center", textAlign: "center" })
 const checkIcon = { width: "50px", height: "50px", background: "#10B981", borderRadius: "50%", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", marginBottom: "20px" }
+
+// --- CLOUDINARY WIDGET (INTERNAL COMPONENT FOR FRAMER COMPATIBILITY) ---
+function CloudinaryWidget(props) {
+    const { 
+        cloudName, 
+        uploadPreset, 
+        buttonText, 
+        primaryColor, 
+        onUpload, 
+        isMultiple,
+        folder
+    } = props
+
+    const widgetRef = useRef(null)
+
+    useEffect(() => {
+        if (!window.cloudinary) {
+            const script = document.createElement("script")
+            script.src = "https://widget.cloudinary.com/v2.0/global/all.js"
+            script.type = "text/javascript"
+            script.async = true
+            document.body.appendChild(script)
+        }
+    }, [])
+
+    const openWidget = () => {
+        if (!window.cloudinary) {
+            alert("Cargando servicios de imagen...")
+            return
+        }
+
+        if (!widgetRef.current) {
+            widgetRef.current = window.cloudinary.createUploadWidget(
+                {
+                    cloudName: cloudName,
+                    uploadPreset: uploadPreset,
+                    multiple: isMultiple,
+                    folder: folder,
+                    clientAllowedFormats: ["png", "jpg", "jpeg", "webp"],
+                    maxFileSize: 5000000,
+                    sources: ["local", "url", "camera"],
+                    transformation: [{ quality: "auto", fetch_format: "auto" }]
+                },
+                (error, result) => {
+                    if (!error && result && result.event === "success") {
+                        if (onUpload) onUpload(result.info.secure_url)
+                    }
+                }
+            )
+        }
+        widgetRef.current.open()
+    }
+
+    return (
+        <button onClick={openWidget} style={{ ...cloudinaryBtnStyle, backgroundColor: primaryColor }}>
+            {buttonText}
+        </button>
+    )
+}
+
+const cloudinaryBtnStyle = {
+    padding: "10px 20px", border: "none", borderRadius: "8px", color: "white",
+    fontWeight: "bold", cursor: "pointer", width: "100%", fontSize: "14px"
+}
 
 addPropertyControls(WizardOnboarding, {
     apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },

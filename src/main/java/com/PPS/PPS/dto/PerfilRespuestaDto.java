@@ -34,4 +34,6 @@ public class PerfilRespuestaDto {
     private Integer distanciaMetros;
     @com.fasterxml.jackson.annotation.JsonProperty("destacado")
     private boolean destacado;
+    @com.fasterxml.jackson.annotation.JsonProperty("fotoPerfilUrl")
+    private String fotoPerfilUrl;
 }

@@ -65,4 +65,8 @@ public class RegistroCompletoSolicitudDto {
     
     @NotBlank(message = "El código postal es obligatorio")
     private String codigoPostal;
+
+    // --- Portafolio Multimedia ---
+    private java.util.List<String> fotosPortafolio;
+    private java.util.List<String> urlsVideos;
 }

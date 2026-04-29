@@ -258,6 +258,7 @@ public class DirectorioService {
                             .cantidadResenas(0)
                             .distanciaMetros((int) distancia)
                             .destacado(esPremiumReal)
+                            .fotoPerfilUrl(p.getFotoPerfilUrl())
                             .build();
                 })
                 .sorted((a, b) -> {
@@ -305,6 +306,7 @@ public class DirectorioService {
                         .promedioEstrellas(0.0)
                         .cantidadResenas(0)
                         .destacado(false) // Optimizado para mapa masivo
+                        .fotoPerfilUrl(p.getFotoPerfilUrl())
                         .build())
                 .collect(Collectors.toList()));
 
@@ -327,6 +329,7 @@ public class DirectorioService {
                         .promedioEstrellas(0.0)
                         .cantidadResenas(0)
                         .destacado(false)
+                        .fotoPerfilUrl(e.getLogoUrl())
                         .build())
                 .collect(Collectors.toList()));
 

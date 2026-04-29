@@ -6,11 +6,13 @@ import com.PPS.PPS.dto.RegistroCompletoSolicitudDto;
 import com.PPS.PPS.dto.RegistroSolicitudDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.PerfilProveedor;
+import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.entity.Usuario;
 import com.PPS.PPS.exception.ValidacionNegocioException;
 import com.PPS.PPS.repository.PerfilEmpresaRepository;
 import com.PPS.PPS.repository.PerfilProveedorRepository;
+import com.PPS.PPS.repository.PortafolioRepository;
 import com.PPS.PPS.repository.RubroRepository;
 import com.PPS.PPS.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -41,6 +44,7 @@ public class AuthService {
     private final PerfilProveedorRepository perfilProveedorRepository;
     private final PerfilEmpresaRepository perfilEmpresaRepository;
     private final RubroRepository rubroRepository;
+    private final PortafolioRepository portafolioRepository;
     private final GeocodingService geocodingService;
     private final GeometryFactory geometryFactory;
     private final RestClient supabaseRestClient;
@@ -196,8 +200,45 @@ public class AuthService {
             log.info("Usuario registrado como rol básico (SIN PERFIL): {}", usuarioId);
         }
 
+        // 5. Procesar Portafolio (Imágenes y Videos)
+        procesarPortafolio(usuario, dto);
+
         log.info("Registro completo exitoso para usuario: {}", usuarioId);
         return authBase;
+    }
+
+    private void procesarPortafolio(Usuario usuario, RegistroCompletoSolicitudDto dto) {
+        // Procesar Imágenes
+        if (dto.getFotosPortafolio() != null) {
+            for (String url : dto.getFotosPortafolio()) {
+                if (url != null && !url.isBlank()) {
+                    Portafolio p = Portafolio.builder()
+                            .usuario(usuario)
+                            .titulo("Imagen de portafolio")
+                            .urlRecurso(url)
+                            .tipoRecurso("IMAGEN")
+                            .visible(true)
+                            .build();
+                    portafolioRepository.save(p);
+                }
+            }
+        }
+
+        // Procesar Videos (Enlaces)
+        if (dto.getUrlsVideos() != null) {
+            for (String url : dto.getUrlsVideos()) {
+                if (url != null && !url.isBlank()) {
+                    Portafolio p = Portafolio.builder()
+                            .usuario(usuario)
+                            .titulo("Video / Red Social")
+                            .urlRecurso(url)
+                            .tipoRecurso("ENLACE")
+                            .visible(true)
+                            .build();
+                    portafolioRepository.save(p);
+                }
+            }
+        }
     }
 
     /**

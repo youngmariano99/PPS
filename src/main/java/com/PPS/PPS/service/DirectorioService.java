@@ -307,8 +307,7 @@ public class DirectorioService {
                         .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
                         .promedioEstrellas(0.0)
                         .cantidadResenas(0)
-                        .destacado(p.getUsuario().getSuscripcionActual() != null && 
-                                   p.getUsuario().getSuscripcionActual().getEstado().equals("ACTIVA"))
+                        .destacado(false) // Optimizado para mapa masivo
                         .fotoPerfilUrl(p.getFotoPerfilUrl())
                         .especialidades(p.getEspecialidades())
                         .condicionesServicio(p.getCondicionesServicio())

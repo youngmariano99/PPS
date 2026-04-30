@@ -26,7 +26,8 @@ export default function WizardOnboarding(props) {
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
         provincia: "", codigoPostal: "",
-        fotosPortafolio: [], urlsVideos: [""] 
+        fotosPortafolio: [], urlsVideos: [""],
+        especialidades: [], condicionesServicio: []
     })
 
     useEffect(() => {
@@ -68,9 +69,12 @@ export default function WizardOnboarding(props) {
             if (!formData.descripcion || formData.descripcion.length < 20) return "Contanos un poco más sobre vos."
         }
         if (s === 4 && formData.tipo !== "CLIENTE") {
-            if (!formData.calle || !formData.numero || !formData.ciudad) return "Completá tu dirección para aparecer en el mapa."
+            if (formData.especialidades.length === 0) return "Agregá al menos una especialidad (ej: Backend, .NET)."
         }
         if (s === 5 && formData.tipo !== "CLIENTE") {
+            if (!formData.calle || !formData.numero || !formData.ciudad) return "Completá tu dirección para aparecer en el mapa."
+        }
+        if (s === 6 && formData.tipo !== "CLIENTE") {
             if (!formData.fotoPerfilUrl) return "Subí una foto de perfil para que los clientes te reconozcan."
         }
         return null
@@ -86,7 +90,8 @@ export default function WizardOnboarding(props) {
             return
         }
 
-        if (step < (formData.tipo === "CLIENTE" ? 2 : 5)) setStep(prev => prev + 1)
+        const totalSteps = formData.tipo === "CLIENTE" ? 2 : 6
+        if (step < totalSteps) setStep(prev => prev + 1)
         else await submitFinal()
     }
 
@@ -126,8 +131,8 @@ export default function WizardOnboarding(props) {
         <div style={wizardWrapper}>
             <div style={glassCard(borderRadius)}>
                 <div style={headerWizard}>
-                    <span style={stepLabel}>Paso {step} de {formData.tipo === "CLIENTE" ? 2 : 5}</span>
-                    <div style={barBg}><motion.div style={barFill} animate={{ width: `${(step / (formData.tipo === "CLIENTE" ? 2 : 5)) * 100}%` }} /></div>
+                    <span style={stepLabel}>Paso {step} de {formData.tipo === "CLIENTE" ? 2 : 6}</span>
+                    <div style={barBg}><motion.div style={barFill} animate={{ width: `${(step / (formData.tipo === "CLIENTE" ? 2 : 6)) * 100}%` }} /></div>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -186,6 +191,31 @@ export default function WizardOnboarding(props) {
 
                     {step === 4 && (
                         <motion.div key="p4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={stepBox}>
+                            <h2 style={titleStyleDark}>Servicios y Etiquetas</h2>
+                            <p style={subTitleStyleDark}>Agregá palabras clave sobre lo que hacés y cómo trabajás.</p>
+                            
+                            <div>
+                                <label style={labelStyle}>Tus Especialidades (Ej: React, Backend, .NET)</label>
+                                <TagInput 
+                                    tags={formData.especialidades} 
+                                    setTags={(tags) => setFormData({...formData, especialidades: tags})}
+                                    placeholder="Escribí y presioná Enter..."
+                                />
+                            </div>
+
+                            <div style={{ marginTop: "16px" }}>
+                                <label style={labelStyle}>Métodos de pago / Condiciones (Ej: Mercado Pago, Efectivo)</label>
+                                <TagInput 
+                                    tags={formData.condicionesServicio} 
+                                    setTags={(tags) => setFormData({...formData, condicionesServicio: tags})}
+                                    placeholder="Ej: Acepto transferencia, Pago adelantado..."
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {step === 5 && (
+                        <motion.div key="p5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={stepBox}>
                             <h2 style={titleStyleDark}>Tu ubicación</h2>
                             <p style={subTitleStyleDark}>Esto nos ayuda a mostrarte a clientes cercanos.</p>
                             <Input name="calle" placeholder="Calle" value={formData.calle} onChange={handleChange} />
@@ -200,8 +230,8 @@ export default function WizardOnboarding(props) {
                         </motion.div>
                     )}
 
-                    {step === 5 && (
-                        <motion.div key="p5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={stepBox}>
+                    {step === 6 && (
+                        <motion.div key="p6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={stepBox}>
                             <h2 style={titleStyleDark}>Tu Imagen Profesional</h2>
                             <p style={subTitleStyleDark}>Las fotos y videos ayudan a generar confianza con tus clientes.</p>
                             
@@ -265,7 +295,7 @@ export default function WizardOnboarding(props) {
                     <div style={btnRow}>
                         {step > 1 && <button onClick={() => setStep(s => s - 1)} style={secondaryBtn}>Atrás</button>}
                         <button onClick={handleAction} disabled={loading} style={primaryBtn}>
-                            {loading ? "Procesando..." : (step === (formData.tipo === "CLIENTE" ? 2 : 5) ? "Finalizar" : "Continuar")}
+                            {loading ? "Procesando..." : (step === (formData.tipo === "CLIENTE" ? 2 : 6) ? "Finalizar" : "Continuar")}
                         </button>
                     </div>
                 </div>
@@ -291,6 +321,52 @@ const GuideItem = ({ met, txt }) => (
         <span style={{ fontSize: "11px", fontWeight: "600" }}>{txt}</span>
     </div>
 )
+
+const TagInput = ({ tags, setTags, placeholder }) => {
+    const [input, setInput] = useState("")
+
+    const addTag = (e) => {
+        if (e.key === "Enter" && input.trim()) {
+            e.preventDefault()
+            if (!tags.includes(input.trim())) {
+                setTags([...tags, input.trim()])
+            }
+            setInput("")
+        }
+    }
+
+    const removeTag = (tag) => setTags(tags.filter(t => t !== tag))
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {tags.map((tag, i) => (
+                    <div key={i} style={{ 
+                        background: "#EEF2FF", 
+                        color: "#4F46E5", 
+                        padding: "4px 10px", 
+                        borderRadius: "8px", 
+                        fontSize: "12px", 
+                        fontWeight: "700",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                    }}>
+                        {tag}
+                        <span onClick={() => removeTag(tag)} style={{ cursor: "pointer", opacity: 0.7 }}>×</span>
+                    </div>
+                ))}
+            </div>
+            <input 
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={addTag}
+                placeholder={placeholder}
+                style={inputStyle}
+            />
+        </div>
+    )
+}
 
 // --- ESTILOS ---
 const wizardWrapper = { width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center", padding: "20px", boxSizing: "border-box" }

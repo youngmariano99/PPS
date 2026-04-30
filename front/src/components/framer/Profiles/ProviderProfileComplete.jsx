@@ -36,6 +36,117 @@ export default function ProviderProfileComplete(props) {
     const [isOwner, setIsOwner] = useState(false)
     const [editForm, setEditForm] = useState({})
     const [error, setError] = useState(null)
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 900)
+        handleResize() // Set initial value safely after mount
+        window.addEventListener("resize", handleResize)
+        return () => window.removeEventListener("resize", handleResize)
+    }, [])
+
+    // --- STYLES (PURE INTER MATURE UI) ---
+    const fS = {
+        page: { width: "100%", minHeight: "100vh", backgroundColor: "#fdfdfd", color: "#1e293b", fontFamily: "Inter, sans-serif" },
+        content: { width: "100%", maxWidth: "1120px", margin: "0 auto", padding: "0 24px" },
+        grid: { 
+            display: "grid", 
+            gridTemplateColumns: isMobile ? "1fr" : "340px 1fr", 
+            gap: isMobile ? "30px" : "40px", 
+            marginTop: "40px",
+            alignItems: "start"
+        },
+        stickyCol: { 
+            display: "flex", 
+            flexDirection: "column", 
+            gap: "40px", 
+            position: isMobile ? "static" : "sticky", 
+            top: "120px", 
+            height: "fit-content"
+        },
+        scrollCol: { display: "flex", flexDirection: "column", gap: "40px" },
+        section: { width: "100%" },
+        label: { fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "16px" },
+        card: { padding: "28px", backgroundColor: "white", borderRadius: "20px", border: "1px solid #f1f5f9", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" },
+        desc: { fontSize: "16px", lineHeight: "1.7", color: "#475569", margin: 0 },
+        cRow: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px", fontSize: "15px", color: "#334155" },
+        link: { color: "#334155", textDecoration: "none", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" },
+        input: { width: "100%", padding: "8px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none" },
+        inputArea: { width: "100%", minHeight: "120px", padding: "16px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "15px", fontFamily: "Inter", resize: "none", backgroundColor: "#f8fafc" },
+        pGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px" },
+        pImg: { aspectRatio: "4/3", borderRadius: "20px", backgroundSize: "cover", backgroundColor: "#f1f5f9", position: "relative", overflow: "hidden", cursor: "pointer" },
+        pImgOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.2)", opacity: 0, transition: "opacity 0.2s ease", display: "flex", alignItems: "center", justifyContent: "center", color: "white" },
+        loader: { width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
+        errorContainer: { width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px" },
+        empty: { padding: "60px 40px", textAlign: "center", backgroundColor: "#f8fafc", borderRadius: "24px", border: "2px dashed #e2e8f0", color: "#94a3b8", fontSize: "14px", display: "flex", flexDirection: "column", alignItems: "center" },
+        mainBtn: { height: "38px", padding: "0 22px", borderRadius: "10px", border: "none", color: "white", fontWeight: "700", cursor: "pointer", fontFamily: "Inter", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,0.08)" }
+    }
+
+    const hS = {
+        container: { 
+            padding: isMobile ? "40px 0 30px 0" : "60px 0 40px 0", 
+            borderBottom: "1px solid #f1f5f9", 
+            backgroundColor: "white",
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.03)"
+        },
+        flex: { display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: "24px", marginBottom: "32px" },
+        left: { display: "flex", alignItems: "center", gap: "32px" },
+        avatar: { width: "100px", height: "100px", borderRadius: "32px", backgroundSize: "cover", position: "relative", backgroundColor: "#f8fafc", boxShadow: "0 10px 20px rgba(0,0,0,0.05)" },
+        avatarOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", borderRadius: "32px" },
+        info: { display: "flex", flexDirection: "column", gap: "4px" },
+        nameRow: { display: "flex", alignItems: "center", gap: "12px" },
+        name: { fontSize: "36px", fontWeight: "700", letterSpacing: "-1.5px", margin: 0, fontFamily: "Inter Display, sans-serif" },
+        proTag: { fontSize: "11px", fontWeight: "800", display: "flex", alignItems: "center", gap: "4px" },
+        cat: { fontSize: "16px", fontWeight: "600" },
+        bioSection: { marginTop: "12px", borderTop: "1px solid #f8fafc", paddingTop: "24px" },
+        bioText: { fontSize: "16px", lineHeight: "1.6", color: "#475569", maxWidth: "800px", margin: 0 },
+        actions: { display: "flex", alignItems: "center" },
+        btnEdit: { 
+            height: "38px",
+            padding: "0 18px", 
+            borderRadius: "10px", 
+            border: "1px solid #e2e8f0", 
+            backgroundColor: "white", 
+            color: "#475569", 
+            fontWeight: "600", 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "8px", 
+            cursor: "pointer", 
+            fontSize: "13px",
+            fontFamily: "Inter"
+        },
+        btnSave: { 
+            height: "38px",
+            padding: "0 20px", 
+            borderRadius: "10px", 
+            border: "none", 
+            color: "white", 
+            fontWeight: "700", 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "8px", 
+            cursor: "pointer", 
+            fontSize: "13px", 
+            fontFamily: "Inter",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.08)" 
+        },
+        btnCancel: { 
+            height: "38px",
+            padding: "0 12px", 
+            borderRadius: "10px", 
+            border: "1px solid #fee2e2", 
+            backgroundColor: "#fef2f2", 
+            color: "#ef4444", 
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+        }
+    }
 
     const discoverAndFetch = async () => {
         setLoading(true)
@@ -193,43 +304,29 @@ export default function ProviderProfileComplete(props) {
                              )}
                         </div>
                     </div>
+
+                    {/* Resumen Profesional movido al Top */}
+                    <div style={hS.bioSection}>
+                        <h4 style={fS.label}>Resumen Profesional</h4>
+                        {isEditing ? (
+                            <textarea 
+                                style={fS.inputArea} 
+                                value={editForm.description} 
+                                onChange={e => setEditForm({...editForm, description: e.target.value})}
+                                placeholder="Escribe tu resumen profesional aquí..."
+                            />
+                        ) : (
+                            <p style={hS.bioText}>{data.description || "Sin descripción profesional cargada."}</p>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Main Content */}
             <div style={fS.content}>
                 <div style={fS.grid}>
-                    {/* Left: Bio & Portfolio */}
-                    <div style={fS.col}>
-                        <section style={fS.section}>
-                            <h4 style={fS.label}>Resumen Profesional</h4>
-                            {isEditing ? (
-                                <textarea 
-                                    style={fS.inputArea} 
-                                    value={editForm.description} 
-                                    onChange={e => setEditForm({...editForm, description: e.target.value})}
-                                />
-                            ) : (
-                                <div style={fS.card}><p style={fS.desc}>{data.description}</p></div>
-                            )}
-                        </section>
-
-                        <section style={fS.section}>
-                            <h4 style={fS.label}>Portfolio de Trabajos</h4>
-                            {data.portfolio.length === 0 ? (
-                                <div style={fS.empty}><p>No hay trabajos cargados.</p></div>
-                            ) : (
-                                <div style={fS.pGrid}>
-                                    {data.portfolio.map((img, i) => (
-                                        <div key={i} style={{...fS.pImg, backgroundImage: `url(${img})`}}></div>
-                                    ))}
-                                </div>
-                            )}
-                        </section>
-                    </div>
-
-                    {/* Right: Contact & Networks */}
-                    <div style={fS.col}>
+                    {/* Left Column: Contact & Networks (Sticky) */}
+                    <aside style={fS.stickyCol}>
                         <section style={fS.section}>
                             <h4 style={fS.label}>Información de Contacto</h4>
                             <div style={fS.card}>
@@ -266,90 +363,38 @@ export default function ProviderProfileComplete(props) {
                                 </div>
                             </div>
                         </section>
+                    </aside>
+
+                    {/* Right Column: Portfolio (Scrollable) */}
+                    <div style={fS.scrollCol}>
+                        <section style={fS.section}>
+                            <h4 style={fS.label}>Portfolio de Trabajos</h4>
+                            {data.portfolio.length === 0 ? (
+                                <div style={fS.empty}>
+                                    <Camera size={32} color="#cbd5e1" style={{ marginBottom: "12px" }} />
+                                    <p>No hay trabajos cargados en el portfolio aún.</p>
+                                </div>
+                            ) : (
+                                <div style={fS.pGrid}>
+                                    {data.portfolio.map((img, i) => (
+                                        <div key={i} style={{...fS.pImg, backgroundImage: `url(${img})`}}>
+                                            <div style={fS.pImgOverlay}><Maximize size={16} /></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
                     </div>
                 </div>
             </div>
+
             <div style={{ height: "60px" }} />
         </div>
     )
 }
 
-// --- STYLES (PURE INTER MATURE UI) ---
 
-const fS = {
-    page: { width: "100%", minHeight: "100vh", backgroundColor: "#fdfdfd", color: "#1e293b", fontFamily: "Inter, sans-serif" },
-    content: { width: "100%", maxWidth: "1120px", margin: "0 auto", padding: "0 24px" },
-    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "60px", marginTop: "40px" },
-    col: { display: "flex", flexDirection: "column", gap: "40px" },
-    section: { width: "100%" },
-    label: { fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "16px" },
-    card: { padding: "28px", backgroundColor: "white", borderRadius: "20px", border: "1px solid #f1f5f9", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" },
-    desc: { fontSize: "16px", lineHeight: "1.7", color: "#475569", margin: 0 },
-    cRow: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px", fontSize: "15px", color: "#334155" },
-    link: { color: "#334155", textDecoration: "none", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" },
-    input: { width: "100%", padding: "8px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none" },
-    inputArea: { width: "100%", minHeight: "150px", padding: "16px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "15px", fontFamily: "Inter", resize: "none" },
-    pGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
-    pImg: { aspectRatio: "1/1", borderRadius: "16px", backgroundSize: "cover", backgroundColor: "#f1f5f9" },
-    loader: { width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
-    empty: { padding: "40px", textAlign: "center", backgroundColor: "#f8fafc", borderRadius: "20px", border: "1px dashed #e2e8f0", color: "#94a3b8", fontSize: "14px" }
-}
 
-const hS = {
-    container: { padding: "80px 0 60px 0", borderBottom: "1px solid #f1f5f9", backgroundColor: "white" },
-    flex: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "32px" },
-    left: { display: "flex", alignItems: "center", gap: "32px" },
-    avatar: { width: "100px", height: "100px", borderRadius: "32px", backgroundSize: "cover", position: "relative", backgroundColor: "#f8fafc", boxShadow: "0 10px 20px rgba(0,0,0,0.05)" },
-    avatarOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", borderRadius: "32px" },
-    info: { display: "flex", flexDirection: "column", gap: "4px" },
-    nameRow: { display: "flex", alignItems: "center", gap: "12px" },
-    name: { fontSize: "36px", fontWeight: "700", letterSpacing: "-1.5px", margin: 0, fontFamily: "Inter Display, sans-serif" },
-    proTag: { fontSize: "11px", fontWeight: "800", display: "flex", alignItems: "center", gap: "4px" },
-    cat: { fontSize: "16px", fontWeight: "600" },
-    actions: { display: "flex", alignItems: "center" },
-    btnEdit: { 
-        height: "38px",
-        padding: "0 18px", 
-        borderRadius: "10px", 
-        border: "1px solid #e2e8f0", 
-        backgroundColor: "white", 
-        color: "#475569", 
-        fontWeight: "600", 
-        display: "flex", 
-        alignItems: "center", 
-        gap: "8px", 
-        cursor: "pointer", 
-        fontSize: "13px",
-        fontFamily: "Inter"
-    },
-    btnSave: { 
-        height: "38px",
-        padding: "0 20px", 
-        borderRadius: "10px", 
-        border: "none", 
-        color: "white", 
-        fontWeight: "700", 
-        display: "flex", 
-        alignItems: "center", 
-        gap: "8px", 
-        cursor: "pointer", 
-        fontSize: "13px", 
-        fontFamily: "Inter",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.08)" 
-    },
-    btnCancel: { 
-        height: "38px",
-        padding: "0 12px", 
-        borderRadius: "10px", 
-        border: "1px solid #fee2e2", 
-        backgroundColor: "#fef2f2", 
-        color: "#ef4444", 
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
-    }
-}
 
 addPropertyControls(ProviderProfileComplete, {
     apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },

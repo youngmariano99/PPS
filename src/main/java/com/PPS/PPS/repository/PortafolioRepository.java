@@ -26,4 +26,7 @@ public interface PortafolioRepository extends JpaRepository<Portafolio, UUID> {
      */
     List<Portafolio> findAllByUsuarioIdOrderByFechaCreacionDesc(UUID usuarioId);
     List<Portafolio> findAllByEmpresaIdOrderByFechaCreacionDesc(UUID empresaId);
+
+    void deleteByUsuarioId(UUID usuarioId);
+    void deleteByEmpresaId(UUID empresaId);
 }

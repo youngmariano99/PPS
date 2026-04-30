@@ -452,6 +452,16 @@ public class DirectorioService {
             perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
         }
 
+        // --- SOLUCIÓN AL PROBLEMA 2 ---
+        // 1. Validar límites según el plan actual
+        validarLimitesMultimedia(usuarioId, dto);
+
+        // 2. Limpiar portafolio anterior para evitar duplicados (Problema 3)
+        portafolioRepository.deleteByUsuarioId(usuarioId);
+
+        // 3. Guardar el nuevo portafolio
+        guardarMultimediaEnPortafolio(dto, perfil.getUsuario(), null);
+
         proveedorRepository.save(perfil);
     }
 

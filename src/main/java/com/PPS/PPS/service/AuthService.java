@@ -211,8 +211,8 @@ public class AuthService {
 
     private void procesarPortafolio(Usuario usuario, RegistroCompletoSolicitudDto dto) {
         // Procesar Imágenes
-        if (dto.getFotosPortafolio() != null) {
-            for (String url : dto.getFotosPortafolio()) {
+        if (dto.getFotosPortafolioUrls() != null) {
+            for (String url : dto.getFotosPortafolioUrls()) {
                 if (url != null && !url.isBlank()) {
                     Portafolio p = Portafolio.builder()
                             .usuario(usuario)
@@ -227,8 +227,8 @@ public class AuthService {
         }
 
         // Procesar Videos (Enlaces)
-        if (dto.getUrlsVideos() != null) {
-            for (String url : dto.getUrlsVideos()) {
+        if (dto.getVideoLinks() != null) {
+            for (String url : dto.getVideoLinks()) {
                 if (url != null && !url.isBlank()) {
                     Portafolio p = Portafolio.builder()
                             .usuario(usuario)

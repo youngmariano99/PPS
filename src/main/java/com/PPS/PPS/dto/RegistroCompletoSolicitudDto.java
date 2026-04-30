@@ -67,8 +67,8 @@ public class RegistroCompletoSolicitudDto {
     private String codigoPostal;
 
     // --- Portafolio Multimedia ---
-    private java.util.List<String> fotosPortafolio;
-    private java.util.List<String> urlsVideos;
+    private java.util.List<String> fotosPortafolioUrls;
+    private java.util.List<String> videoLinks;
 
     // --- Etiquetas y Servicios ---
     private java.util.List<String> especialidades;

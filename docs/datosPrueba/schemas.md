@@ -98,6 +98,38 @@ create table public.resenas (
 create trigger trg_cooldown_resena BEFORE INSERT on resenas for EACH row
 execute FUNCTION validar_cooldown_resena ();
 
+# reportes_reseñas
+
+create table public.reportes_resenas (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  resena_id uuid not null,
+  usuario_reportador_id uuid not null,
+  motivo text not null,
+  evidencia_url text null,
+  estado text not null default 'PENDIENTE'::text,
+  resolucion_admin text null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint reportes_resenas_pkey primary key (id),
+  constraint reportes_resenas_resena_id_fkey foreign KEY (resena_id) references resenas (id) on delete CASCADE,
+  constraint reportes_resenas_usuario_reportador_id_fkey foreign KEY (usuario_reportador_id) references usuarios (id) on delete CASCADE,
+  constraint reportes_resenas_estado_check check (
+    (
+      estado = any (
+        array[
+          'PENDIENTE'::text,
+          'APROBADO'::text,
+          'RECHAZADO'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create trigger update_reportes_modtime BEFORE
+update on reportes_resenas for EACH row
+execute FUNCTION update_updated_at_column ();
+
 # portafolios
 
 create table public.portafolios (
@@ -222,3 +254,205 @@ create table public.perfiles_empresa (
 
 create index IF not exists idx_perfiles_empresa_ubicacion on public.perfiles_empresa using gist (ubicacion) TABLESPACE pg_default;
 
+# respuestas_candidatos
+
+create table public.respuestas_candidato (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  postulacion_id uuid not null,
+  pregunta_id uuid not null,
+  respuesta_dada text not null,
+  created_at timestamp with time zone not null default now(),
+  constraint respuestas_candidato_pkey primary key (id),
+  constraint uk_respuesta_unica unique (postulacion_id, pregunta_id),
+  constraint respuestas_candidato_postulacion_id_fkey foreign KEY (postulacion_id) references postulaciones (id) on delete CASCADE,
+  constraint respuestas_candidato_pregunta_id_fkey foreign KEY (pregunta_id) references preguntas_filtro_oferta (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+
+# preguntas_filtro_oferta
+
+create table public.preguntas_filtro_oferta (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  oferta_id uuid not null,
+  pregunta text not null,
+  tipo_pregunta text not null,
+  respuesta_esperada_excluyente text null,
+  created_at timestamp with time zone not null default now(),
+  constraint preguntas_filtro_oferta_pkey primary key (id),
+  constraint preguntas_filtro_oferta_oferta_id_fkey foreign KEY (oferta_id) references ofertas_empleo (id) on delete CASCADE,
+  constraint preguntas_filtro_oferta_tipo_pregunta_check check (
+    (
+      tipo_pregunta = any (array['SI_NO'::text, 'TEXTO_CORTO'::text])
+    )
+  )
+) TABLESPACE pg_default;
+
+# postulaciones
+
+create table public.postulaciones (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  oferta_id uuid not null,
+  usuario_candidato_id uuid not null,
+  mensaje_presentacion text null,
+  cv_url_adjunto text null,
+  estado text not null default 'ENVIADO'::text,
+  motivo_rechazo_codigo text null,
+  feedback_adicional text null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint postulaciones_pkey primary key (id),
+  constraint uk_postulacion_unica unique (oferta_id, usuario_candidato_id),
+  constraint postulaciones_oferta_id_fkey foreign KEY (oferta_id) references ofertas_empleo (id) on delete CASCADE,
+  constraint postulaciones_usuario_candidato_id_fkey foreign KEY (usuario_candidato_id) references usuarios (id) on delete CASCADE,
+  constraint postulaciones_estado_check check (
+    (
+      estado = any (
+        array[
+          'ENVIADO'::text,
+          'VISTO'::text,
+          'EN_REVISION'::text,
+          'CONTACTADO'::text,
+          'DESCARTADO'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+# ofertas_empleo
+
+create table public.ofertas_empleo (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  proveedor_id uuid null,
+  empresa_id uuid null,
+  titulo text not null,
+  descripcion text not null,
+  modalidad text not null,
+  salario_min numeric null,
+  salario_max numeric null,
+  habilidades_clave text[] null,
+  activa boolean not null default true,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint ofertas_empleo_pkey primary key (id),
+  constraint ofertas_empleo_empresa_id_fkey foreign KEY (empresa_id) references perfiles_empresa (id) on delete CASCADE,
+  constraint ofertas_empleo_proveedor_id_fkey foreign KEY (proveedor_id) references perfiles_proveedor (id) on delete CASCADE,
+  constraint chk_oferta_propietario check (
+    (
+      (
+        (proveedor_id is not null)
+        and (empresa_id is null)
+      )
+      or (
+        (proveedor_id is null)
+        and (empresa_id is not null)
+      )
+    )
+  ),
+  constraint ofertas_empleo_modalidad_check check (
+    (
+      modalidad = any (
+        array[
+          'REMOTO'::text,
+          'PRESENCIAL'::text,
+          'HIBRIDO'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+# notificaciones
+
+create table public.notificaciones (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  usuario_id uuid not null,
+  tipo_notificacion text not null,
+  mensaje text not null,
+  entidad_referencia_id uuid null,
+  leida boolean not null default false,
+  created_at timestamp with time zone not null default now(),
+  constraint notificaciones_pkey primary key (id),
+  constraint notificaciones_usuario_id_fkey foreign KEY (usuario_id) references usuarios (id) on delete CASCADE,
+  constraint notificaciones_tipo_notificacion_check check (
+    (
+      tipo_notificacion = any (
+        array[
+          'CAMBIO_ESTADO_POSTULACION'::text,
+          'NUEVA_OFERTA_COMPATIBLE'::text,
+          'NUEVA_RESENA'::text,
+          'NUEVO_MENSAJE'::text,
+          'REPORTE_RESUELTO'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+# intenciones_contacto
+
+create table public.intenciones_contacto (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  usuario_interesado_id uuid not null,
+  proveedor_contactado_id uuid null,
+  empresa_contactada_id uuid null,
+  created_at timestamp with time zone not null default now(),
+  direccion_ip text null,
+  constraint intenciones_contacto_pkey primary key (id),
+  constraint intenciones_contacto_empresa_contactada_id_fkey foreign KEY (empresa_contactada_id) references perfiles_empresa (id) on delete CASCADE,
+  constraint intenciones_contacto_proveedor_contactado_id_fkey foreign KEY (proveedor_contactado_id) references perfiles_proveedor (id) on delete CASCADE,
+  constraint intenciones_contacto_usuario_interesado_id_fkey foreign KEY (usuario_interesado_id) references usuarios (id) on delete CASCADE,
+  constraint chk_contacto_destino check (
+    (
+      (
+        (proveedor_contactado_id is not null)
+        and (empresa_contactada_id is null)
+      )
+      or (
+        (proveedor_contactado_id is null)
+        and (empresa_contactada_id is not null)
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+# curriculums_nativos
+
+create table public.curriculums_nativos (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  usuario_id uuid not null,
+  titular_profesional text null,
+  sobre_mi text null,
+  experiencia_laboral jsonb null default '[]'::jsonb,
+  educacion jsonb null default '[]'::jsonb,
+  habilidades jsonb null default '[]'::jsonb,
+  cv_url_pdf text null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint curriculums_nativos_pkey primary key (id),
+  constraint curriculums_nativos_usuario_id_key unique (usuario_id),
+  constraint curriculums_nativos_usuario_id_fkey foreign KEY (usuario_id) references usuarios (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+# alertas_empleo
+
+create table public.alertas_empleo (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  usuario_id uuid not null,
+  etiquetas_busqueda text[] not null,
+  modalidad_preferida text null,
+  created_at timestamp with time zone not null default now(),
+  constraint alertas_empleo_pkey primary key (id),
+  constraint alertas_empleo_usuario_id_fkey foreign KEY (usuario_id) references usuarios (id) on delete CASCADE,
+  constraint alertas_empleo_modalidad_preferida_check check (
+    (
+      modalidad_preferida = any (
+        array[
+          'REMOTO'::text,
+          'PRESENCIAL'::text,
+          'HIBRIDO'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;

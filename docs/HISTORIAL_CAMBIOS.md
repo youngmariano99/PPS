@@ -69,3 +69,12 @@
 * **Módulo/Tarea:** Optimización de Ranking y Paginación (Fase de Producción)
 * **Archivos Tocados:** `DirectorioController.java`, `DirectorioService.java`, `PerfilProveedorRepository.java`, `PerfilRespuestaDto.java`, `ListadoProfesionales.jsx`
 * **Qué y Por Qué (1 oración clara):** Se implementó la paginación del lado del servidor, se optimizó el rendimiento mediante `@EntityGraph` (reducción drástica de latencia al cargar entidades en una sola consulta), se normalizó el filtro de rubros para ignorar la diferencia entre 'ñ' y 'n', y se unificó el ranking (Premium > Distancia).
+* **Fecha:** 2026-04-29
+* **Módulo/Tarea:** Onboarding Multimedia e Integración Cloudinary (v6.1)
+* **Archivos Tocados:** `RegirstroFormWizard.jsx`, `AuthService.java`, `RegistroCompletoSolicitudDto.java`, `Portafolio.java`
+* **Qué y Por Qué (1 oración clara):** Se expandió el Wizard de registro para integrar subida directa a Cloudinary (fotos de perfil y portfolio) con persistencia atómica en el backend, garantizando una identidad visual completa desde el alta del usuario.
+
+* **Fecha:** 2026-04-29
+* **Módulo/Tarea:** Rediseño Marketplace y Motor de Búsqueda Global (v7.0)
+* **Archivos Tocados:** `ListadoProfesionales.jsx`, `DirectorioController.java`, `DirectorioService.java`, `PerfilProveedorRepository.java`, `PerfilRespuestaDto.java`
+* **Qué y Por Qué (1 oración clara):** Se implementó un buscador global dinámico (nombre/rubro/localidad) integrado en el backend, se rediseñó la UI del listado eliminando ruidos visuales y se optimizó la paginación con saltos manuales y visualización de fotos de perfil.

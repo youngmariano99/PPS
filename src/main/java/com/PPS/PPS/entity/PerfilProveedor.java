@@ -74,6 +74,12 @@ public class PerfilProveedor {
     @Column(name = "linkedin_url")
     private String linkedinUrl;
 
+    @Column(name = "especialidades", columnDefinition = "text[]")
+    private java.util.List<String> especialidades;
+
+    @Column(name = "condiciones_servicio", columnDefinition = "text[]")
+    private java.util.List<String> condicionesServicio;
+
     @Column(name = "created_at", updatable = false, insertable = false)
     private OffsetDateTime fechaCreacion;
 

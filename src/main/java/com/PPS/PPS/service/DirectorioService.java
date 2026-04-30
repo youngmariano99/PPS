@@ -259,6 +259,8 @@ public class DirectorioService {
                             .distanciaMetros((int) distancia)
                             .destacado(esPremiumReal)
                             .fotoPerfilUrl(p.getFotoPerfilUrl())
+                            .especialidades(p.getEspecialidades())
+                            .condicionesServicio(p.getCondicionesServicio())
                             .build();
                 })
                 .sorted((a, b) -> {
@@ -305,8 +307,11 @@ public class DirectorioService {
                         .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
                         .promedioEstrellas(0.0)
                         .cantidadResenas(0)
-                        .destacado(false) // Optimizado para mapa masivo
+                        .destacado(p.getUsuario().getSuscripcionActual() != null && 
+                                   p.getUsuario().getSuscripcionActual().getEstado().equals("ACTIVA"))
                         .fotoPerfilUrl(p.getFotoPerfilUrl())
+                        .especialidades(p.getEspecialidades())
+                        .condicionesServicio(p.getCondicionesServicio())
                         .build())
                 .collect(Collectors.toList()));
 

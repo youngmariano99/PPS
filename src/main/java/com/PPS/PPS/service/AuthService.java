@@ -176,6 +176,8 @@ public class AuthService {
                 .numero(Integer.parseInt(dto.getNumero()))
                 .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
                 .ubicacion(puntoUbicacion)
+                .especialidades(dto.getEspecialidades())
+                .condicionesServicio(dto.getCondicionesServicio())
                 .build();
             perfilProveedorRepository.save(perfil);
         } else if ("EMPRESA".equalsIgnoreCase(dto.getTipo())) {

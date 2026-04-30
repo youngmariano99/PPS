@@ -69,4 +69,8 @@ public class RegistroCompletoSolicitudDto {
     // --- Portafolio Multimedia ---
     private java.util.List<String> fotosPortafolio;
     private java.util.List<String> urlsVideos;
+
+    // --- Etiquetas y Servicios ---
+    private java.util.List<String> especialidades;
+    private java.util.List<String> condicionesServicio;
 }

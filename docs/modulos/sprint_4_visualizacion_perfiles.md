@@ -51,6 +51,20 @@ Permitir que los usuarios puedan ver perfiles de otros profesionales (Proveedore
 
 ---
 
-## 4. Instrucciones para Framer
-1.  Actualizar los componentes en Framer con el código ajustado.
-2.  Configurar las URLs de las páginas en el panel derecho de propiedades (Canvas) para que la navegación entre Listado -> Perfil funcione correctamente.
+---
+
+## 5. Mejoras de Identidad y Búsqueda (Actualización 29/04)
+
+### Buscador Global Dinámico
+*   **Endpoint:** `/api/v1/directorio/buscar/lista` ahora acepta el parámetro `q`.
+*   **Alcance:** El término de búsqueda filtra por:
+    *   Nombre y Apellido del profesional.
+    *   Rubro (Principal y Personalizado).
+    *   Ciudad / Localidad.
+    *   Descripción profesional.
+*   **Frontend:** Implementado en `ListadoProfesionales.jsx` con una barra de búsqueda dual (Search + MapPin icons) que dispara búsquedas en tiempo real.
+
+### Identidad Visual (Fotos de Perfil)
+*   **Mapeo:** El DTO de respuesta incluye `foto_perfil_url` (o `fotoPerfilUrl`).
+*   **Renderizado:** Las tarjetas del listado ahora priorizan la imagen de Cloudinary con un fallback automático a las iniciales del profesional si la imagen no está presente.
+*   **Estilo:** Uso de `backgroundSize: "cover"` para asegurar que la imagen se vea profesional en el formato cuadrado del avatar.

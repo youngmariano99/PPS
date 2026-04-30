@@ -195,20 +195,22 @@ export default function WizardOnboarding(props) {
                             <p style={subTitleStyleDark}>Agregá palabras clave sobre lo que hacés y cómo trabajás.</p>
                             
                             <div>
-                                <label style={labelStyle}>Tus Especialidades (Ej: React, Backend, .NET)</label>
+                                <label style={labelStyle}>Tus Especialidades</label>
+                                <p style={helperText}>Ej: React, Backend, Cimientos. Escribí una y presioná <strong>Enter</strong> para agregar.</p>
                                 <TagInput 
                                     tags={formData.especialidades} 
                                     setTags={(tags) => setFormData({...formData, especialidades: tags})}
-                                    placeholder="Escribí y presioná Enter..."
+                                    placeholder="Escribí una especialidad..."
                                 />
                             </div>
 
-                            <div style={{ marginTop: "16px" }}>
-                                <label style={labelStyle}>Métodos de pago / Condiciones (Ej: Mercado Pago, Efectivo)</label>
+                            <div style={{ marginTop: "20px" }}>
+                                <label style={labelStyle}>Métodos de pago / Condiciones</label>
+                                <p style={helperText}>Ej: Mercado Pago, Efectivo. Escribí y presioná <strong>Enter</strong>.</p>
                                 <TagInput 
                                     tags={formData.condicionesServicio} 
                                     setTags={(tags) => setFormData({...formData, condicionesServicio: tags})}
-                                    placeholder="Ej: Acepto transferencia, Pago adelantado..."
+                                    placeholder="Ej: Acepto transferencia..."
                                 />
                             </div>
                         </motion.div>
@@ -409,6 +411,7 @@ const secondaryBtn = { padding: "16px 24px", background: "#F1F5F9", border: "non
 const mediaGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "10px" }
 const uploadBox = { display: "flex", flexDirection: "column", gap: "8px" }
 const labelStyle = { fontSize: "12px", fontWeight: "700", color: "#475569" }
+const helperText = { fontSize: "11px", color: "#94A3B8", marginTop: "2px", marginBottom: "8px", lineHeight: "1.3" }
 const previewThumb = { width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover", marginTop: "8px", border: "2px solid #6366F1" }
 const galleryPreview = { display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }
 const miniThumb = { width: "40px", height: "40px", borderRadius: "8px", overflow: "hidden", position: "relative" }

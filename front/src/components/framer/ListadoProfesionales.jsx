@@ -272,34 +272,47 @@ export default function ListadoProfesionales(props) {
 
                 {/* Etiquetas de Especialidad */}
                 {(prof.especialidades && prof.especialidades.length > 0) && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "12px" }}>
-                        {prof.especialidades.slice(0, 3).map((tag, i) => (
-                            <span key={i} style={{ 
-                                background: "#F5F3FF", 
-                                color: "#6366F1", 
-                                fontSize: "10px", 
-                                fontWeight: "700", 
-                                padding: "2px 8px", 
-                                borderRadius: "4px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.2px"
-                            }}>
-                                {tag}
-                            </span>
-                        ))}
-                        {prof.especialidades.length > 3 && (
-                            <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: "600" }}>+{prof.especialidades.length - 3}</span>
-                        )}
+                    <div style={{ marginBottom: "12px" }}>
+                        <div style={{ fontSize: "10px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", marginBottom: "4px", letterSpacing: "0.5px" }}>
+                            Especialidades
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            {prof.especialidades.slice(0, 3).map((tag, i) => (
+                                <span key={i} style={{ 
+                                    background: "#F5F3FF", 
+                                    color: "#6366F1", 
+                                    fontSize: "10px", 
+                                    fontWeight: "700", 
+                                    padding: "2px 8px", 
+                                    borderRadius: "4px",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.2px"
+                                }}>
+                                    {tag}
+                                </span>
+                            ))}
+                            {prof.especialidades.length > 3 && (
+                                <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: "600" }}>+{prof.especialidades.length - 3}</span>
+                            )}
+                        </div>
                     </div>
                 )}
 
                 {/* Condiciones de Pago / Confianza */}
                 {(prof.condicionesServicio && prof.condicionesServicio.length > 0) && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "12px" }}>
-                        <span style={{ fontSize: "11px", color: "#10B981", fontWeight: "700", display: "flex", alignItems: "center", gap: "3px" }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            {prof.condicionesServicio[0]}
-                        </span>
+                    <div style={{ marginBottom: "12px" }}>
+                        <div style={{ fontSize: "10px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", marginBottom: "4px", letterSpacing: "0.5px" }}>
+                            Condiciones
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span style={{ fontSize: "11px", color: "#10B981", fontWeight: "700", display: "flex", alignItems: "center", gap: "3px" }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                {prof.condicionesServicio[0]}
+                            </span>
+                            {prof.condicionesServicio.length > 1 && (
+                                <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: "600" }}>+{prof.condicionesServicio.length - 1}</span>
+                            )}
+                        </div>
                     </div>
                 )}
 

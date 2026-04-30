@@ -480,6 +480,21 @@ export default function BuscadorDirectorioFinal(props) {
                                 "Sin descripción disponible"}
                         </p>
 
+                        {perfilSeleccionado.especialidades && perfilSeleccionado.especialidades.length > 0 && (
+                            <div style={{ marginBottom: "12px" }}>
+                                <div style={{ fontSize: "10px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", marginBottom: "4px", letterSpacing: "0.5px" }}>
+                                    Especialidades
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                                    {perfilSeleccionado.especialidades.map((tag, i) => (
+                                        <span key={i} style={{ background: "#F1F5F9", color: "#475569", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "4px" }}>
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div style={styles.modalInfo}>
                             <span style={styles.modalDistance}>
                                 📍{" "}
@@ -610,6 +625,17 @@ export default function BuscadorDirectorioFinal(props) {
                                                 ? `${p.descripcion.substring(0, 60)}${p.descripcion.length > 60 ? "..." : ""}`
                                                 : "Sin descripción"}
                                         </p>
+
+                                        {p.especialidades && p.especialidades.length > 0 && (
+                                            <div style={{ marginBottom: "8px" }}>
+                                                <div style={{ fontSize: "9px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", marginBottom: "2px" }}>Especialidades</div>
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                                                    {p.especialidades.slice(0, 2).map((tag, i) => (
+                                                        <span key={i} style={{ background: "#F5F3FF", color: "#6366F1", fontSize: "9px", fontWeight: "700", padding: "1px 6px", borderRadius: "3px" }}>{tag}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div style={styles.cardFooter}>
                                             <span style={styles.cityTag}>

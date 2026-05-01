@@ -24,7 +24,7 @@ export default function RegistroFormWizardChamba(props) {
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
         provincia: "", pais: "Argentina", codigoPostal: "",
-        fotosPortafolio: [], urlsVideos: [""],
+        fotosPortafolioUrls: [], videoLinks: [""],
         especialidades: [], condicionesServicio: []
     })
 
@@ -551,7 +551,7 @@ const Step5 = ({ data, onChange }) => (
 
 const Step6 = ({ data, setFormData }) => {
     const handlePhoto = (url) => setFormData({...data, fotoPerfilUrl: url})
-    const handlePortafolio = (url) => setFormData(prev => ({...prev, fotosPortafolio: [...prev.fotosPortafolio, url]}))
+    const handlePortafolio = (url) => setFormData(prev => ({...prev, fotosPortafolioUrls: [...prev.fotosPortafolioUrls, url]}))
 
     return (
         <div style={stepInner}>
@@ -585,15 +585,43 @@ const Step6 = ({ data, setFormData }) => {
                             <span style={uploadText}>Subir trabajos</span>
                             <span style={uploadHint}>Hasta 10 imágenes</span>
                         </div>
-                        {data.fotosPortafolio.length > 0 && (
+                        {data.fotosPortafolioUrls.length > 0 && (
                             <div style={miniGallery}>
-                                {data.fotosPortafolio.slice(0, 3).map((url, i) => (
+                                {data.fotosPortafolioUrls.slice(0, 3).map((url, i) => (
                                     <img key={i} src={url} style={miniImg} alt="Trabajo" />
                                 ))}
-                                {data.fotosPortafolio.length > 3 && <div style={miniMore}>+{data.fotosPortafolio.length - 3}</div>}
+                                {data.fotosPortafolioUrls.length > 3 && <div style={miniMore}>+{data.fotosPortafolioUrls.length - 3}</div>}
                             </div>
                         )}
                     </div>
+                </div>
+            </div>
+
+            {/* Nueva Sección de Videos */}
+            <div style={{ marginTop: "32px" }}>
+                <label style={labelStyle}>Links de Video o Redes (YouTube, Instagram, etc.)</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                    {data.videoLinks.map((link, idx) => (
+                        <div key={idx} style={inputWrap}>
+                            <div style={inputIconBox}>🔗</div>
+                            <input 
+                                style={inputField}
+                                placeholder="https://..."
+                                value={link}
+                                onChange={(e) => {
+                                    const newLinks = [...data.videoLinks]
+                                    newLinks[idx] = e.target.value
+                                    setFormData({...data, videoLinks: newLinks})
+                                }}
+                            />
+                        </div>
+                    ))}
+                    <button 
+                        style={{ ...secondaryBtn, padding: "8px 16px", fontSize: "13px", alignSelf: "flex-start" }}
+                        onClick={() => setFormData({...data, videoLinks: [...data.videoLinks, ""]})}
+                    >
+                        + Agregar otro link
+                    </button>
                 </div>
             </div>
         </div>

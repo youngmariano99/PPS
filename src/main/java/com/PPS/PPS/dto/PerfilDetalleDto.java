@@ -20,8 +20,10 @@ public class PerfilDetalleDto {
     private List<String> fotosPortafolio;
     private List<String> videoLinks;
     private String telefono;
+    private String email;
     private String matricula;
     private String direccion;
+    private String pais;
     private String instagramUrl;
     private String facebookUrl;
     private String linkedinUrl;

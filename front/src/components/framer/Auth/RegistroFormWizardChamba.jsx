@@ -23,7 +23,7 @@ export default function RegistroFormWizardChamba(props) {
         nombre: "", apellido: "", email: "", password: "", confirmPassword: "", telefono: "", tipo: "",
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
-        provincia: "", codigoPostal: "",
+        provincia: "", pais: "Argentina", codigoPostal: "",
         fotosPortafolio: [], urlsVideos: [""],
         especialidades: [], condicionesServicio: []
     })
@@ -102,7 +102,7 @@ export default function RegistroFormWizardChamba(props) {
             setLoading(true)
             setError(null)
             try {
-                const direccionCompleta = `${formData.calle} ${formData.numero}, ${formData.ciudad}, ${formData.provincia}`
+                const direccionCompleta = `${formData.calle} ${formData.numero}, ${formData.ciudad}, ${formData.provincia}, ${formData.pais}`
                 const res = await fetch(`${apiUrl.replace(/\/+$/, "")}/directorio/geocodificar?direccion=${encodeURIComponent(direccionCompleta)}`)
                 
                 if (!res.ok) {
@@ -541,7 +541,10 @@ const Step5 = ({ data, onChange }) => (
                 <Input label="Código Postal" name="codigoPostal" value={data.codigoPostal} onChange={onChange} icon={<IconMap />} placeholder="C1107" />
                 <Input label="Ciudad" name="ciudad" value={data.ciudad} onChange={onChange} icon={<IconEmp />} placeholder="Buenos Aires" />
             </div>
-            <Input label="Provincia" name="provincia" value={data.provincia} onChange={onChange} icon={<IconMap />} placeholder="Ej: Buenos Aires" />
+            <div style={rowGrid}>
+                <Input label="Provincia" name="provincia" value={data.provincia} onChange={onChange} icon={<IconMap />} placeholder="Ej: Buenos Aires" />
+                <Input label="País" name="pais" value={data.pais} onChange={onChange} icon={<IconMap />} placeholder="Ej: Argentina" />
+            </div>
         </div>
     </div>
 )

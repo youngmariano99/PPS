@@ -390,7 +390,6 @@ public class DirectorioService {
                 .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre() : p.getRubroPersonalizado())
                 .descripcion(p.getDescripcionProfesional())
                 .fotoPerfilUrl(p.getFotoPerfilUrl())
-                .dni(p.getDni())
                 .matricula(p.getMatricula())
                 .telefono(p.getUsuario().getTelefono())
                 .email(p.getUsuario().getEmail())

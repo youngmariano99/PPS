@@ -259,6 +259,7 @@ public class DirectorioService {
                             .distanciaMetros((int) distancia)
                             .destacado(esPremiumReal)
                             .fotoPerfilUrl(p.getFotoPerfilUrl())
+                            .telefono(p.getUsuario().getTelefono())
                             .especialidades(p.getEspecialidades())
                             .condicionesServicio(p.getCondicionesServicio())
                             .build();

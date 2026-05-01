@@ -36,6 +36,8 @@ public class PerfilRespuestaDto {
     private boolean destacado;
     @com.fasterxml.jackson.annotation.JsonProperty("fotoPerfilUrl")
     private String fotoPerfilUrl;
+    @com.fasterxml.jackson.annotation.JsonProperty("telefono")
+    private String telefono;
 
     private java.util.List<String> especialidades;
     private java.util.List<String> condicionesServicio;

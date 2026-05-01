@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -129,24 +128,25 @@ public class AuthService {
     }
 
     /**
-     * Registra un nuevo usuario y su perfil profesional en una sola transacción atómica.
+     * Registra un nuevo usuario y su perfil profesional en una sola transacción
+     * atómica.
      */
     @Transactional
     public AuthRespuestaDto registrarCompleto(RegistroCompletoSolicitudDto dto) {
         log.info("Iniciando registro completo para: {}", dto.getEmail());
 
-        // 1. Registro en Supabase (Si falla, lanza excepción y hace rollback de lo local)
+        // 1. Registro en Supabase (Si falla, lanza excepción y hace rollback de lo
+        // local)
         AuthRespuestaDto authBase = registrar(new RegistroSolicitudDto(
-            dto.getNombre(), dto.getApellido(), dto.getEmail(), dto.getPassword(), dto.getTelefono()
-        ));
-        
+                dto.getNombre(), dto.getApellido(), dto.getEmail(), dto.getPassword(), dto.getTelefono()));
+
         UUID usuarioId = authBase.getUsuarioId();
         Usuario usuario = usuarioRepository.findById(usuarioId).orElseThrow();
 
         // 2. Preparar Ubicación (Geocoding)
-        String direccionCompleta = String.format("%s %s, %s, %s, Argentina", 
-            dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia());
-        
+        String direccionCompleta = String.format("%s %s, %s, %s, Argentina",
+                dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia());
+
         Point puntoUbicacion = null;
         double[] coords = geocodingService.obtenerCoordenadas(direccionCompleta);
         if (coords != null) {
@@ -162,41 +162,41 @@ public class AuthService {
         // 4. Crear Perfil según Rol
         if ("PROVEEDOR".equalsIgnoreCase(dto.getTipo())) {
             PerfilProveedor perfil = PerfilProveedor.builder()
-                .usuario(usuario)
-                .rubroPrincipal(rubro)
-                .rubroPersonalizado(dto.getRubroPersonalizado())
-                .descripcionProfesional(dto.getDescripcion())
-                .dni(dto.getDniCuit())
-                .matricula(dto.getMatricula())
-                .fotoPerfilUrl(dto.getFotoPerfilUrl())
-                .pais("Argentina")
-                .provincia(dto.getProvincia())
-                .ciudad(dto.getCiudad())
-                .calle(dto.getCalle())
-                .numero(Integer.parseInt(dto.getNumero()))
-                .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
-                .ubicacion(puntoUbicacion)
-                .especialidades(dto.getEspecialidades())
-                .condicionesServicio(dto.getCondicionesServicio())
-                .build();
+                    .usuario(usuario)
+                    .rubroPrincipal(rubro)
+                    .rubroPersonalizado(dto.getRubroPersonalizado())
+                    .descripcionProfesional(dto.getDescripcion())
+                    .dni(dto.getDniCuit())
+                    .matricula(dto.getMatricula())
+                    .fotoPerfilUrl(dto.getFotoPerfilUrl())
+                    .pais("Argentina")
+                    .provincia(dto.getProvincia())
+                    .ciudad(dto.getCiudad())
+                    .calle(dto.getCalle())
+                    .numero(Integer.parseInt(dto.getNumero()))
+                    .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
+                    .ubicacion(puntoUbicacion)
+                    .especialidades(dto.getEspecialidades())
+                    .condicionesServicio(dto.getCondicionesServicio())
+                    .build();
             perfilProveedorRepository.save(perfil);
         } else if ("EMPRESA".equalsIgnoreCase(dto.getTipo())) {
             PerfilEmpresa perfil = PerfilEmpresa.builder()
-                .usuario(usuario)
-                .rubroPrincipal(rubro)
-                .rubroPersonalizado(dto.getRubroPersonalizado())
-                .descripcionEmpresa(dto.getDescripcion())
-                .razonSocial(dto.getNombre()) // En empresas el nombre suele ser la razón social
-                .cuit(dto.getDniCuit())
-                .logoUrl(dto.getFotoPerfilUrl())
-                .pais("Argentina")
-                .provincia(dto.getProvincia())
-                .ciudad(dto.getCiudad())
-                .calle(dto.getCalle())
-                .numero(Integer.parseInt(dto.getNumero()))
-                .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
-                .ubicacion(puntoUbicacion)
-                .build();
+                    .usuario(usuario)
+                    .rubroPrincipal(rubro)
+                    .rubroPersonalizado(dto.getRubroPersonalizado())
+                    .descripcionEmpresa(dto.getDescripcion())
+                    .razonSocial(dto.getNombre()) // En empresas el nombre suele ser la razón social
+                    .cuit(dto.getDniCuit())
+                    .logoUrl(dto.getFotoPerfilUrl())
+                    .pais("Argentina")
+                    .provincia(dto.getProvincia())
+                    .ciudad(dto.getCiudad())
+                    .calle(dto.getCalle())
+                    .numero(Integer.parseInt(dto.getNumero()))
+                    .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
+                    .ubicacion(puntoUbicacion)
+                    .build();
             perfilEmpresaRepository.save(perfil);
         } else {
             log.info("Usuario registrado como rol básico (SIN PERFIL): {}", usuarioId);

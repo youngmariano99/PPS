@@ -1,8 +1,6 @@
 package com.PPS.PPS.controller;
 
 import com.PPS.PPS.dto.suscripcion.CrearSuscripcionRequestDto;
-import com.PPS.PPS.dto.suscripcion.MpWebhookDto;
-import com.PPS.PPS.entity.Usuario;
 import com.PPS.PPS.repository.UsuarioRepository;
 import com.PPS.PPS.service.MercadoPagoService;
 import com.PPS.PPS.service.SuscripcionService;
@@ -60,8 +58,9 @@ public class SuscripcionController {
             HttpServletResponse response) throws IOException {
         log.info("Redirect de MP recibido. Redirigiendo a éxito en Framer.");
 
-        // Redirigir al frontend para UX. 
-        // Si tienes la página 'pago-exitoso' en Framer, irá ahí. Si no existe, irá a la home.
+        // Redirigir al frontend para UX.
+        // Si tienes la página 'pago-exitoso' en Framer, irá ahí. Si no existe, irá a la
+        // home.
         String returnRedirect = frontendUrl + "/pago-exitoso";
         response.sendRedirect(returnRedirect);
     }
@@ -88,7 +87,7 @@ public class SuscripcionController {
                     suscripcionService.procesarWebhookPagoUnico(reference);
                 }
             } else {
-                log.info("El pago {} no está aprobado o no se pudo consultar. Status: {}", 
+                log.info("El pago {} no está aprobado o no se pudo consultar. Status: {}",
                         paymentId, (pago != null ? pago.getStatus() : "null"));
             }
         }

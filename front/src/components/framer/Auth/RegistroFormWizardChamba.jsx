@@ -15,11 +15,12 @@ export default function RegistroFormWizardChamba(props) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [success, setSuccess] = useState(false)
+    const [userId, setUserId] = useState(null)
     const [rubros, setRubros] = useState([])
     const [showCustom, setShowCustom] = useState(false)
 
     const [formData, setFormData] = useState({
-        nombre: "", apellido: "", email: "", password: "", telefono: "", tipo: "",
+        nombre: "", apellido: "", email: "", password: "", confirmPassword: "", telefono: "", tipo: "",
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
         provincia: "", codigoPostal: "",
@@ -77,14 +78,14 @@ export default function RegistroFormWizardChamba(props) {
             if (!formData.nombre || !formData.apellido || !formData.email || !formData.telefono) return "Completá tus datos básicos."
             if (!/^\S+@\S+\.\S+$/.test(formData.email)) return "Ingresá un email válido."
             if (getStrength() < 3) return "La contraseña debe ser más segura."
+            if (formData.password !== formData.confirmPassword) return "Las contraseñas no coinciden."
         }
         if (s === 3 && formData.tipo !== "CLIENTE") {
             if (!formData.rubroId && !formData.rubroPersonalizado) return "Elegí tu rubro principal."
             if (!formData.dniCuit) return "El DNI/CUIT es obligatorio."
-            if (!formData.descripcion || formData.descripcion.length < 20) return "Contanos un poco más sobre vos (mín. 20 carac.)"
         }
         if (s === 4 && formData.tipo !== "CLIENTE") {
-            if (formData.especialidades.length === 0) return "Agregá al menos una especialidad."
+            // Sin validación obligatoria para reducir fricción
         }
         if (s === 5 && formData.tipo !== "CLIENTE") {
             if (!formData.calle || !formData.numero || !formData.ciudad) return "Completá tu dirección."
@@ -95,6 +96,28 @@ export default function RegistroFormWizardChamba(props) {
     const handleNext = async () => {
         const err = validateStep(step)
         if (err) { setError(err); return }
+
+        // Validación de Ubicación Inteligente (Paso 5)
+        if (step === 5 && formData.tipo !== "CLIENTE") {
+            setLoading(true)
+            setError(null)
+            try {
+                const direccionCompleta = `${formData.calle} ${formData.numero}, ${formData.ciudad}, ${formData.provincia}`
+                const res = await fetch(`${apiUrl.replace(/\/+$/, "")}/directorio/geocodificar?direccion=${encodeURIComponent(direccionCompleta)}`)
+                
+                if (!res.ok) {
+                    throw new Error("No pudimos encontrar esa dirección en el mapa. Por favor, verificá que los datos sean correctos.")
+                }
+                
+                // Si llegamos acá, la dirección es válida
+            } catch (err) {
+                setError(err.message)
+                setLoading(false)
+                return
+            } finally {
+                setLoading(false)
+            }
+        }
 
         if (step === 2 && formData.tipo === "CLIENTE") {
             await submitFinal()
@@ -115,17 +138,15 @@ export default function RegistroFormWizardChamba(props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData)
             })
-            if (!res.ok) {
-                const data = await res.json()
-                throw new Error(data.mensaje || "Error al registrar.")
-            }
+            const data = await res.json()
+            setUserId(data.usuarioId)
             setSuccess(true)
         } catch (err) {
             setError(err.message)
         } finally { setLoading(false) }
     }
 
-    if (success) return <SuccessView nombre={formData.nombre} />
+    if (success) return <SuccessView nombre={formData.nombre} userId={userId} profileUrl={props.providerProfileUrl} tipo={formData.tipo} />
 
     return (
         <div style={pageContainer}>
@@ -279,16 +300,21 @@ const Step2 = ({ data, onChange, checks }) => (
                 <Input label="Email" name="email" type="email" value={data.email} onChange={onChange} icon={<IconMail />} placeholder="tu@email.com" />
                 <Input label="WhatsApp" name="telefono" value={data.telefono} onChange={onChange} icon={<IconPhone />} placeholder="+54 9 11..." />
             </div>
-            <div style={{ position: "relative" }}>
-                <Input label="Contraseña" name="password" type="password" value={data.password} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
-                <div style={passGuide}>
-                    <p style={guideTitle}>Tu contraseña debe tener:</p>
-                    <div style={guideGrid}>
-                        <GuideCheck met={checks.min} text="Mínimo 8 caracteres" />
-                        <GuideCheck met={checks.upper} text="Al menos 1 mayúscula" />
-                        <GuideCheck met={checks.number} text="Al menos 1 número" />
-                        <GuideCheck met={checks.special} text="Al menos 1 símbolo" />
-                    </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ position: "relative" }}>
+                    <Input label="Contraseña" name="password" type="password" value={data.password} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
+                </div>
+                <div style={{ position: "relative" }}>
+                    <Input label="Confirmar contraseña" name="confirmPassword" type="password" value={data.confirmPassword} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
+                </div>
+            </div>
+            <div style={passGuide}>
+                <p style={guideTitle}>Tu contraseña debe tener:</p>
+                <div style={guideGrid}>
+                    <GuideCheck met={checks.min} text="Mínimo 8 caracteres" />
+                    <GuideCheck met={checks.upper} text="Al menos 1 mayúscula" />
+                    <GuideCheck met={checks.number} text="Al menos 1 número" />
+                    <GuideCheck met={checks.special} text="Al menos 1 símbolo" />
                 </div>
             </div>
         </div>
@@ -515,16 +541,7 @@ const Step5 = ({ data, onChange }) => (
                 <Input label="Código Postal" name="codigoPostal" value={data.codigoPostal} onChange={onChange} icon={<IconMap />} placeholder="C1107" />
                 <Input label="Ciudad" name="ciudad" value={data.ciudad} onChange={onChange} icon={<IconEmp />} placeholder="Buenos Aires" />
             </div>
-            <div>
-                <label style={labelStyle}>Provincia</label>
-                <select name="provincia" value={data.provincia} onChange={onChange} style={selectField}>
-                    <option value="">Seleccioná una opción</option>
-                    <option value="Buenos Aires">Buenos Aires</option>
-                    <option value="CABA">CABA</option>
-                    <option value="Santa Fe">Santa Fe</option>
-                    <option value="Córdoba">Córdoba</option>
-                </select>
-            </div>
+            <Input label="Provincia" name="provincia" value={data.provincia} onChange={onChange} icon={<IconMap />} placeholder="Ej: Buenos Aires" />
         </div>
     </div>
 )
@@ -689,12 +706,45 @@ const TagInput = ({ tags, setTags, placeholder }) => {
     )
 }
 
-const SuccessView = ({ nombre }) => (
+const SuccessView = ({ nombre, userId, profileUrl, tipo }) => (
     <div style={successWrapper}>
-        <div style={successIcon}>✓</div>
-        <h2 style={titleStyle}>¡Bienvenido, {nombre}!</h2>
-        <p style={subtitleStyle}>Tu cuenta en Chamba ha sido creada exitosamente. Ya podés empezar a conectar con oportunidades.</p>
-        <button style={primaryBtn} onClick={() => window.location.reload()}>Ir al inicio</button>
+        <motion.div 
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={successIcon}
+        >
+            ✓
+        </motion.div>
+        <h2 style={{ ...stepTitle, fontSize: "32px", marginBottom: "16px" }}>¡Bienvenido a la comunidad, {nombre}! 🥳</h2>
+        <p style={{ ...stepSubtitle, fontSize: "16px", color: "#475569", maxWidth: "500px", marginBottom: "40px" }}>
+            {tipo === "CLIENTE" 
+                ? "Tu cuenta ha sido creada. Ya podés empezar a buscar los mejores servicios y oportunidades en Chamba."
+                : "Tu perfil profesional ya está activo. Es momento de conectar con nuevas oportunidades y mostrar todo lo que sabés hacer."
+            }
+        </p>
+        
+        <div style={{ display: "flex", gap: "16px", width: "100%", justifyContent: "center" }}>
+            {tipo !== "CLIENTE" && (
+                <button 
+                    style={primaryBtn} 
+                    onClick={() => {
+                        const url = profileUrl || "https://overly-mindset-259417.framer.app/perfiles-prov"
+                        window.location.href = `${url}?id=${userId}`
+                    }}
+                >
+                    Ver mi perfil profesional
+                </button>
+            )}
+            <button 
+                style={tipo === "CLIENTE" ? primaryBtn : secondaryBtn} 
+                onClick={() => window.location.href = "/"}
+            >
+                Ir al inicio
+            </button>
+        </div>
+        <p style={{ marginTop: "40px", fontSize: "13px", color: "#94A3B8" }}>
+            CONECTA. TRABAJO. GENERA OPORTUNIDADES.
+        </p>
     </div>
 )
 
@@ -902,6 +952,19 @@ const sugPill = {
 
 // --- FRAMER CONTROLS ---
 addPropertyControls(RegistroFormWizardChamba, {
-    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
-    btnText: { type: ControlType.String, title: "Botón", defaultValue: "Siguiente" },
+    apiUrl: {
+        type: ControlType.String,
+        title: "API Base URL",
+        defaultValue: "https://pps-sk7p.onrender.com/api/v1",
+    },
+    btnText: {
+        type: ControlType.String,
+        title: "Botón Texto",
+        defaultValue: "Siguiente →",
+    },
+    providerProfileUrl: {
+        type: ControlType.String,
+        title: "URL Perfil Prov",
+        defaultValue: "https://overly-mindset-259417.framer.app/perfiles-prov",
+    },
 })

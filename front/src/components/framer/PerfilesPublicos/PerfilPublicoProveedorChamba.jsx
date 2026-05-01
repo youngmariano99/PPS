@@ -370,8 +370,16 @@ export default function PerfilPublicoProveedorChamba(props) {
                         <span>{data.category}</span> <ChevronRight size={12} />
                         <span style={{ color: "#475569", fontWeight: "600" }}>{data.name}</span>
                         <div style={{ flex: 1 }} />
-                        <div style={{ display: "flex", gap: "4px", alignItems: "center", color: primaryColor, fontWeight: "600", cursor: "pointer" }}>
-                            Compartir perfil <ExternalLink size={14} />
+                        <div 
+                            onClick={() => {
+                                const text = encodeURIComponent(`¡Hola! Mirá el perfil de profesional de ${data.name} en Chamba: ${window.location.href}. Encontrá los mejores talentos de tu zona de forma rápida y segura. 🚀`);
+                                window.open(`https://wa.me/?text=${text}`, "_blank");
+                            }}
+                            style={{ display: "flex", gap: "6px", alignItems: "center", color: primaryColor, fontWeight: "700", cursor: "pointer", background: primaryColor + "10", padding: "8px 16px", borderRadius: "100px", transition: "all 0.2s" }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = primaryColor + "20"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = primaryColor + "10"}
+                        >
+                            <span style={{ fontSize: "13px" }}>Compartir perfil</span> <ExternalLink size={14} />
                         </div>
                     </div>
 
@@ -420,10 +428,15 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 {data.description}
                             </p>
 
+                            <div style={{ marginBottom: "8px", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Especialidades</div>
                             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                {(data.specialties.length > 0 ? data.specialties : [data.category]).map((tag, i) => (
-                                    <span key={i} className="chamba-tag">{tag}</span>
-                                ))}
+                                {data.specialties.length > 0 ? (
+                                    data.specialties.map((tag, i) => (
+                                        <span key={i} className="chamba-tag">{tag}</span>
+                                    ))
+                                ) : (
+                                    <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó especialidades.</span>
+                                )}
                             </div>
                         </div>
 
@@ -484,6 +497,43 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 <button className="chamba-btn-primary" style={{ width: "auto", margin: "0 auto", padding: "10px 24px", fontSize: "14px" }}>Cargar trabajos</button>
                             </div>
                         )}
+                    </div>
+
+                    {/* Cómo Trabajo (Condiciones) */}
+                    <div className="chamba-card">
+                        <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", marginBottom: "24px" }}>Cómo trabajo</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "24px" }}>
+                            <div>
+                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Condiciones del servicio</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    {data.conditions.length > 0 ? (
+                                        data.conditions.map((c, i) => (
+                                            <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start", fontSize: "14px", color: "#475569" }}>
+                                                <CheckCircle2 size={18} color="#10B981" style={{ marginTop: "2px", flexShrink: 0 }} />
+                                                <span>{c}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó condiciones de contratación.</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div style={{ background: "#F8FAFC", padding: "20px", borderRadius: "20px", border: "1px solid #F1F5F9" }}>
+                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Métodos de pago</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                    <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981" }} /> Efectivo
+                                    </div>
+                                    <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#009EE3", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#009EE3" }} /> Mercado Pago
+                                    </div>
+                                    <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#64748B" }} /> Transferencia
+                                    </div>
+                                </div>
+                                <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "16px" }}>Consulta otros medios de pago directamente con el profesional.</p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Reseñas */}
@@ -578,8 +628,19 @@ export default function PerfilPublicoProveedorChamba(props) {
                 {/* Right Column (Sidebar) */}
                 <div>
                     {/* Botón Principal */}
-                    <button className="chamba-btn-primary" style={{ padding: "18px", marginBottom: "12px" }}>
-                        <MessageCircle size={20} /> Contactar
+                    <button 
+                        className="chamba-btn-primary" 
+                        style={{ padding: "18px", marginBottom: "12px" }}
+                        onClick={() => {
+                            if (!data.phone) {
+                                alert("El profesional aún no ha registrado un teléfono de contacto.");
+                                return;
+                            }
+                            const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`);
+                            window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank");
+                        }}
+                    >
+                        <MessageCircle size={20} /> Contactar por WhatsApp
                     </button>
                     <p style={{ textAlign: "center", fontSize: "12px", color: "#94A3B8", marginBottom: "32px" }}>Respondemos en menos de 1 hora</p>
 

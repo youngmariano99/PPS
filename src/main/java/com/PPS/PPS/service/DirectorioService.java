@@ -508,4 +508,7 @@ public class DirectorioService {
 
         usuarioRepository.save(usuario);
     }
+    public double[] geocodificarDireccion(String direccion) {
+        return geocodingService.obtenerCoordenadas(direccion);
+    }
 }

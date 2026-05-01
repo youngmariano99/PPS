@@ -51,4 +51,14 @@ public class DirectorioController {
     public ResponseEntity<Object> obtenerDetalle(@PathVariable UUID id) {
         return ResponseEntity.ok(directorioService.obtenerDetalleProveedor(id));
     }
+
+    @GetMapping("/geocodificar")
+    @Operation(summary = "Validar y geocodificar una dirección", description = "Retorna longitud y latitud si la dirección existe.")
+    public ResponseEntity<double[]> geocodificar(@RequestParam String direccion) {
+        double[] coords = directorioService.geocodificarDireccion(direccion);
+        if (coords == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(coords);
+    }
 }

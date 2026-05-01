@@ -26,4 +26,9 @@ public class PerfilDetalleDto {
     private String facebookUrl;
     private String linkedinUrl;
     private boolean esPremium;
+    private java.util.List<String> especialidades;
+    private java.util.List<String> condicionesServicio;
+    private java.util.List<ResenaDetalleDto> resenas;
+    private Double promedioEstrellas;
+    private Integer totalResenas;
 }

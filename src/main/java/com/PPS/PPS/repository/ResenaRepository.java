@@ -8,4 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface ResenaRepository extends JpaRepository<Resena, UUID> {
+    java.util.List<Resena> findByIntencionContactoProveedorContactadoIdOrderByFechaCreacionDesc(UUID proveedorId);
 }

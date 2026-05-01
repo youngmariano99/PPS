@@ -3,6 +3,7 @@ package com.PPS.PPS.service;
 import com.PPS.PPS.dto.PerfilDetalleDto;
 import com.PPS.PPS.dto.PerfilRespuestaDto;
 import com.PPS.PPS.dto.PerfilSolicitudDto;
+import com.PPS.PPS.dto.ResenaDetalleDto;
 import com.PPS.PPS.dto.UsuarioPerfilDto;
 import com.PPS.PPS.entity.*;
 import com.PPS.PPS.exception.RecursoNoEncontradoException;
@@ -34,6 +35,7 @@ public class DirectorioService {
     private final UsuarioRepository usuarioRepository;
     private final SuscripcionUsuarioRepository suscripcionRepository;
     private final PortafolioRepository portafolioRepository;
+    private final ResenaRepository resenaRepository;
     private final GeocodingService geocodingService;
     private final GeometryFactory geometryFactory;
 
@@ -123,7 +125,8 @@ public class DirectorioService {
 
     private void validarLimitesMultimedia(UUID usuarioId, PerfilSolicitudDto dto) {
         boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(Objects.requireNonNull(usuarioId), "ACTIVA")
-                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
+                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                         s.getPlan().getNombre().equalsIgnoreCase("PRO"))
                 .orElse(false);
 
         int limiteFotos = esPremium ? 20 : 5;
@@ -344,8 +347,6 @@ public class DirectorioService {
     public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
         log.info("Obteniendo detalle de proveedor para ID: {}", id);
 
-        // Buscamos primero por usuario_id (el ID de Supabase que suele mandar el front)
-        // Si no, buscamos por el ID propio del perfil (PK)
         PerfilProveedor p = proveedorRepository.findByUsuarioId(id)
                 .orElseGet(() -> proveedorRepository.findById(id)
                         .orElseThrow(() -> {
@@ -354,7 +355,8 @@ public class DirectorioService {
                         }));
 
         boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
-                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium"))
+                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                         s.getPlan().getNombre().equalsIgnoreCase("PRO"))
                 .orElse(false);
 
         List<Portafolio> multimedia;
@@ -365,21 +367,46 @@ public class DirectorioService {
                     org.springframework.data.domain.PageRequest.of(0, 5));
         }
 
+        // --- CARGA DE RESEÑAS REALES ---
+        List<Resena> resenasEntity = resenaRepository.findByIntencionContactoProveedorContactadoIdOrderByFechaCreacionDesc(p.getId());
+        List<ResenaDetalleDto> resenasMapped = resenasEntity.stream()
+                .map(r -> ResenaDetalleDto.builder()
+                        .id(r.getId())
+                        .nombreCliente(r.getIntencionContacto().getUsuarioInteresado().getNombre() + " " + r.getIntencionContacto().getUsuarioInteresado().getApellido())
+                        .estrellas(r.getEstrellas().doubleValue())
+                        .comentario(r.getComentario())
+                        .fecha(r.getFechaCreacion())
+                        .trabajoVerificado(r.isTrabajoVerificado())
+                        .respuestaProveedor(r.getRespuestaProveedor())
+                        .build())
+                .collect(Collectors.toList());
+
+        Double promedio = resenasMapped.isEmpty() ? 0.0 : 
+                resenasMapped.stream().mapToDouble(ResenaDetalleDto::getEstrellas).average().orElse(0.0);
+
         return PerfilDetalleDto.builder()
                 .id(p.getId())
                 .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
                 .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre() : p.getRubroPersonalizado())
                 .descripcion(p.getDescripcionProfesional())
                 .fotoPerfilUrl(p.getFotoPerfilUrl())
-                .ciudad(p.getCiudad())
-                .provincia(p.getProvincia())
-                .telefono(p.getUsuario().getTelefono())
+                .dni(p.getDni())
                 .matricula(p.getMatricula())
+                .telefono(p.getUsuario().getTelefono())
+                .email(p.getUsuario().getEmail())
+                .pais(p.getPais())
+                .provincia(p.getProvincia())
+                .ciudad(p.getCiudad())
                 .direccion(p.getCalle() + " " + p.getNumero())
                 .instagramUrl(p.getInstagramUrl())
                 .facebookUrl(p.getFacebookUrl())
                 .linkedinUrl(p.getLinkedinUrl())
                 .esPremium(esPremium)
+                .especialidades(p.getEspecialidades() != null ? p.getEspecialidades() : new ArrayList<>())
+                .condicionesServicio(p.getCondicionesServicio() != null ? p.getCondicionesServicio() : new ArrayList<>())
+                .resenas(resenasMapped)
+                .promedioEstrellas(promedio)
+                .totalResenas(resenasMapped.size())
                 .fotosPortafolio(multimedia.stream()
                         .filter(m -> m.getTipoRecurso().equals("IMAGEN"))
                         .map(Portafolio::getUrlRecurso)

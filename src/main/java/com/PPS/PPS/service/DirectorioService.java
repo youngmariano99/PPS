@@ -467,6 +467,8 @@ public class DirectorioService {
         perfil.setInstagramUrl(dto.getInstagramUrl());
         perfil.setFacebookUrl(dto.getFacebookUrl());
         perfil.setLinkedinUrl(dto.getLinkedinUrl());
+        perfil.setEspecialidades(dto.getEspecialidades());
+        perfil.setCondicionesServicio(dto.getCondicionesServicio());
 
         // Si hay cambio de dirección, re-geocodificar
         if (!perfil.getCalle().equals(dto.getCalle()) || !perfil.getNumero().equals(dto.getNumero()) ||

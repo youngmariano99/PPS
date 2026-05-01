@@ -52,10 +52,10 @@ export default function PerfilPublicoProveedorChamba(props) {
     // --- ESTADOS LÓGICOS (1:1 con el original) ---
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [isEditing, setIsEditing] = useState(false)
-    const [saving, setSaving] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
-    const [editForm, setEditForm] = useState({})
+    const [editingSection, setEditingSection] = useState(null) // 'header', 'bio', 'specialties', 'portfolio', 'conditions', 'contact'
+    const [tempData, setTempData] = useState({})
+    const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState(null)
     const [isMobile, setIsMobile] = useState(false)
 
@@ -257,7 +257,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                         linkedin: res.linkedinUrl || "",
                     }
                     setData(mapped)
-                    setEditForm(mapped)
+                    setTempData(mapped)
                 } else {
                     setError("No se pudo cargar el perfil.")
                 }
@@ -290,7 +290,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                 linkedin: "https://linkedin.com/in/marianolombardo",
             }
             setData(demo)
-            setEditForm(demo)
+            setTempData(demo)
             setIsOwner(true)
         } else {
             setError("No se encontró el perfil solicitado.")
@@ -300,47 +300,57 @@ export default function PerfilPublicoProveedorChamba(props) {
 
     useEffect(() => { discoverAndFetch() }, [apiUrl, enableDemoMode])
 
-    const handleSave = async () => {
-        setSaving(true)
-        const { data: { user } } = await supabase.auth.getUser()
-        const { data: { session } } = await supabase.auth.getSession()
+    const handleEditSection = (section) => {
+        setTempData({ ...data })
+        setEditingSection(section)
+    }
 
+    const handleSaveSection = async () => {
+        setIsSaving(true)
         try {
-            // Actualización de perfil
-            await fetch(`${apiUrl}/perfil/proveedor/me`, {
+            const { data: { user } } = await supabase.auth.getUser()
+            const { data: { session } } = await supabase.auth.getSession()
+            
+            // Mapeo de tempData a PerfilSolicitudDto
+            const payload = {
+                descripcion: tempData.description,
+                matricula: tempData.matricula,
+                fotoPerfilUrl: tempData.avatar,
+                instagramUrl: tempData.instagram,
+                facebookUrl: tempData.facebook,
+                linkedinUrl: tempData.linkedin,
+                especialidades: tempData.specialties,
+                condicionesServicio: tempData.conditions,
+                fotosPortafolioUrls: tempData.portfolio,
+                pais: data.pais || "Argentina", // Mantener campos obligatorios
+                provincia: data.province,
+                ciudad: data.city,
+                calle: data.address ? data.address.split(" ")[0] : "",
+                numero: data.address ? parseInt(data.address.split(" ")[1]) || 0 : 0,
+                codigoPostal: 0 // Mock o traer de data si existe
+            }
+
+            const response = await fetch(`${apiUrl}/perfil/proveedor/me`, {
                 method: "PUT",
-                headers: {
+                headers: { 
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${session.access_token}`,
-                    "X-User-Id": user.id,
+                    Authorization: session ? `Bearer ${session.access_token}` : "",
+                    "X-User-Id": user ? user.id : ""
                 },
-                body: JSON.stringify({
-                    descripcion: editForm.description,
-                    matricula: editForm.matricula,
-                    fotoPerfilUrl: editForm.avatar,
-                    ciudad: editForm.city,
-                    provincia: editForm.province,
-                    instagramUrl: editForm.instagram,
-                    facebookUrl: editForm.facebook,
-                    linkedinUrl: editForm.linkedin,
-                }),
+                body: JSON.stringify(payload)
             })
 
-            // Actualización de teléfono
-            await fetch(`${apiUrl}/perfil/usuario/me`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${session.access_token}`,
-                    "X-User-Id": user.id,
-                },
-                body: JSON.stringify({ telefono: editForm.phone }),
-            })
-
-            await discoverAndFetch()
-            setIsEditing(false)
-        } catch (e) { console.error(e) }
-        setSaving(false)
+            if (response.ok) {
+                setData({ ...tempData })
+                setEditingSection(null)
+            } else {
+                alert("Error al guardar los cambios")
+            }
+        } catch (err) {
+            console.error("Error saving section:", err)
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     if (loading) return (
@@ -393,18 +403,51 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 border: data.isPro ? `4px solid ${primaryColor}` : "4px solid white",
                                 boxShadow: data.isPro ? `0 10px 30px ${primaryColor}20` : "0 10px 30px rgba(0,0,0,0.05)",
                                 backgroundSize: "cover",
-                                backgroundImage: `url(${data.avatar})`,
+                                backgroundImage: `url(${tempData.avatar || data.avatar})`,
                                 transition: "all 0.3s ease",
                                 backgroundColor: "#F1F5F9"
                             }} />
+                            {isOwner && (
+                                <button 
+                                    onClick={() => openUploadWidget((url) => {
+                                        setTempData(prev => ({ ...prev, avatar: url }))
+                                        setEditingSection("header")
+                                    }, false)}
+                                    style={{
+                                        position: "absolute",
+                                        bottom: "-10px",
+                                        right: "-10px",
+                                        width: "44px",
+                                        height: "44px",
+                                        borderRadius: "50%",
+                                        background: "white",
+                                        border: "none",
+                                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: "pointer",
+                                        zIndex: 10
+                                    }}
+                                >
+                                    <Camera size={20} color={primaryColor} />
+                                </button>
+                            )}
                         </div>
 
                         {/* Info Header */}
                         <div style={{ flex: 1, minWidth: "300px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                                <h1 className="chamba-title" style={{ fontSize: "32px", fontWeight: "700", margin: 0 }}>{data.name}</h1>
-                                {data.isPro && <span className="chamba-badge-pro">PRO</span>}
-                                <CheckCircle2 size={24} color={primaryColor} fill={primaryColor + "20"} />
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", justifyContent: "space-between" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <h1 className="chamba-title" style={{ fontSize: "32px", fontWeight: "700", margin: 0 }}>{data.name}</h1>
+                                    {data.isPro && <span className="chamba-badge-pro">PRO</span>}
+                                    <CheckCircle2 size={24} color={primaryColor} fill={primaryColor + "20"} />
+                                </div>
+                                {isOwner && editingSection !== "header" && (
+                                    <button onClick={() => handleEditSection("header")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer", fontWeight: "600", fontSize: "14px" }}>
+                                        <Edit3 size={16} /> Editar
+                                    </button>
+                                )}
                             </div>
                             
                             <p style={{ fontSize: "18px", fontWeight: "600", color: primaryColor, marginBottom: "12px" }}>{data.category}</p>
@@ -424,20 +467,84 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 <span style={{ color: "#94A3B8", fontSize: "14px" }}>({data.reviewCount} reseñas)</span>
                             </div>
 
-                            <p style={{ color: "#475569", fontSize: "15px", lineHeight: "1.6", maxWidth: "600px", marginBottom: "24px" }}>
-                                {data.description}
-                            </p>
+                            {editingSection === "header" ? (
+                                <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: `1px solid ${primaryColor}20`, marginBottom: "20px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                            <div>
+                                                <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Instagram</label>
+                                                <input className="chamba-input" value={tempData.instagram} onChange={e => setTempData({...tempData, instagram: e.target.value})} placeholder="URL de Instagram" />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Facebook</label>
+                                                <input className="chamba-input" value={tempData.facebook} onChange={e => setTempData({...tempData, facebook: e.target.value})} placeholder="URL de Facebook" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>LinkedIn</label>
+                                            <input className="chamba-input" value={tempData.linkedin} onChange={e => setTempData({...tempData, linkedin: e.target.value})} placeholder="URL de LinkedIn" />
+                                        </div>
+                                        <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "8px" }}>
+                                            <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
+                                            <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
+                                                {isSaving ? "Guardando..." : "Guardar"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {editingSection === "bio" ? (
+                                        <div style={{ marginBottom: "24px" }}>
+                                            <textarea 
+                                                className="chamba-input" 
+                                                style={{ minHeight: "100px", resize: "none" }}
+                                                value={tempData.description}
+                                                onChange={e => setTempData({...tempData, description: e.target.value})}
+                                            />
+                                            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
+                                                <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
+                                                <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ position: "relative" }}>
+                                            <p style={{ color: "#475569", fontSize: "15px", lineHeight: "1.6", maxWidth: "600px", marginBottom: "24px" }}>
+                                                {data.description}
+                                                {isOwner && <Edit3 size={14} style={{ marginLeft: "8px", cursor: "pointer", color: primaryColor }} onClick={() => handleEditSection("bio")} />}
+                                            </p>
+                                        </div>
+                                    )}
 
-                            <div style={{ marginBottom: "8px", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Especialidades</div>
-                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                {data.specialties.length > 0 ? (
-                                    data.specialties.map((tag, i) => (
-                                        <span key={i} className="chamba-tag">{tag}</span>
-                                    ))
-                                ) : (
-                                    <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó especialidades.</span>
-                                )}
-                            </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Especialidades</div>
+                                        {isOwner && editingSection !== "specialties" && <Edit3 size={14} style={{ cursor: "pointer", color: primaryColor }} onClick={() => handleEditSection("specialties")} />}
+                                    </div>
+                                    
+                                    {editingSection === "specialties" ? (
+                                        <div style={{ marginBottom: "20px" }}>
+                                            <TagInput 
+                                                tags={tempData.specialties} 
+                                                setTags={(t) => setTempData({...tempData, specialties: t})} 
+                                            />
+                                            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
+                                                <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
+                                                <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                            {data.specialties.length > 0 ? (
+                                                data.specialties.map((tag, i) => (
+                                                    <span key={i} className="chamba-tag">{tag}</span>
+                                                ))
+                                            ) : (
+                                                <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó especialidades.</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
 
                         {/* Trust Badges - Horizontal Alignment */}
@@ -482,58 +589,112 @@ export default function PerfilPublicoProveedorChamba(props) {
                     {/* Portfolio */}
                     <div className="chamba-card">
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                            <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Portfolio</h3>
-                            <span style={{ color: primaryColor, fontWeight: "600", fontSize: "14px", cursor: "pointer" }}>Ver todo <ChevronRight size={14} style={{ verticalAlign: "middle" }} /></span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Portfolio</h3>
+                                {isOwner && (
+                                    <button 
+                                        onClick={() => openUploadWidget((url) => {
+                                            const newPortfolio = [...data.portfolio, url]
+                                            setTempData({...data, portfolio: newPortfolio})
+                                            handleEditSection("portfolio")
+                                        }, true)}
+                                        style={{ background: primaryColor + "15", border: "none", color: primaryColor, borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    >
+                                        +
+                                    </button>
+                                )}
+                            </div>
+                            {editingSection === "portfolio" && (
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>Cancelar</button>
+                                    <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "4px 12px", borderRadius: "6px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>Guardar</button>
+                                </div>
+                            )}
                         </div>
+
                         <div className="portfolio-grid" style={{ gap: "12px" }}>
-                            {data.portfolio.map((img, i) => (
-                                <div key={i} className="portfolio-item" style={{ backgroundImage: `url(${img})`, borderRadius: "12px" }} />
+                            {(editingSection === "portfolio" ? tempData.portfolio : data.portfolio).map((img, i) => (
+                                <div key={i} style={{ position: "relative" }}>
+                                    <div className="portfolio-item" style={{ backgroundImage: `url(${img})`, borderRadius: "12px" }} />
+                                    {editingSection === "portfolio" && (
+                                        <button 
+                                            onClick={() => {
+                                                const newP = tempData.portfolio.filter((_, idx) => idx !== i)
+                                                setTempData({...tempData, portfolio: newP})
+                                            }}
+                                            style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(239, 68, 68, 0.9)", color: "white", border: "none", width: "24px", height: "24px", borderRadius: "50%", cursor: "pointer", fontSize: "12px" }}
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
                             ))}
                         </div>
-                        {data.portfolio.length === 0 && (
+                        {data.portfolio.length === 0 && !editingSection && (
                             <div style={{ marginTop: "16px", textAlign: "center", padding: "32px", background: "#F8FAFC", borderRadius: "16px", border: "2px dashed #E2E8F0" }}>
                                 <Camera size={32} color="#CBD5E1" style={{ marginBottom: "12px" }} />
                                 <p style={{ fontSize: "14px", color: "#94A3B8", marginBottom: "16px" }}>{data.name.split(" ")[0]} aún no cargó trabajos a su portfolio.</p>
-                                <button className="chamba-btn-primary" style={{ width: "auto", margin: "0 auto", padding: "10px 24px", fontSize: "14px" }}>Cargar trabajos</button>
+                                {isOwner && <button onClick={() => handleEditSection("portfolio")} className="chamba-btn-primary" style={{ width: "auto", margin: "0 auto", padding: "10px 24px", fontSize: "14px" }}>Configurar Portfolio</button>}
                             </div>
                         )}
                     </div>
 
                     {/* Cómo Trabajo (Condiciones) */}
                     <div className="chamba-card">
-                        <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", marginBottom: "24px" }}>Cómo trabajo</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "24px" }}>
-                            <div>
-                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Condiciones del servicio</div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                    {data.conditions.length > 0 ? (
-                                        data.conditions.map((c, i) => (
-                                            <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start", fontSize: "14px", color: "#475569" }}>
-                                                <CheckCircle2 size={18} color="#10B981" style={{ marginTop: "2px", flexShrink: 0 }} />
-                                                <span>{c}</span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó condiciones de contratación.</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div style={{ background: "#F8FAFC", padding: "20px", borderRadius: "20px", border: "1px solid #F1F5F9" }}>
-                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Métodos de pago</div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                                    <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981" }} /> Efectivo
-                                    </div>
-                                    <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#009EE3", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#009EE3" }} /> Mercado Pago
-                                    </div>
-                                    <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#64748B" }} /> Transferencia
-                                    </div>
-                                </div>
-                                <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "16px" }}>Consulta otros medios de pago directamente con el profesional.</p>
-                            </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                            <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Cómo trabajo</h3>
+                            {isOwner && editingSection !== "conditions" && (
+                                <button onClick={() => handleEditSection("conditions")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>
+                                    <Edit3 size={14} /> Editar
+                                </button>
+                            )}
                         </div>
+
+                        {editingSection === "conditions" ? (
+                            <div>
+                                <TagInput 
+                                    tags={tempData.conditions} 
+                                    setTags={(t) => setTempData({...tempData, conditions: t})} 
+                                />
+                                <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "16px" }}>
+                                    <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
+                                    <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "24px" }}>
+                                <div>
+                                    <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Condiciones del servicio</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                        {data.conditions.length > 0 ? (
+                                            data.conditions.map((c, i) => (
+                                                <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start", fontSize: "14px", color: "#475569" }}>
+                                                    <CheckCircle2 size={18} color="#10B981" style={{ marginTop: "2px", flexShrink: 0 }} />
+                                                    <span>{c}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó condiciones de contratación.</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div style={{ background: "#F8FAFC", padding: "20px", borderRadius: "20px", border: "1px solid #F1F5F9" }}>
+                                    <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Métodos de pago</div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                        <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981" }} /> Efectivo
+                                        </div>
+                                        <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#009EE3", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#009EE3" }} /> Mercado Pago
+                                        </div>
+                                        <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#64748B" }} /> Transferencia
+                                        </div>
+                                    </div>
+                                    <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "16px" }}>Consulta otros medios de pago directamente con el profesional.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Reseñas */}
@@ -646,24 +807,53 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                     {/* Información de contacto */}
                     <div className="chamba-card">
-                        <h4 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "24px" }}>Información de contacto</h4>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                <Mail size={18} color={primaryColor} />
-                                <div style={{ fontSize: "14px", color: "#475569" }}>{data.email}</div>
-                            </div>
-                            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                <MapPin size={18} color={primaryColor} />
-                                <div style={{ fontSize: "14px", color: "#475569" }}>{data.location || "Ubicación no especificada"}</div>
-                            </div>
-                            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                <Hash size={18} color={primaryColor} />
-                                <div style={{ fontSize: "14px" }}>
-                                    <div style={{ fontWeight: "700", color: "#0F172A" }}>Matrícula Profesional</div>
-                                    <div style={{ color: "#94A3B8", fontSize: "13px" }}>{data.matricula}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                            <h4 style={{ fontSize: "16px", fontWeight: "700", margin: 0 }}>Información de contacto</h4>
+                            {isOwner && editingSection !== "contact" && (
+                                <button onClick={() => handleEditSection("contact")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer" }}>
+                                    <Edit3 size={14} />
+                                </button>
+                            )}
+                        </div>
+
+                        {editingSection === "contact" ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <div>
+                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Email</label>
+                                    <input className="chamba-input" value={tempData.email} onChange={e => setTempData({...tempData, email: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Teléfono (WhatsApp)</label>
+                                    <input className="chamba-input" value={tempData.phone} onChange={e => setTempData({...tempData, phone: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Matrícula</label>
+                                    <input className="chamba-input" value={tempData.matricula} onChange={e => setTempData({...tempData, matricula: e.target.value})} />
+                                </div>
+                                <div style={editActionRow}>
+                                    <button onClick={() => setEditingSection(null)} style={secondaryBtnStyle}>Cancelar</button>
+                                    <button onClick={handleSaveSection} style={primaryBtnSmallStyle}>Guardar</button>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                    <Mail size={18} color={primaryColor} />
+                                    <div style={{ fontSize: "14px", color: "#475569" }}>{data.email}</div>
+                                </div>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                    <MapPin size={18} color={primaryColor} />
+                                    <div style={{ fontSize: "14px", color: "#475569" }}>{data.location || "Ubicación no especificada"}</div>
+                                </div>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                    <Hash size={18} color={primaryColor} />
+                                    <div style={{ fontSize: "14px" }}>
+                                        <div style={{ fontWeight: "700", color: "#0F172A" }}>Matrícula Profesional</div>
+                                        <div style={{ color: "#94A3B8", fontSize: "13px" }}>{data.matricula}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <div style={{ marginTop: "24px", background: "#F3E8FF", padding: "14px", borderRadius: "12px", fontSize: "12px", color: "#7C3AED", textAlign: "center", fontWeight: "600" }}>
                             Para ver el teléfono, contactá al profesional.
                         </div>
@@ -711,103 +901,73 @@ export default function PerfilPublicoProveedorChamba(props) {
                 </div>
             </div>
 
-            {/* BOTÓN DE EDICIÓN FLOTANTE (Solo para Dueño) */}
-            {isOwner && (
-                <div style={{ position: "fixed", bottom: "32px", right: "32px", zIndex: 1000 }}>
-                    {!isEditing ? (
-                        <button 
-                            onClick={() => setIsEditing(true)}
-                            className="chamba-btn-primary" 
-                            style={{ width: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}
-                        >
-                            <Edit3 size={18} /> Editar mi perfil
-                        </button>
-                    ) : (
-                        <div style={{ display: "flex", gap: "12px" }}>
-                            <button onClick={() => setIsEditing(false)} className="chamba-btn-outline" style={{ padding: "14px" }}><X size={20} /></button>
-                            <button onClick={handleSave} className="chamba-btn-primary" style={{ width: "auto", padding: "14px 32px" }}>
-                                {saving ? <RefreshCw className="spin" /> : <Save size={18} />} Guardar cambios
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
 
-            {/* MODAL DE EDICIÓN SIMPLIFICADO */}
-            <AnimatePresence>
-                {isEditing && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(8px)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                            style={{ background: "white", borderRadius: "32px", width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto", padding: "40px" }}
-                        >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-                                <h2 className="chamba-title" style={{ fontSize: "24px", fontWeight: "700", margin: 0 }}>Editar Perfil</h2>
-                                <X size={24} style={{ cursor: "pointer" }} onClick={() => setIsEditing(false)} />
-                            </div>
+            <FloatingContact />
+            <div style={{ height: "40px" }} />
+        </div>
+    )
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                                <div>
-                                    <label style={{ fontSize: "13px", fontWeight: "700", display: "block", marginBottom: "8px" }}>Resumen Profesional</label>
-                                    <textarea 
-                                        className="chamba-input" 
-                                        style={{ height: "120px", resize: "none" }}
-                                        value={editForm.description}
-                                        onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                                    />
-                                </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                    <div>
-                                        <label style={{ fontSize: "13px", fontWeight: "700", display: "block", marginBottom: "8px" }}>Teléfono</label>
-                                        <input className="chamba-input" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})} />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: "13px", fontWeight: "700", display: "block", marginBottom: "8px" }}>Matrícula</label>
-                                        <input className="chamba-input" value={editForm.matricula} onChange={(e) => setEditForm({...editForm, matricula: e.target.value})} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: "13px", fontWeight: "700", display: "block", marginBottom: "8px" }}>Instagram URL</label>
-                                    <input className="chamba-input" value={editForm.instagram} onChange={(e) => setEditForm({...editForm, instagram: e.target.value})} />
-                                </div>
-                            </div>
+    // --- SUB-COMPONENTES AUXILIARES ---
+    function FloatingContact() {
+        if (isOwner) return null
+        return (
+            <motion.div 
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                style={{ position: "fixed", bottom: "32px", right: "32px", zIndex: 1000, display: "flex", gap: "12px" }}
+            >
+                <button 
+                    onClick={() => {
+                        const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`);
+                        window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank");
+                    }}
+                    className="chamba-btn-primary" 
+                    style={{ width: "auto", padding: "16px 32px", boxShadow: "0 15px 35px " + primaryColor + "40", background: primaryColor, borderRadius: "100px" }}
+                >
+                    <MessageCircle size={20} /> <span style={{ fontWeight: "800" }}>Contactar ahora</span>
+                </button>
+            </motion.div>
+        )
+    }
+}
 
-                            <div style={{ marginTop: "40px", display: "flex", gap: "16px" }}>
-                                <button className="chamba-btn-outline" style={{ flex: 1 }} onClick={() => setIsEditing(false)}>Cancelar</button>
-                                <button className="chamba-btn-primary" style={{ flex: 2 }} onClick={handleSave}>Guardar cambios</button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+const TagInput = ({ tags, setTags, placeholder = "Escribí y presioná Enter..." }) => {
+    const [inputValue, setInputValue] = useState("")
 
-            <div style={{ height: "100px" }} />
+    const addTag = () => {
+        if (inputValue.trim() && !tags.includes(inputValue.trim())) {
+            setTags([...tags, inputValue.trim()])
+            setInputValue("")
+        }
+    }
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", background: "white", padding: "8px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                {tags.map((tag, i) => (
+                    <span key={i} className="chamba-tag" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {tag} <X size={12} style={{ cursor: "pointer" }} onClick={() => setTags(tags.filter((_, idx) => idx !== i))} />
+                    </span>
+                ))}
+                <input 
+                    style={{ border: "none", outline: "none", fontSize: "13px", padding: "4px", flex: 1, minWidth: "100px" }}
+                    placeholder={placeholder}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addTag()}
+                />
+            </div>
         </div>
     )
 }
 
+const secondaryBtnStyle = { background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer", fontSize: "13px" }
+const primaryBtnSmallStyle = { background: "#A01EED", color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }
+
+// --- FRAMER CONTROLS ---
 addPropertyControls(PerfilPublicoProveedorChamba, {
-    apiUrl: {
-        type: ControlType.String,
-        title: "API URL",
-        defaultValue: "https://pps-sk7p.onrender.com/api/v1",
-    },
-    enableDemoMode: {
-        type: ControlType.Boolean,
-        title: "Modo Demo",
-        defaultValue: false,
-    },
-    isProDemo: {
-        type: ControlType.Boolean,
-        title: "PRO en Demo",
-        defaultValue: true,
-    },
-    primaryColor: {
-        type: ControlType.Color,
-        title: "Color PPS",
-        defaultValue: "#A01EED",
-    },
+    apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
+    enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo", defaultValue: false },
+    isProDemo: { type: ControlType.Boolean, title: "PRO en Demo", defaultValue: true },
+    primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#A01EED" },
 })

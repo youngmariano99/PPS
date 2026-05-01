@@ -47,8 +47,10 @@ public class PerfilSolicitudDto {
     private List<String> fotosPortafolioUrls;
     private List<String> videoLinks;
 
-    // Redes Sociales
     private String instagramUrl;
     private String facebookUrl;
     private String linkedinUrl;
+
+    private List<String> especialidades;
+    private List<String> condicionesServicio;
 }

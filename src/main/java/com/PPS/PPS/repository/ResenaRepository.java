@@ -15,4 +15,7 @@ public interface ResenaRepository extends JpaRepository<Resena, UUID> {
 
     @Query("SELECT r FROM Resena r WHERE r.propietarioId = :id ORDER BY r.fechaCreacion DESC")
     List<Resena> findByPropietarioId(@Param("id") UUID id);
+
+    @Query("SELECT r.propietarioId, AVG(r.estrellas), COUNT(r) FROM Resena r WHERE r.propietarioId IN :ids GROUP BY r.propietarioId")
+    List<Object[]> findAveragesAndCountsByPropietarioIds(@Param("ids") java.util.Collection<UUID> ids);
 }

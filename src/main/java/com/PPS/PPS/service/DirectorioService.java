@@ -225,9 +225,13 @@ public class DirectorioService {
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
 
-        // 4. Batch Fetching de suscripciones solo para los de la página
+        // 4. Batch Fetching de suscripciones y Reseñas para los de la página
         List<UUID> usuarioIds = proveedoresOrdenados.stream()
                 .map(p -> p.getUsuario().getId())
+                .collect(Collectors.toList());
+
+        List<UUID> perfilIds = proveedoresOrdenados.stream()
+                .map(PerfilProveedor::getId)
                 .collect(Collectors.toList());
 
         java.util.Set<UUID> usuariosPremiumIds = suscripcionRepository
@@ -237,10 +241,27 @@ public class DirectorioService {
                 .map(s -> s.getUsuario().getId())
                 .collect(Collectors.toSet());
 
+        // Batch de reseñas
+        java.util.Map<UUID, Double> promedios = new java.util.HashMap<>();
+        java.util.Map<UUID, Integer> conteos = new java.util.HashMap<>();
+        
+        if (!perfilIds.isEmpty()) {
+            List<Object[]> stats = resenaRepository.findAveragesAndCountsByPropietarioIds(perfilIds);
+            for (Object[] row : stats) {
+                UUID pid = (UUID) row[0];
+                Double avg = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
+                Long count = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+                promedios.put(pid, avg);
+                conteos.put(pid, count.intValue());
+            }
+        }
+
         // 5. Mapear a DTO
         List<PerfilRespuestaDto> dtoList = proveedoresOrdenados.stream()
                 .map(p -> {
                     boolean esPremiumReal = usuariosPremiumIds.contains(p.getUsuario().getId());
+                    Double promedioReal = promedios.getOrDefault(p.getId(), 0.0);
+                    Integer cantidadReal = conteos.getOrDefault(p.getId(), 0);
 
                     // Calculamos la distancia en metros de forma más robusta
                     double distGrados = p.getUbicacion().distance(puntoUsuario);
@@ -257,8 +278,8 @@ public class DirectorioService {
                             .longitud(p.getUbicacion().getX())
                             .tipo("PROVEEDOR")
                             .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                            .promedioEstrellas(0.0)
-                            .cantidadResenas(0)
+                            .promedioEstrellas(promedioReal)
+                            .cantidadResenas(cantidadReal)
                             .distanciaMetros((int) distancia)
                             .destacado(esPremiumReal)
                             .fotoPerfilUrl(p.getFotoPerfilUrl())

@@ -75,8 +75,10 @@ export default function ListadoProfesionalesChamba(props) {
                     if (busqueda) queryUrl += `&q=${encodeURIComponent(busqueda)}`
 
                     const res = await fetch(queryUrl)
+                    console.log("🔍 [Listado] Buscando en URL:", queryUrl)
                     if (res.ok) {
                         const data = await res.json()
+                        console.log("✅ [Listado] Profesionales recibidos:", data.content?.length || 0, data)
                         let content = data.content || []
                         if (ordenarPor === "rating") content.sort((a, b) => (b.promedioEstrellas || 0) - (a.promedioEstrellas || 0))
                         else if (ordenarPor === "distancia") content.sort((a, b) => (a.distanciaMetros || 0) - (b.distanciaMetros || 0))

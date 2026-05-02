@@ -29,32 +29,28 @@ public class GeocodingService {
      * Retorna una lista con [Longitud, Latitud] o null si no encuentra nada.
      */
     public double[] obtenerCoordenadas(String direccion) {
-        double[] coords = ejecutarBusqueda(direccion);
-        
-        // Fallback: Si no encuentra la dirección completa, probamos solo con Calle y Ciudad
-        // (A veces la Provincia o datos extra ensucian la búsqueda en Nominatim)
-        if (coords == null && direccion.contains(",")) {
-            String[] partes = direccion.split(",");
-            if (partes.length >= 2) {
-                String simplificada = partes[0] + "," + partes[partes.length - 2];
-                log.info("Reintentando con dirección simplificada: {}", simplificada);
-                coords = ejecutarBusqueda(simplificada);
-            }
-        }
-        
-        return coords;
+        // Eliminamos el fallback simplificado que causaba errores de ubicación (ej: mandaba a CABA)
+        // Es preferible ser estrictos con la dirección completa proporcionada.
+        return ejecutarBusqueda(direccion);
     }
 
     private double[] ejecutarBusqueda(String direccion) {
+        if (direccion == null || direccion.trim().isEmpty()) return null;
+        
         log.info("Geocodificando: {}", direccion);
         try {
-            String queryFinal = direccion + ", Argentina";
+            // Evitar duplicar "Argentina" si ya viene en la dirección
+            String queryFinal = direccion.toLowerCase().contains("argentina") 
+                ? direccion 
+                : direccion + ", Argentina";
+
             List<Map<String, Object>> resultados = restClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/search")
                             .queryParam("q", queryFinal)
                             .queryParam("format", "json")
                             .queryParam("limit", 1)
+                            .queryParam("addressdetails", 1)
                             .build())
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<Map<String, Object>>>() {});
@@ -63,6 +59,7 @@ public class GeocodingService {
                 Map<String, Object> topResult = resultados.get(0);
                 double lat = Double.parseDouble(topResult.get("lat").toString());
                 double lon = Double.parseDouble(topResult.get("lon").toString());
+                log.info("Ubicación encontrada: {}, {}", lat, lon);
                 return new double[]{lon, lat};
             }
         } catch (Exception e) {

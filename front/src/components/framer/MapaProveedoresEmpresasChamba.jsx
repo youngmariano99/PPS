@@ -175,9 +175,11 @@ export default function MapaProveedoresEmpresasChamba(props) {
             const api = apiUrl.replace(/\/+$/, "")
             // RADIO_MAXIMO_BUSQUEDA = 100km fijo para la API como en el original
             const url = `${api}/directorio/buscar/mapa?lat=${lat}&lon=${lon}&radioKm=100`
+            console.log("📍 [Mapa] Fetching puntos en:", url)
             const res = await fetch(url)
             if (!res.ok) throw new Error(`Error ${res.status}`)
             const data = await res.json()
+            console.log("🗺️ [Mapa] Puntos recibidos:", data.length, data)
             setPerfiles(Array.isArray(data) ? data : [])
         } catch (e) {
             console.error("Error API:", e)

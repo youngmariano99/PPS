@@ -144,7 +144,7 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findById(usuarioId).orElseThrow();
 
         // 2. Preparar Ubicación (Geocoding)
-        String direccionCompleta = String.format("%s %s, %s, %s, Argentina",
+        String direccionCompleta = String.format("%s %s, %s, %s",
                 dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia());
 
         Point puntoUbicacion = null;

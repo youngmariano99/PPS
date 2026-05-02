@@ -23,6 +23,7 @@ export default function FormularioLogin(props) {
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [success, setSuccess] = useState(false)
     const [intentos, setIntentos] = useState(0)
     const [bloqueado, setBloqueado] = useState(false)
 
@@ -39,7 +40,7 @@ export default function FormularioLogin(props) {
     useEffect(() => {
         if (intentos >= 5) {
             setBloqueado(true)
-            setError("Demasiados intentos. Esperá 30 segundos.")
+            setError("Demasiados intentos por seguridad. Esperá 30 segundos e intentá de nuevo.")
             const timer = setTimeout(() => {
                 setBloqueado(false)
                 setIntentos(0)
@@ -80,7 +81,7 @@ export default function FormularioLogin(props) {
                 email: cleanEmail,
                 password: cleanPassword,
             })
-            if (sbError) throw sbError
+            if (sbError) throw new Error("AUTH_SYNC_ERROR")
 
             localStorage.setItem("usuario", JSON.stringify({
                 id: data.usuarioId,
@@ -88,14 +89,22 @@ export default function FormularioLogin(props) {
                 email: data.email,
             }))
 
+            setSuccess(true)
+            
             if (onLoginSuccess) onLoginSuccess(data)
+
+            // Redirección suave después de mostrar el éxito
+            setTimeout(() => {
+                window.location.href = "https://overly-mindset-259417.framer.app/"
+            }, 2000)
 
         } catch (err) {
             const errorMap = {
-                "INVALID_CREDENTIALS": "El email o la contraseña no son correctos.",
-                "SERVER_ERROR": "Error en el servidor. Intentá más tarde.",
+                "INVALID_CREDENTIALS": "¡Ups! El email o la contraseña no coinciden. Por favor, revisalos e intentalo de nuevo.",
+                "SERVER_ERROR": "Estamos teniendo un problema técnico en nuestros servidores. Por favor, danos unos minutos e intentalo más tarde.",
+                "AUTH_SYNC_ERROR": "No pudimos sincronizar tu sesión de forma segura. Por favor, intentá ingresar una vez más.",
             }
-            setError(errorMap[err.message] || "Ocurrió un error inesperado.")
+            setError(errorMap[err.message] || "Algo no salió como esperábamos. Por favor, verificá tus datos e intentá de nuevo.")
         } finally {
             setLoading(false)
         }
@@ -103,14 +112,6 @@ export default function FormularioLogin(props) {
 
     return (
         <div style={pageContainer}>
-            {/* Header / Logo */}
-            <div style={headerLogo}>
-                <LogoChamba color="#000000" />
-                <span style={headerTagline}>
-                    CONECTA. <span style={{ color: "#A01EED" }}>TRABAJO.</span> GENERA <span style={{ color: "#A01EED" }}>OPORTUNIDADES.</span>
-                </span>
-            </div>
-
             <div style={mainContent}>
                 {/* Ilustración Mate (Izquierda) */}
                 <div style={mateWrapper}>
@@ -123,102 +124,134 @@ export default function FormularioLogin(props) {
                     animate={{ opacity: 1, y: 0 }}
                     style={cardStyle}
                 >
-                    <h1 style={titleStyle}>¡Bienvenido a <span style={{ color: "#A01EED" }}>Chamba</span>!</h1>
-                    <p style={subtitleStyle}>Ingresá a tu cuenta y seguí conectando talento con oportunidades.</p>
+                    <AnimatePresence mode="wait">
+                        {!success ? (
+                            <motion.div
+                                key="login-form"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}
+                            >
+                                <h1 style={titleStyle}>¡Bienvenido a <span style={{ color: "#A01EED" }}>Chamba</span>!</h1>
+                                <p style={subtitleStyle}>Ingresá a tu cuenta y seguí conectando talento con oportunidades.</p>
 
-                    <form onSubmit={handleSubmit} style={formStyle}>
-                        {/* Email Input */}
-                        <div style={inputGroup}>
-                            <label style={labelStyle}>Email</label>
-                            <div style={inputWrapper}>
-                                <div style={inputIcon}><IconMail /></div>
-                                <input
-                                    type="email"
-                                    placeholder="tu@email.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    style={inputField}
-                                    required
-                                />
-                            </div>
-                        </div>
+                                <form onSubmit={handleSubmit} style={formStyle}>
+                                    {/* Email Input */}
+                                    <div style={inputGroup}>
+                                        <label style={labelStyle}>Email</label>
+                                        <div style={inputWrapper}>
+                                            <div style={inputIcon}><IconMail /></div>
+                                            <input
+                                                type="email"
+                                                placeholder="tu@email.com"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                style={inputField}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
 
-                        {/* Password Input */}
-                        <div style={inputGroup}>
-                            <label style={labelStyle}>Contraseña</label>
-                            <div style={inputWrapper}>
-                                <div style={inputIcon}><IconLock /></div>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    style={inputField}
-                                    required
-                                />
-                                <div 
-                                    style={passwordToggle} 
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                    <IconEye show={showPassword} />
+                                    {/* Password Input */}
+                                    <div style={inputGroup}>
+                                        <label style={labelStyle}>Contraseña</label>
+                                        <div style={inputWrapper}>
+                                            <div style={inputIcon}><IconLock /></div>
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                placeholder="••••••••"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                style={inputField}
+                                                required
+                                            />
+                                            <div 
+                                                style={passwordToggle} 
+                                                onClick={() => setShowPassword(!showPassword)}
+                                            >
+                                                <IconEye show={showPassword} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={forgotPasswordWrapper}>
+                                        <span style={linkViolet}>¿Olvidaste tu contraseña?</span>
+                                    </div>
+
+                                    {/* Submit Button */}
+                                    <motion.button
+                                        whileHover={{ scale: 1.01 }}
+                                        whileTap={{ scale: 0.99 }}
+                                        type="submit"
+                                        disabled={loading || bloqueado}
+                                        style={{
+                                            ...submitButton,
+                                            background: loading ? "#94A3B8" : "#A01EED"
+                                        }}
+                                    >
+                                        {loading ? "Ingresando..." : btnText}
+                                    </motion.button>
+
+                                    {/* Separator */}
+                                    <div style={separatorWrapper}>
+                                        <div style={line} />
+                                        <span style={separatorText}>o continuá con</span>
+                                        <div style={line} />
+                                    </div>
+
+                                    {/* Social Buttons */}
+                                    <div style={socialRow}>
+                                        <div style={socialButton}>
+                                            <IconGoogle />
+                                            <span>Continuar con Google</span>
+                                        </div>
+                                        <div style={socialButton}>
+                                            <IconFacebook />
+                                            <span>Continuar con Facebook</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Error Message */}
+                                    <AnimatePresence>
+                                        {error && (
+                                            <motion.p 
+                                                initial={{ opacity: 0 }} 
+                                                animate={{ opacity: 1 }} 
+                                                style={errorTextStyle}
+                                            >
+                                                {error}
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div style={footerText}>
+                                        ¿No tenés cuenta? <span style={linkVioletBold} onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}>Crear cuenta nueva</span>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="success-message"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "20px 0" }}
+                            >
+                                <div style={successIconWrapper}>
+                                    <IconCheck />
                                 </div>
-                            </div>
-                        </div>
-
-                        <div style={forgotPasswordWrapper}>
-                            <span style={linkViolet}>¿Olvidaste tu contraseña?</span>
-                        </div>
-
-                        {/* Submit Button */}
-                        <motion.button
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
-                            type="submit"
-                            disabled={loading || bloqueado}
-                            style={{
-                                ...submitButton,
-                                background: loading ? "#94A3B8" : "#A01EED"
-                            }}
-                        >
-                            {loading ? "Ingresando..." : btnText}
-                        </motion.button>
-
-                        {/* Separator */}
-                        <div style={separatorWrapper}>
-                            <div style={line} />
-                            <span style={separatorText}>o continuá con</span>
-                            <div style={line} />
-                        </div>
-
-                        {/* Social Buttons */}
-                        <div style={socialRow}>
-                            <div style={socialButton}>
-                                <IconGoogle />
-                                <span>Continuar con Google</span>
-                            </div>
-                            <div style={socialButton}>
-                                <IconFacebook />
-                                <span>Continuar con Facebook</span>
-                            </div>
-                        </div>
-
-                        {/* Error Message */}
-                        <AnimatePresence>
-                            {error && (
-                                <motion.p 
-                                    initial={{ opacity: 0 }} 
-                                    animate={{ opacity: 1 }} 
-                                    style={errorTextStyle}
+                                <h2 style={{ ...titleStyle, marginTop: "24px" }}>¡Qué bueno verte de nuevo!</h2>
+                                <p style={subtitleStyle}>Ingresaste correctamente. En unos segundos te llevamos al inicio...</p>
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                                    style={{ marginTop: "20px" }}
                                 >
-                                    {error}
-                                </motion.p>
-                            )}
-                        </AnimatePresence>
-
-                        <div style={footerText}>
-                            ¿No tenés cuenta? <span style={linkVioletBold} onClick={() => window.location.href = "https://overly-mindset-259417-0c3d19f16.framer.app/registro-general"}>Crear cuenta nueva</span>
-                        </div>
-                    </form>
+                                    <IconSpinner />
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
                 {/* Texto Derecha */}
@@ -283,7 +316,30 @@ const IconFacebook = () => (
     </svg>
 )
 
+const IconCheck = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+    </svg>
+)
+
+const IconSpinner = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A01EED" strokeWidth="3" strokeLinecap="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+)
+
 // --- ESTILOS ---
+
+const successIconWrapper = {
+    width: "80px",
+    height: "80px",
+    borderRadius: "50%",
+    backgroundColor: "#A01EED",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 8px 20px rgba(160, 30, 237, 0.3)",
+}
 
 const pageContainer = {
     width: "100%",

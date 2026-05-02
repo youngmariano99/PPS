@@ -48,8 +48,10 @@ public class DirectorioController {
 
     @GetMapping("/proveedor/{id}")
     @Operation(summary = "Obtener detalle de perfil de proveedor", description = "Retorna el perfil completo incluyendo portfolio y esPremium")
-    public ResponseEntity<Object> obtenerDetalle(@PathVariable UUID id) {
-        return ResponseEntity.ok(directorioService.obtenerDetalleProveedor(id));
+    public ResponseEntity<Object> obtenerDetalle(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) UUID requesterId) {
+        return ResponseEntity.ok(directorioService.obtenerDetalleProveedor(id, requesterId));
     }
 
     @GetMapping("/geocodificar")

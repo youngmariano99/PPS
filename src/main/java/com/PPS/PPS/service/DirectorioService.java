@@ -389,7 +389,7 @@ public class DirectorioService {
         return resultados;
     }
 
-    public PerfilDetalleDto obtenerDetalleProveedor(UUID id) {
+    public PerfilDetalleDto obtenerDetalleProveedor(UUID id, UUID requesterId) {
         log.info("Obteniendo detalle de proveedor para ID: {}", id);
 
         PerfilProveedor p = proveedorRepository.findByUsuarioId(id)
@@ -429,6 +429,8 @@ public class DirectorioService {
         Double promedio = resenasMapped.isEmpty() ? 0.0 : 
                 resenasMapped.stream().mapToDouble(ResenaDetalleDto::getEstrellas).average().orElse(0.0);
 
+        boolean isOwner = requesterId != null && requesterId.equals(p.getUsuario().getId());
+
         return PerfilDetalleDto.builder()
                 .id(p.getId())
                 .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
@@ -436,15 +438,15 @@ public class DirectorioService {
                 .descripcion(p.getDescripcionProfesional())
                 .fotoPerfilUrl(p.getFotoPerfilUrl())
                 .matricula(p.getMatricula())
-                .telefono(p.getUsuario().getTelefono())
+                .telefono(isOwner ? p.getUsuario().getTelefono() : "•••• •••• •••")
                 .email(p.getUsuario().getEmail())
                 .pais(p.getPais())
                 .provincia(p.getProvincia())
                 .ciudad(p.getCiudad())
-                .direccion(p.getCalle() + " " + p.getNumero())
-                .calle(p.getCalle())
-                .numero(p.getNumero())
-                .codigoPostal(p.getCodigoPostal())
+                .direccion(isOwner ? (p.getCalle() + " " + p.getNumero()) : "Dirección Oculta")
+                .calle(isOwner ? p.getCalle() : "Oculto")
+                .numero(isOwner ? p.getNumero() : 0)
+                .codigoPostal(isOwner ? p.getCodigoPostal() : 0)
                 .instagramUrl(p.getInstagramUrl())
                 .facebookUrl(p.getFacebookUrl())
                 .linkedinUrl(p.getLinkedinUrl())

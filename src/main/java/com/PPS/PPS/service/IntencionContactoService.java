@@ -25,7 +25,7 @@ public class IntencionContactoService {
     private final PerfilEmpresaRepository perfilEmpresaRepository;
 
     @Transactional
-    public UUID registrarContacto(UUID interesadoId, UUID destinoId, String ip) {
+    public com.PPS.PPS.dto.ContactoRespuestaDto registrarContacto(UUID interesadoId, UUID destinoId, String ip) {
         Usuario interesado = usuarioRepository.findById(interesadoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario interesado no encontrado."));
 
@@ -33,14 +33,24 @@ public class IntencionContactoService {
                 .usuarioInteresado(interesado)
                 .direccionIp(ip);
 
+        String telefono = null;
+        String calle = null;
+        String numero = null;
+
         // Intentar buscar como proveedor primero, luego como empresa
         PerfilProveedor proveedor = perfilProveedorRepository.findById(destinoId).orElse(null);
         if (proveedor != null) {
             builder.proveedorContactado(proveedor);
+            telefono = proveedor.getUsuario().getTelefono();
+            calle = proveedor.getCalle();
+            numero = String.valueOf(proveedor.getNumero());
         } else {
             PerfilEmpresa empresa = perfilEmpresaRepository.findById(destinoId)
                     .orElseThrow(() -> new RecursoNoEncontradoException("El destino del contacto no existe."));
             builder.empresaContactada(empresa);
+            telefono = empresa.getUsuario().getTelefono();
+            calle = empresa.getCalle();
+            numero = String.valueOf(empresa.getNumero());
         }
 
         // --- EVITAR DUPLICADOS ---
@@ -51,11 +61,19 @@ public class IntencionContactoService {
             existente = intencionContactoRepository.findFirstByUsuarioInteresadoIdAndEmpresaContactadaIdOrderByFechaCreacionDesc(interesadoId, destinoId);
         }
 
+        UUID finalId;
         if (existente.isPresent()) {
-            return existente.get().getId();
+            finalId = existente.get().getId();
+        } else {
+            IntencionContacto guardado = intencionContactoRepository.save(builder.build());
+            finalId = guardado.getId();
         }
 
-        IntencionContacto guardado = intencionContactoRepository.save(builder.build());
-        return guardado.getId();
+        return com.PPS.PPS.dto.ContactoRespuestaDto.builder()
+                .contactoId(finalId)
+                .telefonoRevelado(telefono)
+                .calleRevelada(calle)
+                .numeroRevelado(numero)
+                .build();
     }
 }

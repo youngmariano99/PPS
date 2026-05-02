@@ -22,13 +22,12 @@ public class IntencionContactoController {
 
     @PostMapping
     @Operation(summary = "Registrar intención de contacto", description = "Registra que un usuario está interesado en contactar a un proveedor o empresa.")
-    public ResponseEntity<UUID> registrarContacto(
+    public ResponseEntity<com.PPS.PPS.dto.ContactoRespuestaDto> registrarContacto(
             @RequestHeader("X-User-Id") UUID interesadoId,
             @Valid @RequestBody ContactoSolicitudDto dto,
             HttpServletRequest request) {
         
         String ip = request.getRemoteAddr();
-        UUID contactoId = intencionContactoService.registrarContacto(interesadoId, dto.getDestinoId(), ip);
-        return ResponseEntity.ok(contactoId);
+        return ResponseEntity.ok(intencionContactoService.registrarContacto(interesadoId, dto.getDestinoId(), ip));
     }
 }

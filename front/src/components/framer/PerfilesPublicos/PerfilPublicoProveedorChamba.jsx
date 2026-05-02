@@ -111,6 +111,7 @@ export default function PerfilPublicoProveedorChamba(props) {
     const [reviewRating, setReviewRating] = useState(5)
     const [reviewComment, setReviewComment] = useState("")
     const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+    const [revealSensitive, setRevealSensitive] = useState(false)
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 900)
@@ -489,7 +490,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                 return
             }
 
-            // Registrar Intención de Contacto
+            // Registrar Intención de Contacto y obtener datos revelados
             const response = await fetch(`${apiUrl}/contactos`, {
                 method: "POST",
                 headers: {
@@ -500,15 +501,24 @@ export default function PerfilPublicoProveedorChamba(props) {
             })
 
             if (response.ok) {
-                const id = await response.json()
-                setIntencionContactoId(id)
+                const resData = await response.json()
+                setIntencionContactoId(resData.contactoId)
+                
+                // REVELAR DATOS EN LA UI TRAS EL CONTACTO EXITOSO
+                setData(prev => ({
+                    ...prev,
+                    phone: resData.telefonoRevelado || prev.phone,
+                    calle: resData.calleRevelada || prev.calle,
+                    numero: resData.numeroRevelado || prev.numero
+                }))
+                setRevealSensitive(true)
+
+                const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`)
+                window.open(`https://wa.me/${resData.telefonoRevelado.replace(/\s+/g, "")}?text=${text}`, "_blank")
             }
         } catch (err) {
             console.error("Error al registrar contacto:", err)
         }
-
-        const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`)
-        window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank")
     }
 
     const handleReviewSubmit = async () => {
@@ -643,7 +653,6 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                     <h1 className="chamba-title" style={{ fontSize: "32px", fontWeight: "700", margin: 0 }}>{data.name}</h1>
                                     {data.isPro && <span className="chamba-badge-pro">PRO</span>}
-                                    <CheckCircle2 size={24} color={primaryColor} fill={primaryColor + "20"} />
                                 </div>
                             </div>
 
@@ -1197,9 +1206,21 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     <Mail size={18} color={primaryColor} />
                                     <div style={{ fontSize: "14px", color: "#475569" }}>{data.email}</div>
                                 </div>
-                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                    <Phone size={18} color={primaryColor} />
-                                    <div style={{ fontSize: "14px", color: "#475569" }}>{data.phone}</div>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                                    <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                        <Phone size={18} color={primaryColor} />
+                                        <div style={{ fontSize: "14px", color: "#475569" }}>
+                                            {(isOwner || revealSensitive) ? data.phone : "•••• •••• •••"}
+                                        </div>
+                                    </div>
+                                    {!isOwner && !revealSensitive && (
+                                        <button 
+                                            onClick={handleContactClick}
+                                            style={{ background: "transparent", border: "none", color: primaryColor, fontSize: "11px", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
+                                        >
+                                            Mostrar
+                                        </button>
+                                    )}
                                 </div>
                                 <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
                                     <Hash size={18} color={primaryColor} />
@@ -1292,9 +1313,22 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     }}>
                                         <MapPin size={20} color={primaryColor} />
                                     </div>
-                                    <div style={{ fontSize: "14px", color: "#475569" }}>
+                                    <div style={{ fontSize: "14px", color: "#475569", flex: 1 }}>
                                         <div style={{ fontWeight: "700", color: "#0F172A", fontSize: "15px" }}>{data.city}, {data.province}</div>
-                                        <div style={{ color: "#94A3B8", fontSize: "13px" }}>{data.calle} {data.numero}{data.codigoPostal ? `, CP ${data.codigoPostal}` : ""}</div>
+                                        <div style={{ color: "#94A3B8", fontSize: "13px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <span>
+                                                {(isOwner || revealSensitive) ? `${data.calle} ${data.numero}` : "Dirección oculta"}
+                                                {data.codigoPostal && (isOwner || revealSensitive) ? `, CP ${data.codigoPostal}` : ""}
+                                            </span>
+                                            {!isOwner && !revealSensitive && (
+                                                <button 
+                                                    onClick={handleContactClick}
+                                                    style={{ background: "transparent", border: "none", color: primaryColor, fontSize: "11px", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
+                                                >
+                                                    Ver
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div style={{

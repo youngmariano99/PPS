@@ -164,13 +164,13 @@ CREATE TABLE public.intenciones_contacto (
 
 CREATE TABLE public.resenas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    propietario_id UUID NOT NULL, -- Perfil (Proveedor/Empresa) evaluado
     intencion_contacto_id UUID UNIQUE REFERENCES public.intenciones_contacto(id) ON DELETE CASCADE, 
     solicitud_servicio_id UUID UNIQUE, 
     trabajo_verificado BOOLEAN NOT NULL DEFAULT FALSE,
     estrellas NUMERIC(3, 2) NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5),
     comentario TEXT, respuesta_proveedor TEXT, fecha_respuesta TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_resena_origen CHECK ((intencion_contacto_id IS NOT NULL AND solicitud_servicio_id IS NULL) OR (intencion_contacto_id IS NULL AND solicitud_servicio_id IS NOT NULL))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TRIGGER trg_cooldown_resena BEFORE INSERT ON public.resenas FOR EACH ROW EXECUTE FUNCTION validar_cooldown_resena();
 
@@ -244,6 +244,16 @@ ALTER TABLE public.resenas ALTER COLUMN intencion_contacto_id DROP NOT NULL;
 ALTER TABLE public.perfiles_proveedor ADD COLUMN instagram_url TEXT;
 ALTER TABLE public.perfiles_proveedor ADD COLUMN facebook_url TEXT;
 ALTER TABLE public.perfiles_proveedor ADD COLUMN linkedin_url TEXT;
+
+-- [2026-05-02] Refactorización Reseñas: Modelo de Prestigio (No restrictivo)
+-- Propósito: Permitir reseñas sin contacto previo y centralizar propiedad.
+ALTER TABLE public.resenas ADD COLUMN propietario_id UUID;
+UPDATE public.resenas r SET propietario_id = COALESCE(
+    (SELECT ic.proveedor_contactado_id FROM public.intenciones_contacto ic WHERE ic.id = r.intencion_contacto_id),
+    (SELECT ic.empresa_contactada_id FROM public.intenciones_contacto ic WHERE ic.id = r.intencion_contacto_id)
+) WHERE intencion_contacto_id IS NOT NULL;
+ALTER TABLE public.resenas ALTER COLUMN propietario_id SET NOT NULL;
+ALTER TABLE public.resenas DROP CONSTRAINT IF EXISTS chk_resena_origen;
 ```
 
 ### 12. Extensión Multimedia (Consolidada + Degradación Suave)

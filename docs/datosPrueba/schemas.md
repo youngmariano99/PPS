@@ -63,6 +63,7 @@ create table public.rubros (
 
 create table public.resenas (
   id uuid not null default extensions.uuid_generate_v4 (),
+  propietario_id uuid not null,
   intencion_contacto_id uuid null,
   estrellas numeric(3, 2) not null,
   comentario text null,
@@ -75,18 +76,6 @@ create table public.resenas (
   constraint resenas_intencion_contacto_id_key unique (intencion_contacto_id),
   constraint resenas_solicitud_servicio_id_key unique (solicitud_servicio_id),
   constraint resenas_intencion_contacto_id_fkey foreign KEY (intencion_contacto_id) references intenciones_contacto (id) on delete CASCADE,
-  constraint chk_resena_origen check (
-    (
-      (
-        (intencion_contacto_id is not null)
-        and (solicitud_servicio_id is null)
-      )
-      or (
-        (intencion_contacto_id is null)
-        and (solicitud_servicio_id is not null)
-      )
-    )
-  ),
   constraint resenas_estrellas_check check (
     (
       (estrellas >= (1)::numeric)

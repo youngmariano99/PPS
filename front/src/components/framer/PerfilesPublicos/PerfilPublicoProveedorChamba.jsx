@@ -520,6 +520,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                 alert("¡Gracias por tu reseña!")
                 setShowReviewModal(false)
                 setReviewComment("")
+                setIntencionContactoId(null) // Resetear para evitar 409 en el próximo envío
                 discoverAndFetch() // Recargar datos
             } else {
                 const errorData = await response.json()

@@ -41,6 +41,9 @@ public class Resena {
     @Column(name = "fecha_respuesta")
     private OffsetDateTime fechaRespuesta;
 
+    @Column(name = "propietario_id", nullable = false)
+    private UUID propietarioId;
+
     @Column(name = "created_at", updatable = false, insertable = false)
     private OffsetDateTime fechaCreacion;
 }

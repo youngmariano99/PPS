@@ -42,6 +42,7 @@ public class ResenaService {
 
         // 2. EVALUACIÓN DUAL (Modelo Amazon + Modelo Prestigio)
         Resena nuevaResena = Resena.builder()
+                .propietarioId(dto.getPropietarioId())
                 .estrellas(dto.getEstrellas())
                 .comentario(dto.getComentario())
                 .trabajoVerificado(false)
@@ -83,9 +84,12 @@ public class ResenaService {
                 propietarioUserId = resena.getIntencionContacto().getEmpresaContactada().getUsuario().getId();
             }
         } else {
-            // Buscar por el perfil destino si no hay intención (solo si lo guardamos en la reseña, pero no tenemos esa columna)
-            // TODO: Podríamos agregar propietario_perfil_id a la tabla resenas para facilitar esto.
-            // Por ahora, asumimos que solo se pueden responder reseñas que tienen vinculación o implementar lógica de búsqueda.
+            // Buscar el usuario dueño del propietarioId
+            propietarioUserId = perfilProveedorRepository.findById(resena.getPropietarioId())
+                    .map(p -> p.getUsuario().getId())
+                    .orElseGet(() -> perfilEmpresaRepository.findById(resena.getPropietarioId())
+                            .map(e -> e.getUsuario().getId())
+                            .orElse(null));
         }
         
         if (propietarioUserId == null || !propietarioUserId.equals(proveedorUserId)) {

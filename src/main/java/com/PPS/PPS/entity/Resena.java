@@ -41,6 +41,10 @@ public class Resena {
     @Column(name = "fecha_respuesta")
     private OffsetDateTime fechaRespuesta;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     @Column(name = "propietario_id", nullable = false)
     private UUID propietarioId;
 

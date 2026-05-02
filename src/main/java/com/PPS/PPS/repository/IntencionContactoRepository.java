@@ -16,4 +16,7 @@ public interface IntencionContactoRepository extends JpaRepository<IntencionCont
 
     @Query("SELECT COUNT(ic) FROM IntencionContacto ic WHERE ic.empresaContactada.id = :empresaId AND ic.fechaCreacion >= :fechaInicio")
     long contarLeadsPorEmpresa(UUID empresaId, OffsetDateTime fechaInicio);
+
+    java.util.Optional<IntencionContacto> findFirstByUsuarioInteresadoIdAndProveedorContactadoIdOrderByFechaCreacionDesc(UUID interesadoId, UUID proveedorId);
+    java.util.Optional<IntencionContacto> findFirstByUsuarioInteresadoIdAndEmpresaContactadaIdOrderByFechaCreacionDesc(UUID interesadoId, UUID empresaId);
 }

@@ -11,8 +11,8 @@ import java.util.UUID;
 
 @Repository
 public interface ResenaRepository extends JpaRepository<Resena, UUID> {
-    java.util.List<Resena> findByIntencionContactoProveedorContactadoIdOrderByFechaCreacionDesc(UUID proveedorId);
+    boolean existsByPropietarioIdAndUsuarioId(UUID propietarioId, UUID usuarioId);
 
-    @Query("SELECT r FROM Resena r WHERE r.propietarioId = :id")
-    List<Resena> findByProveedorId(@Param("id") UUID id);
+    @Query("SELECT r FROM Resena r WHERE r.propietarioId = :id ORDER BY r.fechaCreacion DESC")
+    List<Resena> findByPropietarioId(@Param("id") UUID id);
 }

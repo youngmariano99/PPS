@@ -8,6 +8,7 @@ import {
     Award, Hash, Landmark, Edit3, Save, X,
     Instagram, Facebook, Linkedin, ExternalLink
 } from "lucide-react"
+import Swal from "https://esm.sh/sweetalert2"
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
@@ -296,7 +297,16 @@ export default function ProviderProfileComplete(props) {
                                             onClick={() => {
                                                 const url = `${window.location.origin}/perfiles/proveedor/${data.id}?review=true`
                                                 navigator.clipboard.writeText(url)
-                                                alert("¡Link para reseñas copiado al portapapeles!")
+                                                Swal.fire({
+                                                    toast: true,
+                                                    position: "top-end",
+                                                    icon: "success",
+                                                    title: "¡Copiado!",
+                                                    text: "Link para reseñas copiado al portapapeles",
+                                                    showConfirmButton: false,
+                                                    timer: 3000,
+                                                    timerProgressBar: true
+                                                })
                                             }} 
                                             style={{ ...hS.btnEdit, color: "#3B6790", borderColor: "#3B6790" }}
                                         >

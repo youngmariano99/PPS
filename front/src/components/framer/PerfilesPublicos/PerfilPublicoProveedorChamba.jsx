@@ -32,6 +32,7 @@ import {
     ChevronLeft,
     Maximize2
 } from "lucide-react"
+import Swal from "https://esm.sh/sweetalert2"
 
 const getEmbedUrl = (url) => {
     if (!url) return null
@@ -385,8 +386,20 @@ export default function PerfilPublicoProveedorChamba(props) {
                     if (response.ok) {
                         const id = await response.json()
                         setIntencionContactoId(id)
+
+                        // Feedback premium
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: "success",
+                            title: "Link mágico activado",
+                            text: "Podés dejar tu reseña ahora.",
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        })
                     }
-                    
+
                     // Abrir modal automáticamente
                     setShowReviewModal(true)
                 } catch (err) {
@@ -412,7 +425,7 @@ export default function PerfilPublicoProveedorChamba(props) {
             if (editingSection === "ubicacion") {
                 const direccionCompleta = `${tempData.calle} ${tempData.numero}, ${tempData.city}, ${tempData.province}, ${tempData.pais}`
                 const resGeo = await fetch(`${apiUrl.replace(/\/+$/, "")}/directorio/geocodificar?direccion=${encodeURIComponent(direccionCompleta)}`)
-                
+
                 if (!resGeo.ok) {
                     alert("No pudimos encontrar esa dirección en el mapa. Por favor, verificá que los datos (Calle, Número, Ciudad y Provincia) sean correctos.")
                     setIsSaving(false)
@@ -517,17 +530,32 @@ export default function PerfilPublicoProveedorChamba(props) {
             })
 
             if (response.ok) {
-                alert("¡Gracias por tu reseña!")
+                Swal.fire({
+                    icon: "success",
+                    title: "¡Gracias!",
+                    text: "Tu reseña ha sido publicada con éxito.",
+                    confirmButtonColor: primaryColor
+                })
                 setShowReviewModal(false)
                 setReviewComment("")
                 setIntencionContactoId(null) // Resetear para evitar 409 en el próximo envío
                 discoverAndFetch() // Recargar datos
             } else {
                 const errorData = await response.json()
-                alert(errorData.mensaje || "Error al enviar la reseña.")
+                Swal.fire({
+                    icon: "error",
+                    title: "Ups...",
+                    text: errorData.mensaje || "Error al enviar la reseña.",
+                    confirmButtonColor: primaryColor
+                })
             }
         } catch (err) {
-            alert("Error de conexión al enviar la reseña.")
+            Swal.fire({
+                icon: "error",
+                title: "Error de conexión",
+                text: "No se pudo conectar con el servidor para enviar la reseña.",
+                confirmButtonColor: primaryColor
+            })
         } finally {
             setIsSubmittingReview(false)
         }
@@ -688,7 +716,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                         </div>
 
                         {/* Botón Compartir + Redes Sociales (Columna) */}
-                        <div style={{ 
+                        <div style={{
                             marginTop: isMobile ? "32px" : "12px",
                             display: "flex",
                             flexDirection: "column",
@@ -842,9 +870,9 @@ export default function PerfilPublicoProveedorChamba(props) {
                         <div className="portfolio-grid" style={{ gap: "12px", marginBottom: "32px" }}>
                             {(editingSection === "portfolio" ? tempData.portfolio : data.portfolio).map((img, i) => (
                                 <div key={i} style={{ position: "relative" }}>
-                                    <div 
-                                        className="portfolio-item" 
-                                        style={{ backgroundImage: `url(${img})`, borderRadius: "12px", cursor: "pointer" }} 
+                                    <div
+                                        className="portfolio-item"
+                                        style={{ backgroundImage: `url(${img})`, borderRadius: "12px", cursor: "pointer" }}
                                         onClick={() => setSelectedImgIndex(i)}
                                     />
                                     {editingSection === "portfolio" && (
@@ -866,27 +894,27 @@ export default function PerfilPublicoProveedorChamba(props) {
                         {(data.videoLinks.length > 0 || editingSection === "portfolio") && (
                             <div style={{ marginTop: "32px" }}>
                                 <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px" }}>Videos y Presentaciones</div>
-                                
+
                                 {editingSection === "portfolio" ? (
                                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                         {(tempData.videoLinks || []).map((link, idx) => (
                                             <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                                 <div style={{ flex: 1, position: "relative" }}>
-                                                    <input 
+                                                    <input
                                                         className="chamba-input"
                                                         placeholder="Link de YouTube, Instagram o TikTok..."
                                                         value={link}
                                                         onChange={e => {
                                                             const newLinks = [...tempData.videoLinks]
                                                             newLinks[idx] = e.target.value
-                                                            setTempData({...tempData, videoLinks: newLinks})
+                                                            setTempData({ ...tempData, videoLinks: newLinks })
                                                         }}
                                                     />
                                                 </div>
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         const newLinks = tempData.videoLinks.filter((_, i) => i !== idx)
-                                                        setTempData({...tempData, videoLinks: newLinks})
+                                                        setTempData({ ...tempData, videoLinks: newLinks })
                                                     }}
                                                     style={{ background: "#FEE2E2", color: "#EF4444", border: "none", width: "32px", height: "32px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                 >
@@ -894,7 +922,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                                                 </button>
                                             </div>
                                         ))}
-                                        <button 
+                                        <button
                                             onClick={() => setTempData(prev => ({ ...prev, videoLinks: [...(prev.videoLinks || []), ""] }))}
                                             style={{ ...secondaryBtnStyle, color: primaryColor, textAlign: "left", padding: "8px 0" }}
                                         >
@@ -908,16 +936,16 @@ export default function PerfilPublicoProveedorChamba(props) {
                                             const embedUrl = getEmbedUrl(link)
                                             return (
                                                 <div key={i} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                                    <div style={{ 
-                                                        position: "relative", 
+                                                    <div style={{
+                                                        position: "relative",
                                                         paddingTop: "177.77%", // Aspect ratio para Reels/TikTok (9:16)
-                                                        background: "#000", 
-                                                        borderRadius: "20px", 
+                                                        background: "#000",
+                                                        borderRadius: "20px",
                                                         overflow: "hidden",
                                                         boxShadow: "0 10px 30px rgba(0,0,0,0.1)"
                                                     }}>
                                                         {embedUrl ? (
-                                                            <iframe 
+                                                            <iframe
                                                                 src={embedUrl}
                                                                 style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
                                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1035,19 +1063,29 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                             <div style={{ maxWidth: "240px" }}>
                                 <p style={{ fontSize: "14px", color: "#475569", marginBottom: "16px" }}>¿Trabajaste con {data.name.split(" ")[0]}? Dejá tu reseña y ayudá a otros clientes.</p>
-                                <button 
-                                    className="chamba-btn-primary" 
+                                <button
+                                    className="chamba-btn-primary"
                                     style={{ width: "auto", padding: "10px 24px" }}
                                     onClick={() => {
                                         if (isOwner) {
-                                            alert("No puedes calificar tu propio perfil.")
+                                            Swal.fire({
+                                                icon: "info",
+                                                title: "Perfil propio",
+                                                text: "No podés calificar tu propio perfil.",
+                                                confirmButtonColor: primaryColor
+                                            })
                                             return
                                         }
-                                        
+
                                         const checkUser = async () => {
                                             const { data: { user } } = await supabase.auth.getUser()
                                             if (!user) {
-                                                alert("Debes iniciar sesión para calificar.")
+                                                Swal.fire({
+                                                    icon: "warning",
+                                                    title: "Sesión requerida",
+                                                    text: "Debes iniciar sesión para calificar.",
+                                                    confirmButtonColor: primaryColor
+                                                })
                                                 return
                                             }
                                             setShowReviewModal(true)
@@ -1220,11 +1258,11 @@ export default function PerfilPublicoProveedorChamba(props) {
                                         <input className="chamba-input" placeholder="7530" value={tempData.codigoPostal} onChange={e => setTempData({ ...tempData, codigoPostal: e.target.value })} />
                                     </div>
                                 </div>
-                                
+
                                 <div style={{ ...editActionRow, marginTop: "8px" }}>
                                     <button onClick={() => setEditingSection(null)} style={secondaryBtnStyle}>Cancelar</button>
-                                    <button 
-                                        onClick={handleSaveSection} 
+                                    <button
+                                        onClick={handleSaveSection}
                                         disabled={isSaving}
                                         style={{
                                             ...primaryBtnSmallStyle,
@@ -1243,14 +1281,14 @@ export default function PerfilPublicoProveedorChamba(props) {
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                                 <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                    <div style={{ 
-                                        width: "40px", 
-                                        height: "40px", 
-                                        borderRadius: "12px", 
-                                        background: primaryColor + "10", 
-                                        display: "flex", 
-                                        alignItems: "center", 
-                                        justifyContent: "center" 
+                                    <div style={{
+                                        width: "40px",
+                                        height: "40px",
+                                        borderRadius: "12px",
+                                        background: primaryColor + "10",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center"
                                     }}>
                                         <MapPin size={20} color={primaryColor} />
                                     </div>
@@ -1259,11 +1297,11 @@ export default function PerfilPublicoProveedorChamba(props) {
                                         <div style={{ color: "#94A3B8", fontSize: "13px" }}>{data.calle} {data.numero}{data.codigoPostal ? `, CP ${data.codigoPostal}` : ""}</div>
                                     </div>
                                 </div>
-                                <div style={{ 
-                                    padding: "12px", 
-                                    background: "#F8FAFC", 
-                                    borderRadius: "12px", 
-                                    fontSize: "11px", 
+                                <div style={{
+                                    padding: "12px",
+                                    background: "#F8FAFC",
+                                    borderRadius: "12px",
+                                    fontSize: "11px",
                                     color: "#64748B",
                                     border: "1px solid #F1F5F9"
                                 }}>
@@ -1278,71 +1316,23 @@ export default function PerfilPublicoProveedorChamba(props) {
             </div>
 
 
-            <ReviewModal />
+            <ReviewModal
+                show={showReviewModal}
+                onClose={() => setShowReviewModal(false)}
+                data={data}
+                reviewRating={reviewRating}
+                setReviewRating={setReviewRating}
+                reviewComment={reviewComment}
+                setReviewComment={setReviewComment}
+                onSubmit={handleReviewSubmit}
+                isSubmitting={isSubmittingReview}
+            />
             <FloatingContact />
             <PortfolioLightbox />
             <div style={{ height: "40px" }} />
         </div>
     )
 
-    function ReviewModal() {
-        if (!showReviewModal) return null
-        return (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-                <motion.div 
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    style={{ background: "white", borderRadius: "24px", width: "100%", maxWidth: "450px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
-                >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                        <h3 className="chamba-title" style={{ fontSize: "22px", fontWeight: "700", margin: 0 }}>Calificar servicio</h3>
-                        <button onClick={() => setShowReviewModal(false)} style={{ background: "#F1F5F9", border: "none", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
-                    </div>
-
-                    <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>¿Cómo fue tu experiencia trabajando con <b>{data.name}</b>?</p>
-
-                    <div style={{ marginBottom: "24px" }}>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Tu calificación</label>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            {[1, 2, 3, 4, 5].map(star => (
-                                <button 
-                                    key={star}
-                                    onClick={() => setReviewRating(star)}
-                                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
-                                >
-                                    <Star 
-                                        size={32} 
-                                        fill={star <= reviewRating ? "#F59E0B" : "none"} 
-                                        color={star <= reviewRating ? "#F59E0B" : "#CBD5E1"} 
-                                    />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div style={{ marginBottom: "32px" }}>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Comentario (Opcional)</label>
-                        <textarea 
-                            className="chamba-input"
-                            style={{ minHeight: "120px", resize: "none" }}
-                            placeholder="Contanos un poco más sobre el trabajo realizado..."
-                            value={reviewComment}
-                            onChange={(e) => setReviewComment(e.target.value)}
-                        />
-                    </div>
-
-                    <button 
-                        className="chamba-btn-primary" 
-                        disabled={isSubmittingReview}
-                        onClick={handleReviewSubmit}
-                        style={{ height: "56px", fontSize: "16px" }}
-                    >
-                        {isSubmittingReview ? <RefreshCw className="spin" size={20} /> : "Publicar Reseña"}
-                    </button>
-                </motion.div>
-            </div>
-        )
-    }
 
     function FloatingContact() {
         if (isOwner) return null
@@ -1373,37 +1363,37 @@ export default function PerfilPublicoProveedorChamba(props) {
 
         return (
             <AnimatePresence>
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}
                     onClick={() => setSelectedImgIndex(null)}
                 >
-                    <button 
+                    <button
                         onClick={(e) => { e.stopPropagation(); setSelectedImgIndex(null); }}
                         style={{ position: "absolute", top: "32px", right: "32px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: "48px", height: "48px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}
                     >
                         <X size={24} />
                     </button>
 
-                    <button 
+                    <button
                         onClick={(e) => { e.stopPropagation(); prevImg(); }}
                         style={{ position: "absolute", left: "32px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: "56px", height: "56px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}
                     >
                         <ChevronLeft size={32} />
                     </button>
 
-                    <motion.div 
+                    <motion.div
                         key={selectedImgIndex}
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         style={{ maxWidth: "100%", maxHeight: "100%", position: "relative" }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <img 
-                            src={currentImg} 
-                            style={{ maxWidth: "80vw", maxHeight: "80vh", borderRadius: "12px", boxShadow: "0 20px 50px rgba(0,0,0,0.5)", objectFit: "contain" }} 
+                        <img
+                            src={currentImg}
+                            style={{ maxWidth: "80vw", maxHeight: "80vh", borderRadius: "12px", boxShadow: "0 20px 50px rgba(0,0,0,0.5)", objectFit: "contain" }}
                             alt="Portfolio"
                         />
                         <div style={{ position: "absolute", bottom: "-40px", left: 0, right: 0, textAlign: "center", color: "white", fontSize: "14px", fontWeight: "600" }}>
@@ -1411,7 +1401,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                         </div>
                     </motion.div>
 
-                    <button 
+                    <button
                         onClick={(e) => { e.stopPropagation(); nextImg(); }}
                         style={{ position: "absolute", right: "32px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: "56px", height: "56px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}
                     >
@@ -1421,6 +1411,67 @@ export default function PerfilPublicoProveedorChamba(props) {
             </AnimatePresence>
         )
     }
+}
+
+// --- COMPONENTES AUXILIARES (FUERA PARA EVITAR RE-RENDER/LOST FOCUS) ---
+
+function ReviewModal({ show, onClose, data, reviewRating, setReviewRating, reviewComment, setReviewComment, onSubmit, isSubmitting }) {
+    if (!show) return null
+    return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                style={{ background: "white", borderRadius: "24px", width: "100%", maxWidth: "450px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+            >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                    <h3 className="chamba-title" style={{ fontSize: "22px", fontWeight: "700", margin: 0 }}>Calificar servicio</h3>
+                    <button onClick={onClose} style={{ background: "#F1F5F9", border: "none", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
+                </div>
+
+                <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>¿Cómo fue tu experiencia trabajando con <b>{data.name}</b>?</p>
+
+                <div style={{ marginBottom: "24px" }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Tu calificación</label>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        {[1, 2, 3, 4, 5].map(star => (
+                            <button
+                                key={star}
+                                onClick={() => setReviewRating(star)}
+                                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                            >
+                                <Star
+                                    size={32}
+                                    fill={star <= reviewRating ? "#F59E0B" : "none"}
+                                    color={star <= reviewRating ? "#F59E0B" : "#CBD5E1"}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={{ marginBottom: "32px" }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Comentario (Opcional)</label>
+                    <textarea
+                        className="chamba-input"
+                        style={{ minHeight: "120px", resize: "none" }}
+                        placeholder="Contanos un poco más sobre el trabajo realizado..."
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                    />
+                </div>
+
+                <button
+                    className="chamba-btn-primary"
+                    disabled={isSubmitting}
+                    onClick={onSubmit}
+                    style={{ height: "56px", fontSize: "16px" }}
+                >
+                    {isSubmitting ? <RefreshCw className="spin" size={20} /> : "Publicar Reseña"}
+                </button>
+            </motion.div>
+        </div>
+    )
 }
 
 const TagInput = ({ tags, setTags, placeholder = "Escribí y presioná Enter..." }) => {

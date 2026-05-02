@@ -43,6 +43,18 @@ public class IntencionContactoService {
             builder.empresaContactada(empresa);
         }
 
+        // --- EVITAR DUPLICADOS ---
+        java.util.Optional<IntencionContacto> existente;
+        if (proveedor != null) {
+            existente = intencionContactoRepository.findFirstByUsuarioInteresadoIdAndProveedorContactadoIdOrderByFechaCreacionDesc(interesadoId, destinoId);
+        } else {
+            existente = intencionContactoRepository.findFirstByUsuarioInteresadoIdAndEmpresaContactadaIdOrderByFechaCreacionDesc(interesadoId, destinoId);
+        }
+
+        if (existente.isPresent()) {
+            return existente.get().getId();
+        }
+
         IntencionContacto guardado = intencionContactoRepository.save(builder.build());
         return guardado.getId();
     }

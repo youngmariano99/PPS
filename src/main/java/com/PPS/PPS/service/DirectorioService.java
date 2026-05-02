@@ -367,12 +367,12 @@ public class DirectorioService {
                     org.springframework.data.domain.PageRequest.of(0, 5));
         }
 
-        // --- CARGA DE RESEÑAS REALES ---
-        List<Resena> resenasEntity = resenaRepository.findByIntencionContactoProveedorContactadoIdOrderByFechaCreacionDesc(p.getId());
+        // --- CARGA DE RESEÑAS REALES (Basado en PropietarioID) ---
+        List<Resena> resenasEntity = resenaRepository.findByPropietarioId(p.getId());
         List<ResenaDetalleDto> resenasMapped = resenasEntity.stream()
                 .map(r -> ResenaDetalleDto.builder()
                         .id(r.getId())
-                        .nombreCliente(r.getIntencionContacto().getUsuarioInteresado().getNombre() + " " + r.getIntencionContacto().getUsuarioInteresado().getApellido())
+                        .nombreCliente(r.getUsuario().getNombre() + " " + r.getUsuario().getApellido())
                         .estrellas(r.getEstrellas().doubleValue())
                         .comentario(r.getComentario())
                         .fecha(r.getFechaCreacion())

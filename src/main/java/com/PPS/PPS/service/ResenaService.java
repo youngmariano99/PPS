@@ -6,10 +6,8 @@ import com.PPS.PPS.entity.IntencionContacto;
 import com.PPS.PPS.entity.Resena;
 import com.PPS.PPS.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.exception.ValidacionNegocioException;
-import com.PPS.PPS.repository.IntencionContactoRepository;
-import com.PPS.PPS.repository.PerfilEmpresaRepository;
-import com.PPS.PPS.repository.PerfilProveedorRepository;
-import com.PPS.PPS.repository.ResenaRepository;
+import com.PPS.PPS.entity.Usuario;
+import com.PPS.PPS.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +27,7 @@ public class ResenaService {
     private final IntencionContactoRepository intencionContactoRepository;
     private final PerfilProveedorRepository perfilProveedorRepository;
     private final PerfilEmpresaRepository perfilEmpresaRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional
     public Resena crearResena(CrearResenaDto dto, UUID usuarioAutenticadoId, String ipCliente) {
@@ -40,9 +39,17 @@ public class ResenaService {
             throw new ValidacionNegocioException("No puedes calificar tu propio perfil profesional.");
         }
 
+        if (resenaRepository.existsByPropietarioIdAndUsuarioId(dto.getPropietarioId(), usuarioAutenticadoId)) {
+            throw new ValidacionNegocioException("Ya has dejado una reseña para este perfil anteriormente.");
+        }
+
+        Usuario emisor = usuarioRepository.findById(usuarioAutenticadoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario emisor no encontrado."));
+
         // 2. EVALUACIÓN DUAL (Modelo Amazon + Modelo Prestigio)
         Resena nuevaResena = Resena.builder()
                 .propietarioId(dto.getPropietarioId())
+                .usuario(emisor)
                 .estrellas(dto.getEstrellas())
                 .comentario(dto.getComentario())
                 .trabajoVerificado(false)

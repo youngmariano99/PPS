@@ -110,18 +110,14 @@ public class ResenaService {
 
     @Transactional(readOnly = true)
     public List<ResenaDetalleDto> obtenerResenasPorProveedor(UUID proveedorId) {
-        return resenaRepository.findByProveedorId(proveedorId).stream()
+        return resenaRepository.findByPropietarioId(proveedorId).stream()
                 .map(this::mapToDetalleDto)
                 .collect(Collectors.toList());
     }
 
     private ResenaDetalleDto mapToDetalleDto(Resena r) {
-        String nombre = "Usuario";
-        UUID intencionId = null;
-        if (r.getIntencionContacto() != null) {
-            nombre = r.getIntencionContacto().getUsuarioInteresado().getNombre() + " " + r.getIntencionContacto().getUsuarioInteresado().getApellido();
-            intencionId = r.getIntencionContacto().getId();
-        }
+        String nombre = r.getUsuario().getNombre() + " " + r.getUsuario().getApellido();
+        UUID intencionId = r.getIntencionContacto() != null ? r.getIntencionContacto().getId() : null;
         return ResenaDetalleDto.builder()
                 .id(r.getId())
                 .nombreCliente(nombre)

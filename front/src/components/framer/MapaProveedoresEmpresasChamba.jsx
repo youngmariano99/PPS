@@ -393,38 +393,88 @@ export default function MapaProveedoresEmpresasChamba(props) {
                         </Overlay>
                     ))}
 
-                    {/* Tooltip / Mini-Card (Propuesta A) */}
+                    {/* Tooltip / Mini-Card (Premium Chamba Design) */}
                     {perfilSeleccionado && (
                         <Overlay anchor={[perfilSeleccionado.latitud, perfilSeleccionado.longitud]} offset={[0, 0]}>
                             <div style={styles.cardOverlay}>
                                 <div style={styles.card}>
                                     <button style={styles.cardClose} onClick={() => setPerfilSeleccionado(null)}>✕</button>
                                     
-                                    <div style={styles.cardContent}>
-                                        <div style={styles.cardAvatar}>
-                                            <img 
-                                                src={perfilSeleccionado.fotoPerfil || "https://framerusercontent.com/images/4jB1l8K3z0V4nZlXWz7m6.png"} 
-                                                style={styles.avatarImg}
-                                                alt="Avatar"
-                                            />
+                                    <div style={styles.cardHeader}>
+                                        <div style={styles.avatarWrapper}>
+                                            {perfilSeleccionado.fotoPerfilUrl ? (
+                                                <img 
+                                                    src={perfilSeleccionado.fotoPerfilUrl} 
+                                                    style={styles.avatarImg}
+                                                    alt={perfilSeleccionado.nombrePublico}
+                                                />
+                                            ) : (
+                                                <div style={{ ...styles.avatarPlaceholder, backgroundColor: primaryColor + "20", color: primaryColor }}>
+                                                    {perfilSeleccionado.nombrePublico?.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div style={styles.cardInfo}>
-                                            <h4 className="chamba-title" style={styles.cardName}>
-                                                {perfilSeleccionado.nombrePublico}
-                                            </h4>
+                                        <div style={styles.cardMainInfo}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <h4 className="chamba-title" style={styles.cardName}>
+                                                    {perfilSeleccionado.nombrePublico}
+                                                </h4>
+                                                {perfilSeleccionado.destacado && (
+                                                    <span style={{ ...styles.proBadge, backgroundColor: primaryColor }}>PRO</span>
+                                                )}
+                                            </div>
                                             <p style={styles.cardCategory}>{perfilSeleccionado.rubro}</p>
-                                            <div style={styles.cardMeta}>
-                                                <span style={styles.cardRating}>⭐ {perfilSeleccionado.reputacionPromedio || "4.8"} ({perfilSeleccionado.cantidadResenas || "56"})</span>
-                                            </div>
-                                            <div style={styles.cardDistance}>
-                                                📍 {formatearDistancia(perfilSeleccionado.distancia)}
-                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Especialidades / Tags */}
+                                    {perfilSeleccionado.especialidades && perfilSeleccionado.especialidades.length > 0 && (
+                                        <div style={styles.tagContainer}>
+                                            {perfilSeleccionado.especialidades.slice(0, 3).map((tag, idx) => (
+                                                <span key={idx} style={styles.tag}>
+                                                    {tag}{idx < 2 && idx < perfilSeleccionado.especialidades.length - 1 ? " •" : ""}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Métricas Reales */}
+                                    <div style={styles.cardMetrics}>
+                                        <div style={styles.metricItem}>
+                                            <span style={styles.starIcon}>⭐</span>
+                                            <span style={styles.metricText}>
+                                                {perfilSeleccionado.promedioEstrellas > 0 ? perfilSeleccionado.promedioEstrellas.toFixed(1) : "N/A"} 
+                                                <span style={{ color: "#94A3B8", fontWeight: "400", marginLeft: "4px" }}>
+                                                    ({perfilSeleccionado.cantidadResenas || 0})
+                                                </span>
+                                            </span>
+                                        </div>
+                                        <div style={styles.metricDivider} />
+                                        <div style={styles.metricItem}>
+                                            <span style={styles.metricText}>
+                                                📍 {formatearDistancia(Math.round(perfilSeleccionado.distancia))}
+                                            </span>
                                         </div>
                                     </div>
                                     
-                                    <button className="chamba-button-primary" style={styles.cardCta}>
-                                        Ver perfil
-                                    </button>
+                                    <div style={styles.cardActions}>
+                                        <button 
+                                            style={styles.btnSecondary}
+                                            onClick={() => window.open(`https://wa.me/${perfilSeleccionado.telefono?.replace(/\D/g, '')}`, '_blank')}
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2">
+                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                            </svg>
+                                            Contactar
+                                        </button>
+                                        <button 
+                                            className="chamba-button-primary" 
+                                            style={{ ...styles.btnPrimary, backgroundColor: primaryColor }}
+                                            onClick={() => window.open(`/perfil/${perfilSeleccionado.id}`, '_blank')}
+                                        >
+                                            Ver perfil
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </Overlay>
@@ -602,74 +652,156 @@ const styles = {
         animation: "fadeIn 0.3s ease-out",
     },
     card: {
-        width: "280px",
+        width: "300px",
         background: "white",
-        borderRadius: "20px",
-        padding: "16px",
-        boxShadow: "0 15px 40px rgba(0,0,0,0.12)",
+        borderRadius: "24px",
+        padding: "20px",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.15)",
         position: "relative",
+        border: "1px solid #F1F5F9",
     },
     cardClose: {
         position: "absolute",
-        top: "12px",
-        right: "12px",
-        background: "none",
+        top: "16px",
+        right: "16px",
+        background: "#F8FAFC",
         border: "none",
+        width: "28px",
+        height: "28px",
+        borderRadius: "50%",
         color: "#94A3B8",
         cursor: "pointer",
-        fontSize: "16px",
-    },
-    cardContent: {
         display: "flex",
-        gap: "12px",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "12px",
+        zIndex: 2,
+    },
+    cardHeader: {
+        display: "flex",
+        gap: "16px",
+        alignItems: "center",
         marginBottom: "16px",
     },
-    cardAvatar: {
-        width: "56px",
-        height: "56px",
-        borderRadius: "12px",
+    avatarWrapper: {
+        width: "64px",
+        height: "64px",
+        borderRadius: "50%",
         overflow: "hidden",
-        background: "#F1F5F9",
+        border: "3px solid #F1F5F9",
+        flexShrink: 0,
     },
     avatarImg: {
         width: "100%",
         height: "100%",
         objectFit: "cover",
     },
-    cardInfo: {
+    avatarPlaceholder: {
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "20px",
+        fontWeight: "700",
+        fontFamily: "'Poppins', sans-serif",
+    },
+    cardMainInfo: {
         flex: 1,
+        minWidth: 0,
     },
     cardName: {
         margin: 0,
-        fontSize: "16px",
-        fontWeight: "600",
-        color: "#000",
+        fontSize: "18px",
+        fontWeight: "700",
+        color: "#0F172A",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+    },
+    proBadge: {
+        fontSize: "10px",
+        fontWeight: "800",
+        color: "white",
+        padding: "2px 8px",
+        borderRadius: "6px",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
     },
     cardCategory: {
-        margin: "2px 0 6px 0",
-        fontSize: "13px",
+        margin: "2px 0 0 0",
+        fontSize: "14px",
         color: "#A01EED",
-        fontWeight: "500",
-    },
-    cardMeta: {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        fontSize: "12px",
-        color: "#64748B",
-    },
-    cardRating: {
-        color: "#F59E0B",
         fontWeight: "600",
     },
-    cardDistance: {
-        marginTop: "8px",
-        fontSize: "12px",
-        color: "#94A3B8",
+    tagContainer: {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "6px",
+        marginBottom: "16px",
+    },
+    tag: {
+        fontSize: "13px",
+        color: "#64748B",
         fontWeight: "500",
     },
-    cardCta: {
-        width: "100%",
+    cardMetrics: {
+        display: "flex",
+        alignItems: "center",
+        background: "#F8FAFC",
+        borderRadius: "12px",
+        padding: "10px 16px",
+        marginBottom: "20px",
+    },
+    metricItem: {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+    },
+    metricDivider: {
+        width: "1px",
+        height: "14px",
+        background: "#E2E8F0",
+        margin: "0 12px",
+    },
+    starIcon: {
+        fontSize: "14px",
+    },
+    metricText: {
+        fontSize: "13px",
+        fontWeight: "700",
+        color: "#1E293B",
+    },
+    cardActions: {
+        display: "flex",
+        gap: "10px",
+    },
+    btnPrimary: {
+        flex: 1.2,
+        height: "44px",
+        borderRadius: "12px",
+        border: "none",
+        color: "white",
+        fontWeight: "600",
+        fontSize: "14px",
+        cursor: "pointer",
+        transition: "transform 0.2s",
+    },
+    btnSecondary: {
+        flex: 1,
+        height: "44px",
+        borderRadius: "12px",
+        border: "2px solid #F1F5F9",
+        background: "white",
+        color: "#0F172A",
+        fontWeight: "600",
+        fontSize: "14px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "8px",
+        transition: "background 0.2s",
     },
     mapFooter: {
         position: "absolute",

@@ -318,6 +318,30 @@ public class DirectorioService {
         List<PerfilProveedor> proveedoresCrudos = proveedorIds.isEmpty() ? new ArrayList<>()
                 : proveedorRepository.findByIdIn(proveedorIds);
 
+        // 1. Recolectar IDs para Batch Fetching
+        List<UUID> usuarioIds = proveedoresCrudos.stream().map(p -> p.getUsuario().getId()).collect(Collectors.toList());
+        List<UUID> perfilIds = proveedoresCrudos.stream().map(PerfilProveedor::getId).collect(Collectors.toList());
+
+        // 2. Batch de Premium
+        java.util.Set<UUID> usuariosPremiumIds = usuarioIds.isEmpty() ? new java.util.HashSet<>() :
+                suscripcionRepository.findByUsuarioIdInAndEstado(usuarioIds, "ACTIVA").stream()
+                .filter(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                             s.getPlan().getNombre().equalsIgnoreCase("PRO"))
+                .map(s -> s.getUsuario().getId())
+                .collect(Collectors.toSet());
+
+        // 3. Batch de Reseñas
+        java.util.Map<UUID, Double> promedios = new java.util.HashMap<>();
+        java.util.Map<UUID, Integer> conteos = new java.util.HashMap<>();
+        if (!perfilIds.isEmpty()) {
+            List<Object[]> stats = resenaRepository.findAveragesAndCountsByPropietarioIds(perfilIds);
+            for (Object[] row : stats) {
+                UUID pid = (UUID) row[0];
+                promedios.put(pid, row[1] != null ? ((Number) row[1]).doubleValue() : 0.0);
+                conteos.put(pid, row[2] != null ? ((Number) row[2]).intValue() : 0);
+            }
+        }
+
         resultados.addAll(proveedoresCrudos.stream()
                 .map(p -> PerfilRespuestaDto.builder()
                         .id(p.getId())
@@ -330,9 +354,9 @@ public class DirectorioService {
                         .longitud(p.getUbicacion().getX())
                         .tipo("PROVEEDOR")
                         .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                        .promedioEstrellas(0.0)
-                        .cantidadResenas(0)
-                        .destacado(false) // Optimizado para mapa masivo
+                        .promedioEstrellas(promedios.getOrDefault(p.getId(), 0.0))
+                        .cantidadResenas(conteos.getOrDefault(p.getId(), 0))
+                        .destacado(usuariosPremiumIds.contains(p.getUsuario().getId()))
                         .fotoPerfilUrl(p.getFotoPerfilUrl())
                         .especialidades(p.getEspecialidades())
                         .condicionesServicio(p.getCondicionesServicio())
@@ -355,7 +379,7 @@ public class DirectorioService {
                         .longitud(e.getUbicacion().getX())
                         .tipo("EMPRESA")
                         .perfilCompleto(e.getLogoUrl() != null && !e.getLogoUrl().isEmpty())
-                        .promedioEstrellas(0.0)
+                        .promedioEstrellas(0.0) // Las empresas podrían no tener reseñas aún en este flujo masivo
                         .cantidadResenas(0)
                         .destacado(false)
                         .fotoPerfilUrl(e.getLogoUrl())

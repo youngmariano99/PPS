@@ -292,8 +292,12 @@ export default function PerfilPublicoProveedorChamba(props) {
                         description: res.descripcion || "Sin descripción disponible.",
                         location: res.ciudad ? `${res.ciudad}, ${res.provincia}` : "Ubicación no especificada",
                         address: res.direccion || "",
+                        calle: res.calle || "",
+                        numero: res.numero || "",
                         city: res.ciudad || "",
                         province: res.provincia || "",
+                        pais: res.pais || "Argentina",
+                        codigoPostal: res.codigoPostal || "",
                         rating: res.promedioEstrellas || 0,
                         reviewCount: res.totalResenas || 0,
                         isPro: res.esPremium,
@@ -365,6 +369,18 @@ export default function PerfilPublicoProveedorChamba(props) {
             const { data: { user } } = await supabase.auth.getUser()
             const { data: { session } } = await supabase.auth.getSession()
 
+            // Validación de Ubicación (solo si estamos editando la sección de ubicación)
+            if (editingSection === "ubicacion") {
+                const direccionCompleta = `${tempData.calle} ${tempData.numero}, ${tempData.city}, ${tempData.province}, ${tempData.pais}`
+                const resGeo = await fetch(`${apiUrl.replace(/\/+$/, "")}/directorio/geocodificar?direccion=${encodeURIComponent(direccionCompleta)}`)
+                
+                if (!resGeo.ok) {
+                    alert("No pudimos encontrar esa dirección en el mapa. Por favor, verificá que los datos (Calle, Número, Ciudad y Provincia) sean correctos.")
+                    setIsSaving(false)
+                    return
+                }
+            }
+
             // Mapeo de tempData a PerfilSolicitudDto
             const payload = {
                 descripcion: tempData.description,
@@ -376,12 +392,12 @@ export default function PerfilPublicoProveedorChamba(props) {
                 especialidades: tempData.specialties,
                 condicionesServicio: tempData.conditions,
                 fotosPortafolioUrls: tempData.portfolio,
-                pais: data.pais || "Argentina", // Mantener campos obligatorios
-                provincia: data.province,
-                ciudad: data.city,
-                calle: data.address ? data.address.split(" ")[0] : "",
-                numero: data.address ? parseInt(data.address.split(" ")[1]) || 0 : 0,
-                codigoPostal: 0,
+                pais: tempData.pais || "Argentina",
+                provincia: tempData.province,
+                ciudad: tempData.city,
+                calle: tempData.calle,
+                numero: parseInt(tempData.numero) || 0,
+                codigoPostal: parseInt(tempData.codigoPostal) || 0,
                 videoLinks: (tempData.videoLinks || []).filter(l => l.trim() !== "")
             }
 
@@ -396,7 +412,7 @@ export default function PerfilPublicoProveedorChamba(props) {
             })
 
             if (response.ok) {
-                setData({ ...tempData })
+                setData({ ...tempData, location: `${tempData.city}, ${tempData.province}` })
                 setEditingSection(null)
             } else {
                 alert("Error al guardar los cambios")
@@ -957,8 +973,8 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     <div style={{ fontSize: "14px", color: "#475569" }}>{data.email}</div>
                                 </div>
                                 <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                    <MapPin size={18} color={primaryColor} />
-                                    <div style={{ fontSize: "14px", color: "#475569" }}>{data.location || "Ubicación no especificada"}</div>
+                                    <Phone size={18} color={primaryColor} />
+                                    <div style={{ fontSize: "14px", color: "#475569" }}>{data.phone}</div>
                                 </div>
                                 <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
                                     <Hash size={18} color={primaryColor} />
@@ -972,6 +988,102 @@ export default function PerfilPublicoProveedorChamba(props) {
                         <div style={{ marginTop: "24px", background: "#F3E8FF", padding: "14px", borderRadius: "12px", fontSize: "12px", color: "#7C3AED", textAlign: "center", fontWeight: "600" }}>
                             Para ver el teléfono, contactá al profesional.
                         </div>
+                    </div>
+
+                    {/* Nueva Sección de Ubicación */}
+                    <div className="chamba-card">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                            <h4 style={{ fontSize: "16px", fontWeight: "700", margin: 0 }}>Ubicación</h4>
+                            {isOwner && editingSection !== "ubicacion" && (
+                                <button onClick={() => handleEditSection("ubicacion")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer" }}>
+                                    <Edit3 size={14} />
+                                </button>
+                            )}
+                        </div>
+
+                        {editingSection === "ubicacion" ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748B" }}>Calle</label>
+                                        <input className="chamba-input" placeholder="Ej: Bolivar" value={tempData.calle} onChange={e => setTempData({ ...tempData, calle: e.target.value })} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748B" }}>Número</label>
+                                        <input className="chamba-input" type="number" placeholder="123" value={tempData.numero} onChange={e => setTempData({ ...tempData, numero: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748B" }}>Ciudad</label>
+                                        <input className="chamba-input" placeholder="Ej: Coronel Pringles" value={tempData.city} onChange={e => setTempData({ ...tempData, city: e.target.value })} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748B" }}>Provincia</label>
+                                        <input className="chamba-input" placeholder="Ej: Buenos Aires" value={tempData.province} onChange={e => setTempData({ ...tempData, province: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748B" }}>País</label>
+                                        <input className="chamba-input" value={tempData.pais} onChange={e => setTempData({ ...tempData, pais: e.target.value })} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748B" }}>Cód. Postal</label>
+                                        <input className="chamba-input" placeholder="7530" value={tempData.codigoPostal} onChange={e => setTempData({ ...tempData, codigoPostal: e.target.value })} />
+                                    </div>
+                                </div>
+                                
+                                <div style={{ ...editActionRow, marginTop: "8px" }}>
+                                    <button onClick={() => setEditingSection(null)} style={secondaryBtnStyle}>Cancelar</button>
+                                    <button 
+                                        onClick={handleSaveSection} 
+                                        disabled={isSaving}
+                                        style={{
+                                            ...primaryBtnSmallStyle,
+                                            opacity: isSaving ? 0.7 : 1,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                            justifyContent: "center"
+                                        }}
+                                    >
+                                        {isSaving ? <RefreshCw size={14} className="spin" /> : null}
+                                        {isSaving ? "Validando..." : "Guardar Ubicación"}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                    <div style={{ 
+                                        width: "40px", 
+                                        height: "40px", 
+                                        borderRadius: "12px", 
+                                        background: primaryColor + "10", 
+                                        display: "flex", 
+                                        alignItems: "center", 
+                                        justifyContent: "center" 
+                                    }}>
+                                        <MapPin size={20} color={primaryColor} />
+                                    </div>
+                                    <div style={{ fontSize: "14px", color: "#475569" }}>
+                                        <div style={{ fontWeight: "700", color: "#0F172A", fontSize: "15px" }}>{data.city}, {data.province}</div>
+                                        <div style={{ color: "#94A3B8", fontSize: "13px" }}>{data.calle} {data.numero}{data.codigoPostal ? `, CP ${data.codigoPostal}` : ""}</div>
+                                    </div>
+                                </div>
+                                <div style={{ 
+                                    padding: "12px", 
+                                    background: "#F8FAFC", 
+                                    borderRadius: "12px", 
+                                    fontSize: "11px", 
+                                    color: "#64748B",
+                                    border: "1px solid #F1F5F9"
+                                }}>
+                                    📍 Esta ubicación se utiliza para mostrarte en las búsquedas por cercanía de los clientes.
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Redes Sociales */}

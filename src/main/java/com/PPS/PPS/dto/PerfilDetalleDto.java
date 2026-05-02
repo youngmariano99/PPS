@@ -23,6 +23,9 @@ public class PerfilDetalleDto {
     private String email;
     private String matricula;
     private String direccion;
+    private String calle;
+    private Integer numero;
+    private Integer codigoPostal;
     private String pais;
     private String instagramUrl;
     private String facebookUrl;

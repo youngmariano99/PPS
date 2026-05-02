@@ -397,6 +397,9 @@ public class DirectorioService {
                 .provincia(p.getProvincia())
                 .ciudad(p.getCiudad())
                 .direccion(p.getCalle() + " " + p.getNumero())
+                .calle(p.getCalle())
+                .numero(p.getNumero())
+                .codigoPostal(p.getCodigoPostal())
                 .instagramUrl(p.getInstagramUrl())
                 .facebookUrl(p.getFacebookUrl())
                 .linkedinUrl(p.getLinkedinUrl())
@@ -444,7 +447,7 @@ public class DirectorioService {
     }
 
     private Point obtenerPuntoDesdeDireccion(PerfilSolicitudDto dto) {
-        String direccionFull = String.format("%s ,%d, %s, %s, %s",
+        String direccionFull = String.format("%s %d, %s, %s, %s",
                 dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia(), dto.getPais());
         double[] coords = geocodingService.obtenerCoordenadas(direccionFull);
         if (coords == null) {
@@ -470,16 +473,17 @@ public class DirectorioService {
         perfil.setEspecialidades(dto.getEspecialidades());
         perfil.setCondicionesServicio(dto.getCondicionesServicio());
 
-        // Si hay cambio de dirección, re-geocodificar
-        if (!perfil.getCalle().equals(dto.getCalle()) || !perfil.getNumero().equals(dto.getNumero()) ||
-                !perfil.getCiudad().equals(dto.getCiudad())) {
-            perfil.setCalle(dto.getCalle());
-            perfil.setNumero(dto.getNumero());
-            perfil.setCiudad(dto.getCiudad());
-            perfil.setProvincia(dto.getProvincia());
-            perfil.setPais(dto.getPais());
-            perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
-        }
+        // Siempre actualizar los campos de texto de dirección
+        perfil.setCalle(dto.getCalle());
+        perfil.setNumero(dto.getNumero());
+        perfil.setCiudad(dto.getCiudad());
+        perfil.setProvincia(dto.getProvincia());
+        perfil.setPais(dto.getPais());
+        perfil.setCodigoPostal(dto.getCodigoPostal());
+
+        // Re-geocodificar siempre para asegurar precisión tras los cambios en GeocodingService
+        // O al menos si hay cualquier cambio en los campos de ubicación
+        perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
 
         // --- SOLUCIÓN AL PROBLEMA 2 ---
         // 1. Validar límites según el plan actual

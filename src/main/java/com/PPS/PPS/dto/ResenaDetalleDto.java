@@ -17,4 +17,5 @@ public class ResenaDetalleDto {
     private OffsetDateTime fecha;
     private boolean trabajoVerificado;
     private String respuestaProveedor;
+    private UUID intencionContactoId;
 }

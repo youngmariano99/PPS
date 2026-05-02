@@ -99,12 +99,17 @@ export default function PerfilPublicoProveedorChamba(props) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isOwner, setIsOwner] = useState(false)
-    const [editingSection, setEditingSection] = useState(null) 
+    const [editingSection, setEditingSection] = useState(null)
     const [selectedImgIndex, setSelectedImgIndex] = useState(null)
     const [tempData, setTempData] = useState({})
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState(null)
     const [isMobile, setIsMobile] = useState(false)
+    const [intencionContactoId, setIntencionContactoId] = useState(null)
+    const [showReviewModal, setShowReviewModal] = useState(false)
+    const [reviewRating, setReviewRating] = useState(5)
+    const [reviewComment, setReviewComment] = useState("")
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 900)
@@ -358,6 +363,40 @@ export default function PerfilPublicoProveedorChamba(props) {
 
     useEffect(() => { discoverAndFetch() }, [apiUrl, enableDemoMode])
 
+    // --- INTERCEPCIÓN DE LINK MÁGICO (?review=true) ---
+    useEffect(() => {
+        const handleMagicLink = async () => {
+            const params = new URLSearchParams(window.location.search)
+            if (params.get("review") === "true") {
+                try {
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (!user) return // No abrimos si no hay usuario
+
+                    // Disparo silencioso de intención de contacto para generar el Badge
+                    const response = await fetch(`${apiUrl}/contactos`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-User-Id": user.id
+                        },
+                        body: JSON.stringify({ destinoId: data.id })
+                    })
+
+                    if (response.ok) {
+                        const id = await response.json()
+                        setIntencionContactoId(id)
+                    }
+                    
+                    // Abrir modal automáticamente
+                    setShowReviewModal(true)
+                } catch (err) {
+                    console.error("Error en el flujo de link mágico:", err)
+                }
+            }
+        }
+        if (data && !isOwner) handleMagicLink()
+    }, [data, isOwner])
+
     const handleEditSection = (section) => {
         setTempData({ ...data })
         setEditingSection(section)
@@ -421,6 +460,75 @@ export default function PerfilPublicoProveedorChamba(props) {
             console.error("Error saving section:", err)
         } finally {
             setIsSaving(false)
+        }
+    }
+
+    const handleContactClick = async () => {
+        if (!data.phone) {
+            alert("El profesional aún no ha registrado un teléfono de contacto.")
+            return
+        }
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                alert("Debes iniciar sesión para contactar a un profesional.")
+                return
+            }
+
+            // Registrar Intención de Contacto
+            const response = await fetch(`${apiUrl}/contactos`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-User-Id": user.id
+                },
+                body: JSON.stringify({ destinoId: data.id })
+            })
+
+            if (response.ok) {
+                const id = await response.json()
+                setIntencionContactoId(id)
+            }
+        } catch (err) {
+            console.error("Error al registrar contacto:", err)
+        }
+
+        const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`)
+        window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank")
+    }
+
+    const handleReviewSubmit = async () => {
+        setIsSubmittingReview(true)
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            const response = await fetch(`${apiUrl}/resenas`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-User-Id": user.id
+                },
+                body: JSON.stringify({
+                    intencionContactoId: intencionContactoId,
+                    estrellas: reviewRating,
+                    comentario: reviewComment,
+                    propietarioId: data.id
+                })
+            })
+
+            if (response.ok) {
+                alert("¡Gracias por tu reseña!")
+                setShowReviewModal(false)
+                setReviewComment("")
+                discoverAndFetch() // Recargar datos
+            } else {
+                const errorData = await response.json()
+                alert(errorData.mensaje || "Error al enviar la reseña.")
+            }
+        } catch (err) {
+            alert("Error de conexión al enviar la reseña.")
+        } finally {
+            setIsSubmittingReview(false)
         }
     }
 
@@ -578,12 +686,14 @@ export default function PerfilPublicoProveedorChamba(props) {
                             )}
                         </div>
 
-                        {/* Trust Badges - Horizontal Alignment */}
-                        <div style={{
+                        {/* Botón Compartir + Redes Sociales (Columna) */}
+                        <div style={{ 
                             marginTop: isMobile ? "32px" : "12px",
                             display: "flex",
-                            gap: "16px"
+                            flexDirection: "column",
+                            gap: "20px"
                         }}>
+                            {/* Compartir Perfil */}
                             <div
                                 onClick={() => {
                                     const text = encodeURIComponent(`¡Hola! Mirá el perfil de profesional de ${data.name} en Chamba: ${window.location.href}. Encontrá los mejores talentos de tu zona de forma rápida y segura. 🚀`);
@@ -592,14 +702,15 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: "10px",
+                                    gap: "12px",
                                     background: "white",
                                     padding: "12px 24px",
                                     borderRadius: "16px",
                                     border: `2px solid ${primaryColor}15`,
                                     cursor: "pointer",
                                     boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
-                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                    width: "fit-content"
                                 }}
                                 className="chamba-share-btn"
                                 onMouseEnter={(e) => {
@@ -620,6 +731,60 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     <span style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>Compartir perfil</span>
                                     <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "600" }}>Recomendar a otros</span>
                                 </div>
+                            </div>
+
+                            {/* Redes Sociales - Nueva Ubicación Minimalista */}
+                            <div style={{ padding: "0 4px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px" }}>Redes sociales</div>
+                                    {isOwner && editingSection !== "social" && (
+                                        <button onClick={() => handleEditSection("social")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600" }}>
+                                            <Edit3 size={12} /> Editar
+                                        </button>
+                                    )}
+                                </div>
+
+                                {editingSection === "social" ? (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "white", padding: "16px", borderRadius: "16px", border: `1px solid ${primaryColor}20`, boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+                                        <div>
+                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Instagram (URL)</label>
+                                            <input className="chamba-input" style={{ padding: "8px 12px" }} value={tempData.instagram} onChange={e => setTempData({ ...tempData, instagram: e.target.value })} placeholder="https://instagram.com/..." />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Facebook (URL)</label>
+                                            <input className="chamba-input" style={{ padding: "8px 12px" }} value={tempData.facebook} onChange={e => setTempData({ ...tempData, facebook: e.target.value })} placeholder="https://facebook.com/..." />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>LinkedIn (URL)</label>
+                                            <input className="chamba-input" style={{ padding: "8px 12px" }} value={tempData.linkedin} onChange={e => setTempData({ ...tempData, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." />
+                                        </div>
+                                        <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                                            <button onClick={() => setEditingSection(null)} style={{ ...secondaryBtnStyle, fontSize: "12px", padding: "6px 12px" }}>Cancelar</button>
+                                            <button onClick={handleSaveSection} style={{ ...primaryBtnSmallStyle, fontSize: "12px", padding: "6px 16px" }}>Guardar</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+                                        {data.instagram && (
+                                            <a href={data.instagram} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
+                                                <Instagram size={18} color="#E1306C" /> <span>Instagram</span>
+                                            </a>
+                                        )}
+                                        {data.facebook && (
+                                            <a href={data.facebook} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
+                                                <Facebook size={18} color="#1877F2" /> <span>Facebook</span>
+                                            </a>
+                                        )}
+                                        {data.linkedin && (
+                                            <a href={data.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
+                                                <Linkedin size={18} color="#0077B5" /> <span>LinkedIn</span>
+                                            </a>
+                                        )}
+                                        {!data.instagram && !data.facebook && !data.linkedin && (
+                                            <span style={{ fontSize: "13px", color: "#94A3B8", fontStyle: "italic" }}>Sin redes vinculadas</span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -869,7 +1034,28 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                             <div style={{ maxWidth: "240px" }}>
                                 <p style={{ fontSize: "14px", color: "#475569", marginBottom: "16px" }}>¿Trabajaste con {data.name.split(" ")[0]}? Dejá tu reseña y ayudá a otros clientes.</p>
-                                <button className="chamba-btn-primary" style={{ width: "auto", padding: "10px 24px" }}>Dejar una reseña</button>
+                                <button 
+                                    className="chamba-btn-primary" 
+                                    style={{ width: "auto", padding: "10px 24px" }}
+                                    onClick={() => {
+                                        if (isOwner) {
+                                            alert("No puedes calificar tu propio perfil.")
+                                            return
+                                        }
+                                        
+                                        const checkUser = async () => {
+                                            const { data: { user } } = await supabase.auth.getUser()
+                                            if (!user) {
+                                                alert("Debes iniciar sesión para calificar.")
+                                                return
+                                            }
+                                            setShowReviewModal(true)
+                                        }
+                                        checkUser()
+                                    }}
+                                >
+                                    Dejar una reseña
+                                </button>
                             </div>
                         </div>
 
@@ -897,11 +1083,18 @@ export default function PerfilPublicoProveedorChamba(props) {
                                         <p style={{ fontSize: "14px", color: "#475569", lineHeight: "1.6", marginBottom: "16px", minHeight: "60px" }}>
                                             {rev.comentario}
                                         </p>
-                                        {rev.trabajoVerificado && (
-                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#F1F5F9", padding: "4px 10px", borderRadius: "8px", fontSize: "12px", color: "#64748B", fontWeight: "600" }}>
-                                                <CheckCircle2 size={12} /> Trabajo verificado
-                                            </span>
-                                        )}
+                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                            {rev.intencionContactoId && (
+                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#F1F5F9", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", color: "#3B6790", fontWeight: "700" }}>
+                                                    👁️ Contacto Verificado
+                                                </span>
+                                            )}
+                                            {rev.trabajoVerificado && (
+                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#F1F5F9", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", color: "#64748B", fontWeight: "600" }}>
+                                                    <CheckCircle2 size={12} /> Trabajo verificado
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             ) : (
@@ -923,14 +1116,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                     <button
                         className="chamba-btn-primary"
                         style={{ padding: "18px", marginBottom: "12px" }}
-                        onClick={() => {
-                            if (!data.phone) {
-                                alert("El profesional aún no ha registrado un teléfono de contacto.");
-                                return;
-                            }
-                            const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`);
-                            window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank");
-                        }}
+                        onClick={handleContactClick}
                     >
                         <MessageCircle size={20} /> Contactar por WhatsApp
                     </button>
@@ -1086,69 +1272,76 @@ export default function PerfilPublicoProveedorChamba(props) {
                         )}
                     </div>
 
-                    {/* Redes Sociales */}
-                    <div className="chamba-card">
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                            <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px" }}>Redes sociales</div>
-                            {isOwner && editingSection !== "social" && (
-                                <button onClick={() => handleEditSection("social")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer" }}>
-                                    <Edit3 size={14} />
-                                </button>
-                            )}
-                        </div>
-
-                        {editingSection === "social" ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                <div>
-                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Instagram (URL)</label>
-                                    <input className="chamba-input" value={tempData.instagram} onChange={e => setTempData({ ...tempData, instagram: e.target.value })} placeholder="https://instagram.com/..." />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Facebook (URL)</label>
-                                    <input className="chamba-input" value={tempData.facebook} onChange={e => setTempData({ ...tempData, facebook: e.target.value })} placeholder="https://facebook.com/..." />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>LinkedIn (URL)</label>
-                                    <input className="chamba-input" value={tempData.linkedin} onChange={e => setTempData({ ...tempData, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." />
-                                </div>
-                                <div style={editActionRow}>
-                                    <button onClick={() => setEditingSection(null)} style={secondaryBtnStyle}>Cancelar</button>
-                                    <button onClick={handleSaveSection} style={primaryBtnSmallStyle}>Guardar</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                {data.instagram && (
-                                    <a href={data.instagram} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
-                                        <Instagram size={20} color="#E1306C" /> <span>Instagram</span>
-                                    </a>
-                                )}
-                                {data.facebook && (
-                                    <a href={data.facebook} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
-                                        <Facebook size={20} color="#1877F2" /> <span>Facebook</span>
-                                    </a>
-                                )}
-                                {data.linkedin && (
-                                    <a href={data.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
-                                        <Linkedin size={20} color="#0077B5" /> <span>LinkedIn</span>
-                                    </a>
-                                )}
-                                {!data.instagram && !data.facebook && !data.linkedin && (
-                                    <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>Sin redes vinculadas</span>
-                                )}
-                            </div>
-                        )}
-                    </div>
 
                 </div>
             </div>
 
 
+            <ReviewModal />
             <FloatingContact />
             <PortfolioLightbox />
             <div style={{ height: "40px" }} />
         </div>
     )
+
+    function ReviewModal() {
+        if (!showReviewModal) return null
+        return (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    style={{ background: "white", borderRadius: "24px", width: "100%", maxWidth: "450px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+                >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                        <h3 className="chamba-title" style={{ fontSize: "22px", fontWeight: "700", margin: 0 }}>Calificar servicio</h3>
+                        <button onClick={() => setShowReviewModal(false)} style={{ background: "#F1F5F9", border: "none", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
+                    </div>
+
+                    <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>¿Cómo fue tu experiencia trabajando con <b>{data.name}</b>?</p>
+
+                    <div style={{ marginBottom: "24px" }}>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Tu calificación</label>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            {[1, 2, 3, 4, 5].map(star => (
+                                <button 
+                                    key={star}
+                                    onClick={() => setReviewRating(star)}
+                                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                                >
+                                    <Star 
+                                        size={32} 
+                                        fill={star <= reviewRating ? "#F59E0B" : "none"} 
+                                        color={star <= reviewRating ? "#F59E0B" : "#CBD5E1"} 
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: "32px" }}>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Comentario (Opcional)</label>
+                        <textarea 
+                            className="chamba-input"
+                            style={{ minHeight: "120px", resize: "none" }}
+                            placeholder="Contanos un poco más sobre el trabajo realizado..."
+                            value={reviewComment}
+                            onChange={(e) => setReviewComment(e.target.value)}
+                        />
+                    </div>
+
+                    <button 
+                        className="chamba-btn-primary" 
+                        disabled={isSubmittingReview}
+                        onClick={handleReviewSubmit}
+                        style={{ height: "56px", fontSize: "16px" }}
+                    >
+                        {isSubmittingReview ? <RefreshCw className="spin" size={20} /> : "Publicar Reseña"}
+                    </button>
+                </motion.div>
+            </div>
+        )
+    }
 
     function FloatingContact() {
         if (isOwner) return null
@@ -1159,10 +1352,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                 style={{ position: "fixed", bottom: "32px", right: "32px", zIndex: 1000, display: "flex", gap: "12px" }}
             >
                 <button
-                    onClick={() => {
-                        const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`);
-                        window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank");
-                    }}
+                    onClick={handleContactClick}
                     className="chamba-btn-primary"
                     style={{ width: "auto", padding: "16px 32px", boxShadow: "0 15px 35px " + primaryColor + "40", background: primaryColor, borderRadius: "100px" }}
                 >

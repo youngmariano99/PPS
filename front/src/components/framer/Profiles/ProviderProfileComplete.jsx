@@ -287,20 +287,33 @@ export default function ProviderProfileComplete(props) {
                                 <p style={{...hS.cat, color: primaryColor}}>{data.category}</p>
                             </div>
                         </div>
-                        <div style={hS.actions}>
+                        <div style={{ ...hS.actions, gap: "12px" }}>
                              {isOwner && (
-                                 !isEditing ? (
-                                    <motion.button whileHover={{ scale: 1.02 }} onClick={() => setIsEditing(true)} style={hS.btnEdit}>
-                                        <Edit3 size={16} /> <span>Editar Perfil</span>
-                                    </motion.button>
-                                 ) : (
-                                    <div style={{ display: "flex", gap: "10px" }}>
-                                        <button onClick={() => setIsEditing(false)} style={hS.btnCancel} disabled={saving}><X size={16} /></button>
-                                        <button onClick={handleSave} style={{...hS.btnSave, backgroundColor: primaryColor}} disabled={saving}>
-                                            {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} <span>Guardar</span>
-                                        </button>
-                                    </div>
-                                 )
+                                  !isEditing ? (
+                                    <>
+                                        <motion.button 
+                                            whileHover={{ scale: 1.02 }} 
+                                            onClick={() => {
+                                                const url = `${window.location.origin}/perfiles/proveedor/${data.id}?review=true`
+                                                navigator.clipboard.writeText(url)
+                                                alert("¡Link para reseñas copiado al portapapeles!")
+                                            }} 
+                                            style={{ ...hS.btnEdit, color: "#3B6790", borderColor: "#3B6790" }}
+                                        >
+                                            <Landmark size={16} /> <span>Copiar Link para Reseñas</span>
+                                        </motion.button>
+                                        <motion.button whileHover={{ scale: 1.02 }} onClick={() => setIsEditing(true)} style={hS.btnEdit}>
+                                            <Edit3 size={16} /> <span>Editar Perfil</span>
+                                        </motion.button>
+                                    </>
+                                  ) : (
+                                     <div style={{ display: "flex", gap: "10px" }}>
+                                         <button onClick={() => setIsEditing(false)} style={hS.btnCancel} disabled={saving}><X size={16} /></button>
+                                         <button onClick={handleSave} style={{...hS.btnSave, backgroundColor: primaryColor}} disabled={saving}>
+                                             {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} <span>Guardar</span>
+                                         </button>
+                                     </div>
+                                  )
                              )}
                         </div>
                     </div>

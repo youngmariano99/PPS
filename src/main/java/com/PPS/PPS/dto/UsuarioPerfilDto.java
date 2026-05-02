@@ -18,4 +18,5 @@ public class UsuarioPerfilDto {
     private String rol; // USUARIO, PROVEEDOR, EMPRESA
     private String telefono;
     private String fechaRegistro;
+    private boolean isPremium;
 }

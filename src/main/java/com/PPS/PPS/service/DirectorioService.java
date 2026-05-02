@@ -480,6 +480,11 @@ public class DirectorioService {
         String rol = esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO");
         log.info("Usuario {} identificado con rol: {}", usuarioId, rol);
 
+        boolean isPremium = suscripcionRepository.findByUsuarioIdAndEstado(usuarioId, "ACTIVA")
+                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                         s.getPlan().getNombre().equalsIgnoreCase("PRO"))
+                .orElse(false);
+
         return UsuarioPerfilDto.builder()
                 .id(usuario.getId())
                 .nombre(usuario.getNombre())
@@ -488,6 +493,7 @@ public class DirectorioService {
                 .rol(rol)
                 .telefono(usuario.getTelefono())
                 .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
+                .isPremium(isPremium)
                 .build();
     }
 

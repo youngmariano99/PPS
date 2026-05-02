@@ -169,7 +169,7 @@ public class AuthService {
                     .dni(dto.getDniCuit())
                     .matricula(dto.getMatricula())
                     .fotoPerfilUrl(dto.getFotoPerfilUrl())
-                    .pais("Argentina")
+                    .pais(dto.getPais())
                     .provincia(dto.getProvincia())
                     .ciudad(dto.getCiudad())
                     .calle(dto.getCalle())
@@ -189,7 +189,7 @@ public class AuthService {
                     .razonSocial(dto.getNombre()) // En empresas el nombre suele ser la razón social
                     .cuit(dto.getDniCuit())
                     .logoUrl(dto.getFotoPerfilUrl())
-                    .pais("Argentina")
+                    .pais(dto.getPais())
                     .provincia(dto.getProvincia())
                     .ciudad(dto.getCiudad())
                     .calle(dto.getCalle())

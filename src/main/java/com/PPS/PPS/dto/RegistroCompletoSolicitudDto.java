@@ -46,6 +46,9 @@ public class RegistroCompletoSolicitudDto {
     private String matricula;
     private String fotoPerfilUrl;
 
+    @NotBlank(message = "El país es obligatorio")
+    private String pais;
+
     // --- Ubicación ---
     @NotBlank(message = "La calle es obligatoria")
     private String calle;

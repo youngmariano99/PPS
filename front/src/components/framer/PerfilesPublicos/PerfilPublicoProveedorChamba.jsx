@@ -26,8 +26,36 @@ import {
     Clock,
     ShieldCheck,
     MessageCircle,
+    Video,
+    Play,
     ChevronRight,
+    ChevronLeft,
+    Maximize2
 } from "lucide-react"
+
+const getEmbedUrl = (url) => {
+    if (!url) return null
+    try {
+        if (url.includes("youtube.com") || url.includes("youtu.be")) {
+            const id = url.includes("v=") ? url.split("v=")[1].split("&")[0] : url.split("/").pop()
+            return `https://www.youtube.com/embed/${id}`
+        }
+        if (url.includes("instagram.com")) {
+            const parts = url.split("/")
+            const pIdx = parts.indexOf("p")
+            const rIdx = parts.indexOf("reel")
+            const id = pIdx !== -1 ? parts[pIdx + 1] : (rIdx !== -1 ? parts[rIdx + 1] : null)
+            if (id) return `https://www.instagram.com/p/${id.split("?")[0]}/embed/`
+        }
+        if (url.includes("tiktok.com")) {
+            const id = url.split("/video/")[1]?.split("?")[0]
+            if (id) return `https://www.tiktok.com/embed/v2/${id}`
+        }
+    } catch (e) {
+        return null
+    }
+    return null
+}
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
@@ -46,6 +74,24 @@ const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+// --- HELPER MULTIMEDIA ---
+function openUploadWidget(callback, multiple) {
+    if (window.cloudinary) {
+        window.cloudinary.openUploadWidget({
+            cloudName: "denfvu7zy",
+            uploadPreset: "unsigned_preset",
+            multiple: multiple,
+            sources: ["local", "url", "camera"]
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
+                callback(result.info.secure_url)
+            }
+        })
+    } else {
+        alert("El servicio de carga aún no está listo. Por favor, reintente en un momento.")
+    }
+}
+
 export default function PerfilPublicoProveedorChamba(props) {
     const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false } = props
 
@@ -53,7 +99,8 @@ export default function PerfilPublicoProveedorChamba(props) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isOwner, setIsOwner] = useState(false)
-    const [editingSection, setEditingSection] = useState(null) // 'header', 'bio', 'specialties', 'portfolio', 'conditions', 'contact'
+    const [editingSection, setEditingSection] = useState(null) 
+    const [selectedImgIndex, setSelectedImgIndex] = useState(null)
     const [tempData, setTempData] = useState({})
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState(null)
@@ -74,6 +121,12 @@ export default function PerfilPublicoProveedorChamba(props) {
         fontLink.href = "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
         fontLink.rel = "stylesheet"
         document.head.appendChild(fontLink)
+
+        const cloudinaryScript = document.createElement("script")
+        cloudinaryScript.src = "https://widget.cloudinary.com/v2.0/global/all.js"
+        cloudinaryScript.type = "text/javascript"
+        cloudinaryScript.async = true
+        document.body.appendChild(cloudinaryScript)
 
         const styleSheet = document.createElement("style")
         styleSheet.textContent = `
@@ -255,6 +308,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                         instagram: res.instagramUrl || "",
                         facebook: res.facebookUrl || "",
                         linkedin: res.linkedinUrl || "",
+                        videoLinks: res.videoLinks || [],
                     }
                     setData(mapped)
                     setTempData(mapped)
@@ -310,7 +364,7 @@ export default function PerfilPublicoProveedorChamba(props) {
         try {
             const { data: { user } } = await supabase.auth.getUser()
             const { data: { session } } = await supabase.auth.getSession()
-            
+
             // Mapeo de tempData a PerfilSolicitudDto
             const payload = {
                 descripcion: tempData.description,
@@ -327,12 +381,13 @@ export default function PerfilPublicoProveedorChamba(props) {
                 ciudad: data.city,
                 calle: data.address ? data.address.split(" ")[0] : "",
                 numero: data.address ? parseInt(data.address.split(" ")[1]) || 0 : 0,
-                codigoPostal: 0 // Mock o traer de data si existe
+                codigoPostal: 0,
+                videoLinks: (tempData.videoLinks || []).filter(l => l.trim() !== "")
             }
 
             const response = await fetch(`${apiUrl}/perfil/proveedor/me`, {
                 method: "PUT",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
                     Authorization: session ? `Bearer ${session.access_token}` : "",
                     "X-User-Id": user ? user.id : ""
@@ -369,37 +424,25 @@ export default function PerfilPublicoProveedorChamba(props) {
     // --- RENDERIZADO ---
     return (
         <div className="chamba-perfil">
-            
+
             {/* HERO SECTION */}
             <div style={{ background: "linear-gradient(180deg, #F3E8FF 0%, #FFFFFF 100%)", padding: "40px 0", borderBottom: "1px solid #F1F5F9" }}>
                 <div style={{ maxWidth: "1120px", margin: "0 auto", padding: "0 24px" }}>
-                    
+
                     {/* Breadcrumbs (Mock) */}
                     <div style={{ display: "flex", gap: "8px", fontSize: "12px", color: "#94A3B8", marginBottom: "32px", alignItems: "center" }}>
                         <span>Inicio</span> <ChevronRight size={12} />
                         <span>{data.category}</span> <ChevronRight size={12} />
                         <span style={{ color: "#475569", fontWeight: "600" }}>{data.name}</span>
-                        <div style={{ flex: 1 }} />
-                        <div 
-                            onClick={() => {
-                                const text = encodeURIComponent(`¡Hola! Mirá el perfil de profesional de ${data.name} en Chamba: ${window.location.href}. Encontrá los mejores talentos de tu zona de forma rápida y segura. 🚀`);
-                                window.open(`https://wa.me/?text=${text}`, "_blank");
-                            }}
-                            style={{ display: "flex", gap: "6px", alignItems: "center", color: primaryColor, fontWeight: "700", cursor: "pointer", background: primaryColor + "10", padding: "8px 16px", borderRadius: "100px", transition: "all 0.2s" }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = primaryColor + "20"}
-                            onMouseLeave={(e) => e.currentTarget.style.background = primaryColor + "10"}
-                        >
-                            <span style={{ fontSize: "13px" }}>Compartir perfil</span> <ExternalLink size={14} />
-                        </div>
                     </div>
 
                     <div style={{ display: "flex", gap: "40px", flexWrap: "wrap", alignItems: "flex-start" }}>
                         {/* Avatar */}
                         <div style={{ position: "relative" }}>
-                            <div style={{ 
-                                width: "160px", 
-                                height: "160px", 
-                                borderRadius: "48px", 
+                            <div style={{
+                                width: "160px",
+                                height: "160px",
+                                borderRadius: "48px",
                                 border: data.isPro ? `4px solid ${primaryColor}` : "4px solid white",
                                 boxShadow: data.isPro ? `0 10px 30px ${primaryColor}20` : "0 10px 30px rgba(0,0,0,0.05)",
                                 backgroundSize: "cover",
@@ -408,10 +451,10 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 backgroundColor: "#F1F5F9"
                             }} />
                             {isOwner && (
-                                <button 
+                                <button
                                     onClick={() => openUploadWidget((url) => {
                                         setTempData(prev => ({ ...prev, avatar: url }))
-                                        setEditingSection("header")
+                                        setEditingSection("avatar")
                                     }, false)}
                                     style={{
                                         position: "absolute",
@@ -433,6 +476,12 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     <Camera size={20} color={primaryColor} />
                                 </button>
                             )}
+                            {editingSection === "avatar" && (
+                                <div style={{ position: "absolute", bottom: "-60px", left: "0", right: "0", display: "flex", gap: "8px", justifyContent: "center", zIndex: 20 }}>
+                                    <button onClick={handleSaveSection} style={{ ...primaryBtnSmallStyle, padding: "6px 12px", fontSize: "11px" }}>Guardar</button>
+                                    <button onClick={() => { setTempData(prev => ({ ...prev, avatar: data.avatar })); setEditingSection(null); }} style={{ ...secondaryBtnStyle, padding: "6px 12px", fontSize: "11px", background: "white", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>X</button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Info Header */}
@@ -443,23 +492,18 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     {data.isPro && <span className="chamba-badge-pro">PRO</span>}
                                     <CheckCircle2 size={24} color={primaryColor} fill={primaryColor + "20"} />
                                 </div>
-                                {isOwner && editingSection !== "header" && (
-                                    <button onClick={() => handleEditSection("header")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer", fontWeight: "600", fontSize: "14px" }}>
-                                        <Edit3 size={16} /> Editar
-                                    </button>
-                                )}
                             </div>
-                            
+
                             <p style={{ fontSize: "18px", fontWeight: "600", color: primaryColor, marginBottom: "12px" }}>{data.category}</p>
-                            
+
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px" }}>
                                 <div style={{ display: "flex", gap: "2px" }}>
-                                    {[1,2,3,4,5].map(i => (
-                                        <Star 
-                                            key={i} 
-                                            size={16} 
-                                            fill={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"} 
-                                            color={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"} 
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <Star
+                                            key={i}
+                                            size={16}
+                                            fill={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"}
+                                            color={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"}
                                         />
                                     ))}
                                 </div>
@@ -467,113 +511,98 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 <span style={{ color: "#94A3B8", fontSize: "14px" }}>({data.reviewCount} reseñas)</span>
                             </div>
 
-                            {editingSection === "header" ? (
-                                <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: `1px solid ${primaryColor}20`, marginBottom: "20px" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                                            <div>
-                                                <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Instagram</label>
-                                                <input className="chamba-input" value={tempData.instagram} onChange={e => setTempData({...tempData, instagram: e.target.value})} placeholder="URL de Instagram" />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Facebook</label>
-                                                <input className="chamba-input" value={tempData.facebook} onChange={e => setTempData({...tempData, facebook: e.target.value})} placeholder="URL de Facebook" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>LinkedIn</label>
-                                            <input className="chamba-input" value={tempData.linkedin} onChange={e => setTempData({...tempData, linkedin: e.target.value})} placeholder="URL de LinkedIn" />
-                                        </div>
-                                        <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "8px" }}>
-                                            <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
-                                            <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
-                                                {isSaving ? "Guardando..." : "Guardar"}
-                                            </button>
-                                        </div>
+                            {editingSection === "bio" ? (
+                                <div style={{ marginBottom: "24px" }}>
+                                    <textarea
+                                        className="chamba-input"
+                                        style={{ minHeight: "100px", resize: "none" }}
+                                        value={tempData.description}
+                                        onChange={e => setTempData({ ...tempData, description: e.target.value })}
+                                    />
+                                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
+                                        <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
+                                        <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
                                     </div>
                                 </div>
                             ) : (
-                                <>
-                                    {editingSection === "bio" ? (
-                                        <div style={{ marginBottom: "24px" }}>
-                                            <textarea 
-                                                className="chamba-input" 
-                                                style={{ minHeight: "100px", resize: "none" }}
-                                                value={tempData.description}
-                                                onChange={e => setTempData({...tempData, description: e.target.value})}
-                                            />
-                                            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                                                <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
-                                                <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div style={{ position: "relative" }}>
-                                            <p style={{ color: "#475569", fontSize: "15px", lineHeight: "1.6", maxWidth: "600px", marginBottom: "24px" }}>
-                                                {data.description}
-                                                {isOwner && <Edit3 size={14} style={{ marginLeft: "8px", cursor: "pointer", color: primaryColor }} onClick={() => handleEditSection("bio")} />}
-                                            </p>
-                                        </div>
-                                    )}
+                                <div style={{ position: "relative" }}>
+                                    <p style={{ color: "#475569", fontSize: "15px", lineHeight: "1.6", maxWidth: "600px", marginBottom: "24px" }}>
+                                        {data.description}
+                                        {isOwner && <Edit3 size={14} style={{ marginLeft: "8px", cursor: "pointer", color: primaryColor }} onClick={() => handleEditSection("bio")} />}
+                                    </p>
+                                </div>
+                            )}
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Especialidades</div>
-                                        {isOwner && editingSection !== "specialties" && <Edit3 size={14} style={{ cursor: "pointer", color: primaryColor }} onClick={() => handleEditSection("specialties")} />}
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Especialidades</div>
+                                {isOwner && editingSection !== "specialties" && <Edit3 size={14} style={{ cursor: "pointer", color: primaryColor }} onClick={() => handleEditSection("specialties")} />}
+                            </div>
+
+                            {editingSection === "specialties" ? (
+                                <div style={{ marginBottom: "20px" }}>
+                                    <TagInput
+                                        tags={tempData.specialties}
+                                        setTags={(t) => setTempData({ ...tempData, specialties: t })}
+                                    />
+                                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
+                                        <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
+                                        <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
                                     </div>
-                                    
-                                    {editingSection === "specialties" ? (
-                                        <div style={{ marginBottom: "20px" }}>
-                                            <TagInput 
-                                                tags={tempData.specialties} 
-                                                setTags={(t) => setTempData({...tempData, specialties: t})} 
-                                            />
-                                            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                                                <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
-                                                <button onClick={handleSaveSection} style={{ background: primaryColor, color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>Guardar</button>
-                                            </div>
-                                        </div>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                    {data.specialties.length > 0 ? (
+                                        data.specialties.map((tag, i) => (
+                                            <span key={i} className="chamba-tag">{tag}</span>
+                                        ))
                                     ) : (
-                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                            {data.specialties.length > 0 ? (
-                                                data.specialties.map((tag, i) => (
-                                                    <span key={i} className="chamba-tag">{tag}</span>
-                                                ))
-                                            ) : (
-                                                <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó especialidades.</span>
-                                            )}
-                                        </div>
+                                        <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>{data.name.split(" ")[0]} aún no especificó especialidades.</span>
                                     )}
-                                </>
+                                </div>
                             )}
                         </div>
 
                         {/* Trust Badges - Horizontal Alignment */}
-                        <div style={{ 
-                            display: "flex", 
-                            flexDirection: isMobile ? "column" : "row", 
-                            gap: "24px", 
-                            alignItems: "center", 
-                            marginTop: isMobile ? "20px" : "10px"
+                        <div style={{
+                            marginTop: isMobile ? "32px" : "12px",
+                            display: "flex",
+                            gap: "16px"
                         }}>
-                            <div className="feature-icon-box" style={{ padding: 0 }}>
-                                <Zap size={24} color={primaryColor} />
-                                <div style={{ display: "flex", flexDirection: "column" }}>
-                                    <span className="feature-label">Trabajo garantizado</span>
-                                    <span className="feature-sub">Compromiso y calidad</span>
+                            <div
+                                onClick={() => {
+                                    const text = encodeURIComponent(`¡Hola! Mirá el perfil de profesional de ${data.name} en Chamba: ${window.location.href}. Encontrá los mejores talentos de tu zona de forma rápida y segura. 🚀`);
+                                    window.open(`https://wa.me/?text=${text}`, "_blank");
+                                }}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "10px",
+                                    background: "white",
+                                    padding: "12px 24px",
+                                    borderRadius: "16px",
+                                    border: `2px solid ${primaryColor}15`,
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                                }}
+                                className="chamba-share-btn"
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-2px)"
+                                    e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.08)"
+                                    e.currentTarget.style.borderColor = primaryColor + "30"
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)"
+                                    e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.04)"
+                                    e.currentTarget.style.borderColor = primaryColor + "15"
+                                }}
+                            >
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: primaryColor + "10", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <ExternalLink size={18} color={primaryColor} />
                                 </div>
-                            </div>
-                            <div className="feature-icon-box" style={{ padding: 0 }}>
-                                <Clock size={24} color={primaryColor} />
                                 <div style={{ display: "flex", flexDirection: "column" }}>
-                                    <span className="feature-label">Respuesta rápida</span>
-                                    <span className="feature-sub">Menos de 1 hora</span>
-                                </div>
-                            </div>
-                            <div className="feature-icon-box" style={{ padding: 0 }}>
-                                <ShieldCheck size={24} color={primaryColor} />
-                                <div style={{ display: "flex", flexDirection: "column" }}>
-                                    <span className="feature-label">Profesional verificado</span>
-                                    <span className="feature-sub">Perfil aprobado</span>
+                                    <span style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>Compartir perfil</span>
+                                    <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "600" }}>Recomendar a otros</span>
                                 </div>
                             </div>
                         </div>
@@ -583,7 +612,7 @@ export default function PerfilPublicoProveedorChamba(props) {
 
             {/* MAIN CONTENT GRID */}
             <div style={{ maxWidth: "1120px", margin: "40px auto", padding: "0 24px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: "40px" }}>
-                
+
                 {/* Left Column */}
                 <div>
                     {/* Portfolio */}
@@ -592,16 +621,30 @@ export default function PerfilPublicoProveedorChamba(props) {
                             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                 <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Portfolio</h3>
                                 {isOwner && (
-                                    <button 
-                                        onClick={() => openUploadWidget((url) => {
-                                            const newPortfolio = [...data.portfolio, url]
-                                            setTempData({...data, portfolio: newPortfolio})
-                                            handleEditSection("portfolio")
-                                        }, true)}
-                                        style={{ background: primaryColor + "15", border: "none", color: primaryColor, borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                    >
-                                        +
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={() => openUploadWidget((url) => {
+                                                const currentPortfolio = tempData.portfolio || data.portfolio
+                                                const newPortfolio = [...currentPortfolio, url]
+                                                setTempData(prev => ({ ...prev, portfolio: newPortfolio }))
+                                                setEditingSection("portfolio")
+                                            }, true)}
+                                            style={{ background: primaryColor + "15", border: "none", color: primaryColor, borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                            title="Agregar Foto"
+                                        >
+                                            <Camera size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (!editingSection) handleEditSection("portfolio")
+                                                setTempData(prev => ({ ...prev, videoLinks: [...(prev.videoLinks || []), ""] }))
+                                            }}
+                                            style={{ background: primaryColor + "15", border: "none", color: primaryColor, borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                            title="Agregar Link de Video"
+                                        >
+                                            <Video size={14} />
+                                        </button>
+                                    </>
                                 )}
                             </div>
                             {editingSection === "portfolio" && (
@@ -612,15 +655,21 @@ export default function PerfilPublicoProveedorChamba(props) {
                             )}
                         </div>
 
-                        <div className="portfolio-grid" style={{ gap: "12px" }}>
+                        {/* Imágenes del Portfolio */}
+                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "12px" }}>Fotos de trabajos</div>
+                        <div className="portfolio-grid" style={{ gap: "12px", marginBottom: "32px" }}>
                             {(editingSection === "portfolio" ? tempData.portfolio : data.portfolio).map((img, i) => (
                                 <div key={i} style={{ position: "relative" }}>
-                                    <div className="portfolio-item" style={{ backgroundImage: `url(${img})`, borderRadius: "12px" }} />
+                                    <div 
+                                        className="portfolio-item" 
+                                        style={{ backgroundImage: `url(${img})`, borderRadius: "12px", cursor: "pointer" }} 
+                                        onClick={() => setSelectedImgIndex(i)}
+                                    />
                                     {editingSection === "portfolio" && (
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 const newP = tempData.portfolio.filter((_, idx) => idx !== i)
-                                                setTempData({...tempData, portfolio: newP})
+                                                setTempData({ ...tempData, portfolio: newP })
                                             }}
                                             style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(239, 68, 68, 0.9)", color: "white", border: "none", width: "24px", height: "24px", borderRadius: "50%", cursor: "pointer", fontSize: "12px" }}
                                         >
@@ -630,6 +679,87 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 </div>
                             ))}
                         </div>
+
+                        {/* Videos del Portfolio */}
+                        {(data.videoLinks.length > 0 || editingSection === "portfolio") && (
+                            <div style={{ marginTop: "32px" }}>
+                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px" }}>Videos y Presentaciones</div>
+                                
+                                {editingSection === "portfolio" ? (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                        {(tempData.videoLinks || []).map((link, idx) => (
+                                            <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                                <div style={{ flex: 1, position: "relative" }}>
+                                                    <input 
+                                                        className="chamba-input"
+                                                        placeholder="Link de YouTube, Instagram o TikTok..."
+                                                        value={link}
+                                                        onChange={e => {
+                                                            const newLinks = [...tempData.videoLinks]
+                                                            newLinks[idx] = e.target.value
+                                                            setTempData({...tempData, videoLinks: newLinks})
+                                                        }}
+                                                    />
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        const newLinks = tempData.videoLinks.filter((_, i) => i !== idx)
+                                                        setTempData({...tempData, videoLinks: newLinks})
+                                                    }}
+                                                    style={{ background: "#FEE2E2", color: "#EF4444", border: "none", width: "32px", height: "32px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button 
+                                            onClick={() => setTempData(prev => ({ ...prev, videoLinks: [...(prev.videoLinks || []), ""] }))}
+                                            style={{ ...secondaryBtnStyle, color: primaryColor, textAlign: "left", padding: "8px 0" }}
+                                        >
+                                            + Agregar otro link de video
+                                        </button>
+                                        <p style={{ fontSize: "11px", color: "#94A3B8" }}>Pega el link directo de la publicación o video.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "20px" }}>
+                                        {data.videoLinks.map((link, i) => {
+                                            const embedUrl = getEmbedUrl(link)
+                                            return (
+                                                <div key={i} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                    <div style={{ 
+                                                        position: "relative", 
+                                                        paddingTop: "177.77%", // Aspect ratio para Reels/TikTok (9:16)
+                                                        background: "#000", 
+                                                        borderRadius: "20px", 
+                                                        overflow: "hidden",
+                                                        boxShadow: "0 10px 30px rgba(0,0,0,0.1)"
+                                                    }}>
+                                                        {embedUrl ? (
+                                                            <iframe 
+                                                                src={embedUrl}
+                                                                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                allowFullScreen
+                                                            />
+                                                        ) : (
+                                                            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "white", padding: "20px", textAlign: "center" }}>
+                                                                <Video size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                                                                <div style={{ fontSize: "13px" }}>Formato de link no compatible para previsualización</div>
+                                                                <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: primaryColor, marginTop: "12px", fontSize: "12px", fontWeight: "700" }}>Ver en red social</a>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 8px" }}>
+                                                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#475569" }}>Video de presentación {i + 1}</span>
+                                                        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: "11px", color: primaryColor, fontWeight: "600" }}>Abrir original ↗</a>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {data.portfolio.length === 0 && !editingSection && (
                             <div style={{ marginTop: "16px", textAlign: "center", padding: "32px", background: "#F8FAFC", borderRadius: "16px", border: "2px dashed #E2E8F0" }}>
                                 <Camera size={32} color="#CBD5E1" style={{ marginBottom: "12px" }} />
@@ -652,9 +782,9 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                         {editingSection === "conditions" ? (
                             <div>
-                                <TagInput 
-                                    tags={tempData.conditions} 
-                                    setTags={(t) => setTempData({...tempData, conditions: t})} 
+                                <TagInput
+                                    tags={tempData.conditions}
+                                    setTags={(t) => setTempData({ ...tempData, conditions: t })}
                                 />
                                 <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "16px" }}>
                                     <button onClick={() => setEditingSection(null)} style={{ background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer" }}>Cancelar</button>
@@ -678,21 +808,6 @@ export default function PerfilPublicoProveedorChamba(props) {
                                         )}
                                     </div>
                                 </div>
-                                <div style={{ background: "#F8FAFC", padding: "20px", borderRadius: "20px", border: "1px solid #F1F5F9" }}>
-                                    <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "16px" }}>Métodos de pago</div>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                                        <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981" }} /> Efectivo
-                                        </div>
-                                        <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#009EE3", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#009EE3" }} /> Mercado Pago
-                                        </div>
-                                        <div style={{ background: "white", padding: "8px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#475569", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#64748B" }} /> Transferencia
-                                        </div>
-                                    </div>
-                                    <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "16px" }}>Consulta otros medios de pago directamente con el profesional.</p>
-                                </div>
                             </div>
                         )}
                     </div>
@@ -702,17 +817,17 @@ export default function PerfilPublicoProveedorChamba(props) {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                             <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Reseñas</h3>
                         </div>
-                        
+
                         <div style={{ display: "flex", gap: "40px", marginBottom: "40px", flexWrap: "wrap", alignItems: "center" }}>
                             <div style={{ textAlign: "center", padding: "24px", background: "#F8FAFC", borderRadius: "20px", border: "1px solid #F1F5F9", minWidth: "140px" }}>
                                 <div style={{ fontSize: "48px", fontWeight: "800", color: data.reviewCount > 0 ? "#0F172A" : "#CBD5E1" }}>{data.rating > 0 ? data.rating : "0"}</div>
                                 <div style={{ display: "flex", gap: "4px", justifyContent: "center", margin: "8px 0" }}>
-                                    {[1,2,3,4,5].map(i => (
-                                        <Star 
-                                            key={i} 
-                                            size={20} 
-                                            fill={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"} 
-                                            color={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"} 
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <Star
+                                            key={i}
+                                            size={20}
+                                            fill={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"}
+                                            color={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"}
                                         />
                                     ))}
                                 </div>
@@ -720,7 +835,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                             </div>
 
                             <div style={{ flex: 1, minWidth: "200px" }}>
-                                {[5,4,3,2,1].map(star => {
+                                {[5, 4, 3, 2, 1].map(star => {
                                     const count = data.reviewCount > 0 ? (data.reviews.filter(r => Math.round(r.estrellas) === star).length) : 0;
                                     const percentage = data.reviewCount > 0 ? (count / data.reviewCount) * 100 : 0;
                                     return (
@@ -760,7 +875,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                                                 </div>
                                             </div>
                                             <div style={{ display: "flex", gap: "2px" }}>
-                                                {[1,2,3,4,5].map(s => <Star key={s} size={12} fill={s <= rev.estrellas ? "#F59E0B" : "none"} color={s <= rev.estrellas ? "#F59E0B" : "#CBD5E1"} />)}
+                                                {[1, 2, 3, 4, 5].map(s => <Star key={s} size={12} fill={s <= rev.estrellas ? "#F59E0B" : "none"} color={s <= rev.estrellas ? "#F59E0B" : "#CBD5E1"} />)}
                                             </div>
                                         </div>
                                         <p style={{ fontSize: "14px", color: "#475569", lineHeight: "1.6", marginBottom: "16px", minHeight: "60px" }}>
@@ -789,8 +904,8 @@ export default function PerfilPublicoProveedorChamba(props) {
                 {/* Right Column (Sidebar) */}
                 <div>
                     {/* Botón Principal */}
-                    <button 
-                        className="chamba-btn-primary" 
+                    <button
+                        className="chamba-btn-primary"
                         style={{ padding: "18px", marginBottom: "12px" }}
                         onClick={() => {
                             if (!data.phone) {
@@ -820,15 +935,15 @@ export default function PerfilPublicoProveedorChamba(props) {
                             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                 <div>
                                     <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Email</label>
-                                    <input className="chamba-input" value={tempData.email} onChange={e => setTempData({...tempData, email: e.target.value})} />
+                                    <input className="chamba-input" value={tempData.email} onChange={e => setTempData({ ...tempData, email: e.target.value })} />
                                 </div>
                                 <div>
                                     <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Teléfono (WhatsApp)</label>
-                                    <input className="chamba-input" value={tempData.phone} onChange={e => setTempData({...tempData, phone: e.target.value})} />
+                                    <input className="chamba-input" value={tempData.phone} onChange={e => setTempData({ ...tempData, phone: e.target.value })} />
                                 </div>
                                 <div>
                                     <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Matrícula</label>
-                                    <input className="chamba-input" value={tempData.matricula} onChange={e => setTempData({...tempData, matricula: e.target.value})} />
+                                    <input className="chamba-input" value={tempData.matricula} onChange={e => setTempData({ ...tempData, matricula: e.target.value })} />
                                 </div>
                                 <div style={editActionRow}>
                                     <button onClick={() => setEditingSection(null)} style={secondaryBtnStyle}>Cancelar</button>
@@ -861,72 +976,146 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                     {/* Redes Sociales */}
                     <div className="chamba-card">
-                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>Redes sociales</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            {data.instagram && (
-                                <a href={data.instagram} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
-                                    <Instagram size={20} color="#E1306C" /> <span>Instagram</span>
-                                </a>
-                            )}
-                            {data.facebook && (
-                                <a href={data.facebook} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
-                                    <Facebook size={20} color="#1877F2" /> <span>Facebook</span>
-                                </a>
-                            )}
-                            {data.linkedin && (
-                                <a href={data.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
-                                    <Linkedin size={20} color="#0077B5" /> <span>LinkedIn</span>
-                                </a>
-                            )}
-                            {!data.instagram && !data.facebook && !data.linkedin && (
-                                <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>Sin redes vinculadas</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                            <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px" }}>Redes sociales</div>
+                            {isOwner && editingSection !== "social" && (
+                                <button onClick={() => handleEditSection("social")} style={{ background: "transparent", border: "none", color: primaryColor, cursor: "pointer" }}>
+                                    <Edit3 size={14} />
+                                </button>
                             )}
                         </div>
+
+                        {editingSection === "social" ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <div>
+                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Instagram (URL)</label>
+                                    <input className="chamba-input" value={tempData.instagram} onChange={e => setTempData({ ...tempData, instagram: e.target.value })} placeholder="https://instagram.com/..." />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Facebook (URL)</label>
+                                    <input className="chamba-input" value={tempData.facebook} onChange={e => setTempData({ ...tempData, facebook: e.target.value })} placeholder="https://facebook.com/..." />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>LinkedIn (URL)</label>
+                                    <input className="chamba-input" value={tempData.linkedin} onChange={e => setTempData({ ...tempData, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." />
+                                </div>
+                                <div style={editActionRow}>
+                                    <button onClick={() => setEditingSection(null)} style={secondaryBtnStyle}>Cancelar</button>
+                                    <button onClick={handleSaveSection} style={primaryBtnSmallStyle}>Guardar</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                {data.instagram && (
+                                    <a href={data.instagram} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
+                                        <Instagram size={20} color="#E1306C" /> <span>Instagram</span>
+                                    </a>
+                                )}
+                                {data.facebook && (
+                                    <a href={data.facebook} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
+                                        <Facebook size={20} color="#1877F2" /> <span>Facebook</span>
+                                    </a>
+                                )}
+                                {data.linkedin && (
+                                    <a href={data.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", cursor: "pointer", color: "inherit", textDecoration: "none" }}>
+                                        <Linkedin size={20} color="#0077B5" /> <span>LinkedIn</span>
+                                    </a>
+                                )}
+                                {!data.instagram && !data.facebook && !data.linkedin && (
+                                    <span style={{ fontSize: "14px", color: "#94A3B8", fontStyle: "italic" }}>Sin redes vinculadas</span>
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Servicios destacados */}
-                    <div className="chamba-card">
-                        <h4 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "20px" }}>Servicios destacados</h4>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                            {(data.specialties.length > 0 ? data.specialties : [data.category]).map(s => (
-                                <div key={s} style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "14px" }}>
-                                    <CheckCircle2 size={16} color={primaryColor} /> {s}
-                                </div>
-                            ))}
-                            {data.specialties.length === 0 && (
-                                <p style={{ fontSize: "13px", color: "#94A3B8", fontStyle: "italic" }}>No se especificaron servicios adicionales.</p>
-                            )}
-                        </div>
-                    </div>
                 </div>
             </div>
 
 
             <FloatingContact />
+            <PortfolioLightbox />
             <div style={{ height: "40px" }} />
         </div>
     )
 
-    // --- SUB-COMPONENTES AUXILIARES ---
     function FloatingContact() {
         if (isOwner) return null
         return (
-            <motion.div 
+            <motion.div
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 style={{ position: "fixed", bottom: "32px", right: "32px", zIndex: 1000, display: "flex", gap: "12px" }}
             >
-                <button 
+                <button
                     onClick={() => {
                         const text = encodeURIComponent(`Hola ${data.name.split(" ")[0]}, te vi en Chamba y me gustaría consultarte por tus servicios.`);
                         window.open(`https://wa.me/${data.phone.replace(/\s+/g, "")}?text=${text}`, "_blank");
                     }}
-                    className="chamba-btn-primary" 
+                    className="chamba-btn-primary"
                     style={{ width: "auto", padding: "16px 32px", boxShadow: "0 15px 35px " + primaryColor + "40", background: primaryColor, borderRadius: "100px" }}
                 >
                     <MessageCircle size={20} /> <span style={{ fontWeight: "800" }}>Contactar ahora</span>
                 </button>
             </motion.div>
+        )
+    }
+
+    function PortfolioLightbox() {
+        if (selectedImgIndex === null) return null
+        const currentPortfolio = data.portfolio
+        const currentImg = currentPortfolio[selectedImgIndex]
+
+        const nextImg = () => setSelectedImgIndex((selectedImgIndex + 1) % currentPortfolio.length)
+        const prevImg = () => setSelectedImgIndex((selectedImgIndex - 1 + currentPortfolio.length) % currentPortfolio.length)
+
+        return (
+            <AnimatePresence>
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}
+                    onClick={() => setSelectedImgIndex(null)}
+                >
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedImgIndex(null); }}
+                        style={{ position: "absolute", top: "32px", right: "32px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: "48px", height: "48px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}
+                    >
+                        <X size={24} />
+                    </button>
+
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); prevImg(); }}
+                        style={{ position: "absolute", left: "32px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: "56px", height: "56px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}
+                    >
+                        <ChevronLeft size={32} />
+                    </button>
+
+                    <motion.div 
+                        key={selectedImgIndex}
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        style={{ maxWidth: "100%", maxHeight: "100%", position: "relative" }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <img 
+                            src={currentImg} 
+                            style={{ maxWidth: "80vw", maxHeight: "80vh", borderRadius: "12px", boxShadow: "0 20px 50px rgba(0,0,0,0.5)", objectFit: "contain" }} 
+                            alt="Portfolio"
+                        />
+                        <div style={{ position: "absolute", bottom: "-40px", left: 0, right: 0, textAlign: "center", color: "white", fontSize: "14px", fontWeight: "600" }}>
+                            {selectedImgIndex + 1} / {currentPortfolio.length}
+                        </div>
+                    </motion.div>
+
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); nextImg(); }}
+                        style={{ position: "absolute", right: "32px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: "56px", height: "56px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}
+                    >
+                        <ChevronRight size={32} />
+                    </button>
+                </motion.div>
+            </AnimatePresence>
         )
     }
 }
@@ -949,7 +1138,7 @@ const TagInput = ({ tags, setTags, placeholder = "Escribí y presioná Enter..."
                         {tag} <X size={12} style={{ cursor: "pointer" }} onClick={() => setTags(tags.filter((_, idx) => idx !== i))} />
                     </span>
                 ))}
-                <input 
+                <input
                     style={{ border: "none", outline: "none", fontSize: "13px", padding: "4px", flex: 1, minWidth: "100px" }}
                     placeholder={placeholder}
                     value={inputValue}
@@ -963,6 +1152,8 @@ const TagInput = ({ tags, setTags, placeholder = "Escribí y presioná Enter..."
 
 const secondaryBtnStyle = { background: "transparent", border: "none", color: "#94A3B8", fontWeight: "600", cursor: "pointer", fontSize: "13px" }
 const primaryBtnSmallStyle = { background: "#A01EED", color: "white", border: "none", padding: "8px 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }
+const editActionRow = { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }
+
 
 // --- FRAMER CONTROLS ---
 addPropertyControls(PerfilPublicoProveedorChamba, {

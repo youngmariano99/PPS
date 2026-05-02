@@ -175,7 +175,7 @@ export default function RegistroFormWizardChamba(props) {
                         {step === 1 && (
                             <Step1 
                                 tipo={formData.tipo} 
-                                setTipo={(t) => setFormData({...formData, tipo: t})} 
+                                setTipo={(t) => setFormData(prev => ({...prev, tipo: t}))} 
                             />
                         )}
                         {step === 2 && (
@@ -466,9 +466,12 @@ const Step4 = ({ data, setFormData }) => {
     ]
 
     const toggleSugerencia = (sug) => {
-        if (!data.condicionesServicio.includes(sug)) {
-            setFormData({...data, condicionesServicio: [...data.condicionesServicio, sug]})
-        }
+        setFormData(prev => {
+            if (!prev.condicionesServicio.includes(sug)) {
+                return { ...prev, condicionesServicio: [...prev.condicionesServicio, sug] }
+            }
+            return prev
+        })
     }
 
     return (
@@ -485,7 +488,7 @@ const Step4 = ({ data, setFormData }) => {
                     <label style={labelStyle}>Especialidades (Ej: Plomería, React, Limpieza)</label>
                     <TagInput 
                         tags={data.especialidades} 
-                        setTags={(t) => setFormData({...data, especialidades: t})} 
+                        setTags={(t) => setFormData(prev => ({...prev, especialidades: t}))} 
                         placeholder="Escribí una especialidad y Enter..."
                     />
                 </div>
@@ -494,7 +497,7 @@ const Step4 = ({ data, setFormData }) => {
                     <label style={labelStyle}>Condiciones y formas de pago</label>
                     <TagInput 
                         tags={data.condicionesServicio} 
-                        setTags={(t) => setFormData({...data, condicionesServicio: t})} 
+                        setTags={(t) => setFormData(prev => ({...prev, condicionesServicio: t}))} 
                         placeholder="Escribí una condición (Ej: Tarjeta) y Enter..."
                     />
                     
@@ -550,7 +553,7 @@ const Step5 = ({ data, onChange }) => (
 )
 
 const Step6 = ({ data, setFormData }) => {
-    const handlePhoto = (url) => setFormData({...data, fotoPerfilUrl: url})
+    const handlePhoto = (url) => setFormData(prev => ({...prev, fotoPerfilUrl: url}))
     const handlePortafolio = (url) => setFormData(prev => ({...prev, fotosPortafolioUrls: [...prev.fotosPortafolioUrls, url]}))
 
     return (
@@ -609,16 +612,19 @@ const Step6 = ({ data, setFormData }) => {
                                 placeholder="https://..."
                                 value={link}
                                 onChange={(e) => {
-                                    const newLinks = [...data.videoLinks]
-                                    newLinks[idx] = e.target.value
-                                    setFormData({...data, videoLinks: newLinks})
+                                    const val = e.target.value
+                                    setFormData(prev => {
+                                        const newLinks = [...prev.videoLinks]
+                                        newLinks[idx] = val
+                                        return { ...prev, videoLinks: newLinks }
+                                    })
                                 }}
                             />
                         </div>
                     ))}
                     <button 
                         style={{ ...secondaryBtn, padding: "8px 16px", fontSize: "13px", alignSelf: "flex-start" }}
-                        onClick={() => setFormData({...data, videoLinks: [...data.videoLinks, ""]})}
+                        onClick={() => setFormData(prev => ({...prev, videoLinks: [...prev.videoLinks, ""]}))}
                     >
                         + Agregar otro link
                     </button>

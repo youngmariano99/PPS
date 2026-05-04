@@ -6,12 +6,12 @@ Para cumplir estrictamente con los estándares y garantizar que nuestra lógica 
 
 ```text
 com.PPS.PPS
-├── config                      # Configuración general de Spring, Beans globales y Exception Handlers transversales.
+├── config                      # Configuración general de Spring, Beans   globales y Exception Handlers transversales.
 │
-├── domain                      # EL NÚCLEO: Independiente de cualquier framework (ni JPA, ni Spring).
+├── domain                      # EL NÚCLEO: Independiente de cualquier    framework (ni JPA, ni Spring).
 │   ├── model                   # Entidades de Dominio puras de Java (POJOs). Representan las reglas de negocio reales.
 │   ├── repository              # Interfaces (Puertos de Salida) que dictan cómo se guardan los datos (sin extender de JpaRepository).
-│   └── exception               # Excepciones puras de negocio (ej. ReglaNegocioInvalidaException).
+│   └── exception               # Excepciones puras de negocio (ej.   ReglaNegocioInvalidaException).
 │
 ├── application                 # CASOS DE USO: Orquestan la lógica del dominio.
 │   ├── usecase                 # Interfaces de los casos de uso (Puertos de Entrada). Ej: IRegistrarUsuarioUseCase.

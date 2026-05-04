@@ -79,8 +79,8 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 
 ## 3. Lo que hemos hecho hasta ahora (Resumen Técnico)
 
-1.  **Arquitectura Limpia:** Estructuración de paquetes siguiendo principios SOLID y Clean Architecture.
-2.  **Lógica en Español:** Todo el dominio de negocio (`Rubro`, `PerfilProveedor`, `DirectorioService`) está codificado en Español Latinoamericano.
+1.  **Arquitectura Limpia y Desacople:** Estructuración estricta en capas (Dominio, Aplicación, Infraestructura). Eliminación de "Clases Dios" transformándolas en Casos de Uso de Responsabilidad Única (SRP), y uso intensivo del Patrón Factory y Ports/Adapters para aislar dependencias externas (Supabase).
+2.  **Lógica en Español:** Todo el dominio de negocio (`Rubro`, `PerfilProveedor`, `BuscarPerfilesCercanosUseCase`) está codificado en Español Latinoamericano.
 3.  **Optimización Extrema:** Implementación de un `Hard Cap` de 50km en búsquedas y arquitectura de paginación eficiente que reduce el tráfico de red y el consumo de memoria.
 4.  **UI/UX Premium en Framer:** Desarrollo de componentes reactivos con soporte para grilla dinámica (2-3 columnas), modo compacto profesional, fondos transparentes y filtros sincronizados con el backend.
 5.  **Persistencia Robusta:** Esquema de base de datos que soporta perfiles duales (Empresas y Proveedores) compartiendo una base de geolocalización común y gestión estricta de planes de suscripción.

@@ -1,14 +1,14 @@
 package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
-import com.PPS.PPS.dto.PerfilDetalleDto;
-import com.PPS.PPS.dto.ResenaDetalleDto;
-import com.PPS.PPS.dto.UsuarioPerfilDto;
+import com.PPS.PPS.application.dto.PerfilDetalleDto;
+import com.PPS.PPS.application.dto.ResenaDetalleDto;
+import com.PPS.PPS.application.dto.UsuarioPerfilDto;
 import com.PPS.PPS.entity.PerfilProveedor;
 import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Resena;
 import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.exception.RecursoNoEncontradoException;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -89,9 +89,8 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
                 .calle(isOwner ? p.getCalle() : "Oculto")
                 .numero(isOwner ? p.getNumero() : 0)
                 .codigoPostal(isOwner ? p.getCodigoPostal() : 0)
-                .instagramUrl(p.getInstagramUrl())
-                .facebookUrl(p.getFacebookUrl())
-                .linkedinUrl(p.getLinkedinUrl())
+                .redesSociales(p.getRedesSociales() != null ? p.getRedesSociales() : new ArrayList<>())
+                .sitioWebUrl(p.getSitioWebUrl())
                 .esPremium(esPremium)
                 .especialidades(p.getEspecialidades() != null ? p.getEspecialidades() : new ArrayList<>())
                 .condicionesServicio(p.getCondicionesServicio() != null ? p.getCondicionesServicio() : new ArrayList<>())
@@ -141,3 +140,5 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
                 .build();
     }
 }
+
+

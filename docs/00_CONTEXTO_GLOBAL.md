@@ -30,10 +30,10 @@ El código debe generarse **EXCLUSIVAMENTE** utilizando las siguientes dependenc
 
 El proyecto se rige por los principios de **Clean Architecture** (Arquitectura Limpia) y los principios **SOLID**. La estructura de paquetes debe separar claramente el **Dominio** (Entities), la **Aplicación** (Services, DTOs), la **Infraestructura** (Repositories) y la **Presentación** (Controllers).
 
-### Patrones de Diseño Obligatorios:
-*   **Patrones Creacionales (Factory Method / Abstract Factory):** Utilizar para instanciar objetos complejos (ej. creación de distintos tipos de perfiles o postulaciones). **NUNCA** instanciar clases con lógica compleja usando `new` directamente en controladores o servicios principales.
-*   **Patrones Estructurales (Decorator / Proxy):** Utilizar para agregar comportamientos transversales (como logging, validaciones específicas de negocio o caché) **SIN** modificar el código de la clase original, respetando el principio Open/Closed.
-*   **Patrones de Comportamiento (Strategy / State):** Utilizar para eliminar bloques masivos de `if/else` o `switch`. Si una entidad cambia de comportamiento según su estado (ej. una Postulación pasa de "Enviado" a "Visto"), la lógica debe encapsularse en clases de estado separadas. Prohibido crear métodos de control de flujo masivos.
+### Patrones de Diseño Obligatorios (Actualmente Implementados y Auditados):
+*   **Patrones Creacionales (Factory Method / Abstract Factory):** Utilizados para instanciar objetos complejos (ej. `IPerfilFactory` para la creación de distintos tipos de perfiles). No se instancian clases con lógica compleja usando `new` directamente en controladores o servicios principales.
+*   **Patrones Estructurales (Ports & Adapters):** Aislamiento de infraestructuras externas (ej. `SupabaseAuthAdapter`) para proteger los Casos de Uso core de la aplicación.
+*   **Patrones de Comportamiento (Strategy / State / Use Cases):** Se aplican Casos de Uso atómicos y Patrón Factory para eliminar bloques masivos de `if/else` o `switch`. Prohibido crear métodos de control de flujo masivos.
 
 ---
 

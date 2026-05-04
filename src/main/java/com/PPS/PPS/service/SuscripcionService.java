@@ -3,7 +3,7 @@ package com.PPS.PPS.service;
 import com.PPS.PPS.entity.PlanSuscripcion;
 import com.PPS.PPS.entity.SuscripcionUsuario;
 import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.exception.RecursoNoEncontradoException;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.repository.PlanSuscripcionRepository;
 import com.PPS.PPS.repository.SuscripcionUsuarioRepository;
 import com.PPS.PPS.repository.UsuarioRepository;
@@ -120,3 +120,4 @@ public class SuscripcionService {
         suscripcionUsuarioRepository.save(suscripcion);
     }
 }
+

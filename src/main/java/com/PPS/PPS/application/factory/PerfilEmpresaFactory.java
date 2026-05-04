@@ -1,6 +1,6 @@
 package com.PPS.PPS.application.factory;
 
-import com.PPS.PPS.dto.RegistroCompletoSolicitudDto;
+import com.PPS.PPS.application.dto.RegistroCompletoSolicitudDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.entity.Usuario;
@@ -41,3 +41,4 @@ public class PerfilEmpresaFactory implements IPerfilFactory {
         return "EMPRESA";
     }
 }
+

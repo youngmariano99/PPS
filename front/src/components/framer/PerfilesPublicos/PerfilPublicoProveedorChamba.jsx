@@ -320,9 +320,8 @@ export default function PerfilPublicoProveedorChamba(props) {
                         phone: res.telefono || "",
                         email: res.email || (user && user.id === targetId ? user.email : ""),
                         matricula: res.matricula || "Sin matrícula registrada",
-                        instagram: res.instagramUrl || "",
-                        facebook: res.facebookUrl || "",
-                        linkedin: res.linkedinUrl || "",
+                        redesSociales: res.redesSociales || [],
+                        sitioWebUrl: res.sitioWebUrl || "",
                         videoLinks: res.videoLinks || [],
                     }
                     setData(mapped)
@@ -354,9 +353,11 @@ export default function PerfilPublicoProveedorChamba(props) {
                 phone: "291 44556677",
                 email: "mariano.lombardo@gmail.com",
                 matricula: "M.P No registrada",
-                instagram: "https://instagram.com/marianolombardo",
-                facebook: "https://facebook.com/marianolombardo",
-                linkedin: "https://linkedin.com/in/marianolombardo",
+                redesSociales: [
+                    { plataforma: "INSTAGRAM", url: "https://instagram.com/marianolombardo" },
+                    { plataforma: "LINKEDIN", url: "https://linkedin.com/in/marianolombardo" }
+                ],
+                sitioWebUrl: "https://marianolombardo.com",
             }
             setData(demo)
             setTempData(demo)
@@ -443,9 +444,8 @@ export default function PerfilPublicoProveedorChamba(props) {
                 descripcion: tempData.description,
                 matricula: tempData.matricula,
                 fotoPerfilUrl: tempData.avatar,
-                instagramUrl: tempData.instagram,
-                facebookUrl: tempData.facebook,
-                linkedinUrl: tempData.linkedin,
+                redesSocialesUrls: (tempData.redesSociales || []).map(r => r.url || r).filter(url => typeof url === 'string' && url.trim() !== ""),
+                sitioWebUrl: tempData.sitioWebUrl,
                 especialidades: tempData.specialties,
                 condicionesServicio: tempData.conditions,
                 fotosPortafolioUrls: tempData.portfolio,
@@ -793,18 +793,30 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 </div>
 
                                 {editingSection === "social" ? (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "white", padding: "16px", borderRadius: "16px", border: `1px solid ${primaryColor}20`, boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "white", padding: "16px", borderRadius: "16px", border: `1px solid ${primaryColor}20`, boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
                                         <div>
-                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Instagram (URL)</label>
-                                            <input className="chamba-input" style={{ padding: "8px 12px" }} value={tempData.instagram} onChange={e => setTempData({ ...tempData, instagram: e.target.value })} placeholder="https://instagram.com/..." />
+                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Redes Sociales (URLs)</label>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
+                                                {(tempData.redesSociales || []).map((red, idx) => (
+                                                    <input 
+                                                        key={idx}
+                                                        className="chamba-input" 
+                                                        style={{ padding: "8px 12px" }} 
+                                                        value={typeof red === 'string' ? red : red.url} 
+                                                        onChange={(e) => {
+                                                            const newRedes = [...(tempData.redesSociales || [])];
+                                                            newRedes[idx] = e.target.value;
+                                                            setTempData({ ...tempData, redesSociales: newRedes });
+                                                        }} 
+                                                        placeholder="https://instagram.com/..." 
+                                                    />
+                                                ))}
+                                                <button onClick={() => setTempData({ ...tempData, redesSociales: [...(tempData.redesSociales || []), ""] })} style={{ ...secondaryBtnStyle, fontSize: "11px", padding: "4px 8px", alignSelf: "flex-start" }}>+ Agregar red social</button>
+                                            </div>
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Facebook (URL)</label>
-                                            <input className="chamba-input" style={{ padding: "8px 12px" }} value={tempData.facebook} onChange={e => setTempData({ ...tempData, facebook: e.target.value })} placeholder="https://facebook.com/..." />
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>LinkedIn (URL)</label>
-                                            <input className="chamba-input" style={{ padding: "8px 12px" }} value={tempData.linkedin} onChange={e => setTempData({ ...tempData, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." />
+                                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Sitio Web (URL)</label>
+                                            <input className="chamba-input" style={{ padding: "8px 12px", marginTop: "8px" }} value={tempData.sitioWebUrl || ""} onChange={e => setTempData({ ...tempData, sitioWebUrl: e.target.value })} placeholder="https://mi-sitio.com" />
                                         </div>
                                         <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
                                             <button onClick={() => setEditingSection(null)} style={{ ...secondaryBtnStyle, fontSize: "12px", padding: "6px 12px" }}>Cancelar</button>
@@ -812,24 +824,32 @@ export default function PerfilPublicoProveedorChamba(props) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-                                        {data.instagram && (
-                                            <a href={data.instagram} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
-                                                <Instagram size={18} color="#E1306C" /> <span>Instagram</span>
-                                            </a>
-                                        )}
-                                        {data.facebook && (
-                                            <a href={data.facebook} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
-                                                <Facebook size={18} color="#1877F2" /> <span>Facebook</span>
-                                            </a>
-                                        )}
-                                        {data.linkedin && (
-                                            <a href={data.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
-                                                <Linkedin size={18} color="#0077B5" /> <span>LinkedIn</span>
-                                            </a>
-                                        )}
-                                        {!data.instagram && !data.facebook && !data.linkedin && (
-                                            <span style={{ fontSize: "13px", color: "#94A3B8", fontStyle: "italic" }}>Sin redes vinculadas</span>
+                                    <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", flexDirection: "column" }}>
+                                        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                                            {data.redesSociales && data.redesSociales.length > 0 ? (
+                                                data.redesSociales.map((red, idx) => {
+                                                    let Icono = ExternalLink;
+                                                    let color = "#475569";
+                                                    if (red.plataforma === "INSTAGRAM") { Icono = Instagram; color = "#E1306C"; }
+                                                    if (red.plataforma === "FACEBOOK") { Icono = Facebook; color = "#1877F2"; }
+                                                    if (red.plataforma === "LINKEDIN") { Icono = Linkedin; color = "#0077B5"; }
+                                                    
+                                                    return (
+                                                        <a key={idx} href={red.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
+                                                            <Icono size={18} color={color} /> <span>{red.plataforma !== "OTRO" ? red.plataforma.charAt(0) + red.plataforma.slice(1).toLowerCase() : "Link"}</span>
+                                                        </a>
+                                                    );
+                                                })
+                                            ) : (
+                                                <span style={{ fontSize: "13px", color: "#94A3B8", fontStyle: "italic" }}>Sin redes vinculadas</span>
+                                            )}
+                                        </div>
+                                        {data.sitioWebUrl && (
+                                            <div style={{ paddingTop: "8px", borderTop: "1px solid #F1F5F9" }}>
+                                                <a href={data.sitioWebUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: primaryColor, textDecoration: "none", fontWeight: "600" }}>
+                                                    <ExternalLink size={16} /> <span>Visitar Sitio Web</span>
+                                                </a>
+                                            </div>
                                         )}
                                     </div>
                                 )}

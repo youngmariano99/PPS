@@ -24,7 +24,7 @@ export default function RegistroFormWizardChamba(props) {
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
         provincia: "", pais: "Argentina", codigoPostal: "",
-        fotosPortafolioUrls: [], videoLinks: [""],
+        fotosPortafolioUrls: [], videoLinks: [""], redesSocialesUrls: [""], sitioWebUrl: "",
         especialidades: [], condicionesServicio: []
     })
 
@@ -606,35 +606,89 @@ const Step6 = ({ data, setFormData }) => {
                 </div>
             </div>
 
-            {/* Nueva Sección de Videos */}
-            <div style={{ marginTop: "32px" }}>
-                <label style={labelStyle}>Links de Video o Redes (YouTube, Instagram, etc.)</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
-                    {data.videoLinks.map((link, idx) => (
-                        <div key={idx} style={inputWrap}>
-                            <div style={inputIconBox}>🔗</div>
+            {/* Nueva Sección de Videos y Redes */}
+            <div style={{ marginTop: "32px", display: "flex", flexDirection: "column", gap: "24px" }}>
+                
+                {/* 1. Portafolio en Video */}
+                <div>
+                    <label style={labelStyle}>Portafolio en Video (YouTube, TikTok, etc.) - Máx 3</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                        {data.videoLinks.map((link, idx) => (
+                            <div key={idx} style={inputWrap}>
+                                <div style={inputIconBox}>🎥</div>
+                                <input 
+                                    style={inputField}
+                                    placeholder="https://youtube.com/..."
+                                    value={link}
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        setFormData(prev => {
+                                            const newLinks = [...prev.videoLinks]
+                                            newLinks[idx] = val
+                                            return { ...prev, videoLinks: newLinks }
+                                        })
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        {data.videoLinks.length < 3 && (
+                            <button 
+                                style={{ ...secondaryBtn, padding: "8px 16px", fontSize: "13px", alignSelf: "flex-start" }}
+                                onClick={() => setFormData(prev => ({...prev, videoLinks: [...prev.videoLinks, ""]}))}
+                            >
+                                + Agregar video
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* 2. Redes Sociales */}
+                <div>
+                    <label style={labelStyle}>Redes Sociales (Instagram, LinkedIn, GitHub, etc.)</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                        {data.redesSocialesUrls.map((link, idx) => (
+                            <div key={idx} style={inputWrap}>
+                                <div style={inputIconBox}>🔗</div>
+                                <input 
+                                    style={inputField}
+                                    placeholder="https://instagram.com/..."
+                                    value={link}
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        setFormData(prev => {
+                                            const newLinks = [...prev.redesSocialesUrls]
+                                            newLinks[idx] = val
+                                            return { ...prev, redesSocialesUrls: newLinks }
+                                        })
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        <button 
+                            style={{ ...secondaryBtn, padding: "8px 16px", fontSize: "13px", alignSelf: "flex-start" }}
+                            onClick={() => setFormData(prev => ({...prev, redesSocialesUrls: [...prev.redesSocialesUrls, ""]}))}
+                        >
+                            + Agregar red social
+                        </button>
+                    </div>
+                </div>
+
+                {/* 3. Sitio Web */}
+                <div>
+                    <label style={labelStyle}>Sitio Web Personal / Portfolio (Opcional)</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                        <div style={inputWrap}>
+                            <div style={inputIconBox}>🌐</div>
                             <input 
                                 style={inputField}
-                                placeholder="https://..."
-                                value={link}
-                                onChange={(e) => {
-                                    const val = e.target.value
-                                    setFormData(prev => {
-                                        const newLinks = [...prev.videoLinks]
-                                        newLinks[idx] = val
-                                        return { ...prev, videoLinks: newLinks }
-                                    })
-                                }}
+                                placeholder="https://mi-sitio.com"
+                                value={data.sitioWebUrl}
+                                onChange={(e) => setFormData(prev => ({...prev, sitioWebUrl: e.target.value}))}
                             />
                         </div>
-                    ))}
-                    <button 
-                        style={{ ...secondaryBtn, padding: "8px 16px", fontSize: "13px", alignSelf: "flex-start" }}
-                        onClick={() => setFormData(prev => ({...prev, videoLinks: [...prev.videoLinks, ""]}))}
-                    >
-                        + Agregar otro link
-                    </button>
+                    </div>
                 </div>
+
             </div>
         </div>
     )

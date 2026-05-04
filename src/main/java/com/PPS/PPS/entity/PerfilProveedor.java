@@ -3,6 +3,9 @@ package com.PPS.PPS.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.locationtech.jts.geom.Point;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.PPS.PPS.application.dto.RedSocialDto;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -65,14 +68,12 @@ public class PerfilProveedor {
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point ubicacion;
 
-    @Column(name = "instagram_url")
-    private String instagramUrl;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "redes_sociales", columnDefinition = "jsonb")
+    private java.util.List<RedSocialDto> redesSociales;
 
-    @Column(name = "facebook_url")
-    private String facebookUrl;
-
-    @Column(name = "linkedin_url")
-    private String linkedinUrl;
+    @Column(name = "sitio_web_url")
+    private String sitioWebUrl;
 
     @Column(name = "especialidades", columnDefinition = "text[]")
     private java.util.List<String> especialidades;

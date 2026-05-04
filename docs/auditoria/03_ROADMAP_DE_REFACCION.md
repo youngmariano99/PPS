@@ -52,11 +52,17 @@ DEBES ejecutar estrictamente **UNA tarea a la vez**. Por cada tarea (checkbox), 
 ## FASE 4: Reorganización de Infraestructura (Clean Architecture Definitiva)
 **Objetivo:** Mover los archivos a su lugar definitivo en la nueva estructura. *Nota: Hacerlo estrictamente paso a paso.*
 
-- [ ] **Tarea 4.1: Migrar DTOs.**
+- [x] **Tarea 4.1: Migrar DTOs.**
   Mover el contenido de `com.PPS.PPS.dto` hacia `application/dto`. Actualizar todos los imports (Ctrl+Shift+O o refactor automático del IDE). Confirmar compilación.
-- [ ] **Tarea 4.2: Migrar Controladores.**
+- [x] **Tarea 4.2: Migrar Controladores.**
   Mover el contenido de `com.PPS.PPS.controller` hacia `infrastructure/adapter/in/web`. Actualizar imports y verificar.
-- [ ] **Tarea 4.3: Aislar Excepciones.**
+- [x] **Tarea 4.3: Aislar Excepciones.**
   Mover excepciones de negocio a `domain/exception` y `GlobalExceptionHandler` a `infrastructure/config`.
 - [ ] **Tarea 4.4: Desacople de Repositorios (Nivel Avanzado).**
   Crear interfaces puras en `domain/repository`. Mover las interfaces que extienden `JpaRepository` a `infrastructure/adapter/out/persistence/repository`. Crear clases adaptadoras que implementen la interfaz de dominio usando el JpaRepository. *Solo avanzar si se domina este patrón de Adaptadores de Persistencia.*
+
+---
+
+> **Nota de Progreso (Mayo 2026):**  
+> La refactorización ha sido pausada de forma segura tras completar la Fase 3 y la Tarea 4.1. El código se encuentra estable, compila correctamente y gran parte de la deuda técnica central ha sido saneada.  
+> Los pasos restantes de la Fase 4 (Migración de Controladores, Excepciones y Repositorios) se retomarán en una iteración futura para terminar de afianzar la arquitectura limpia.

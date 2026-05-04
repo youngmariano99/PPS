@@ -1,7 +1,7 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.dto.suscripcion.MpPaymentResponseDto;
-import com.PPS.PPS.dto.suscripcion.MpPreapprovalResponseDto;
+import com.PPS.PPS.application.dto.suscripcion.MpPaymentResponseDto;
+import com.PPS.PPS.application.dto.suscripcion.MpPreapprovalResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -158,3 +158,4 @@ public class MercadoPagoService {
         }
     }
 }
+

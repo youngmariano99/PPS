@@ -1,7 +1,7 @@
 package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IBuscarPerfilesCercanosUseCase;
-import com.PPS.PPS.dto.PerfilRespuestaDto;
+import com.PPS.PPS.application.dto.PerfilRespuestaDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.PerfilProveedor;
 import com.PPS.PPS.repository.PerfilEmpresaRepository;
@@ -228,3 +228,4 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
         return resultados;
     }
 }
+

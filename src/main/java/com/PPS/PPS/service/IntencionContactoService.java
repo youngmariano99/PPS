@@ -4,7 +4,7 @@ import com.PPS.PPS.entity.IntencionContacto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.PerfilProveedor;
 import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.exception.RecursoNoEncontradoException;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.repository.IntencionContactoRepository;
 import com.PPS.PPS.repository.PerfilEmpresaRepository;
 import com.PPS.PPS.repository.PerfilProveedorRepository;
@@ -25,7 +25,7 @@ public class IntencionContactoService {
     private final PerfilEmpresaRepository perfilEmpresaRepository;
 
     @Transactional
-    public com.PPS.PPS.dto.ContactoRespuestaDto registrarContacto(UUID interesadoId, UUID destinoId, String ip) {
+    public com.PPS.PPS.application.dto.ContactoRespuestaDto registrarContacto(UUID interesadoId, UUID destinoId, String ip) {
         Usuario interesado = usuarioRepository.findById(interesadoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario interesado no encontrado."));
 
@@ -69,7 +69,7 @@ public class IntencionContactoService {
             finalId = guardado.getId();
         }
 
-        return com.PPS.PPS.dto.ContactoRespuestaDto.builder()
+        return com.PPS.PPS.application.dto.ContactoRespuestaDto.builder()
                 .contactoId(finalId)
                 .telefonoRevelado(telefono)
                 .calleRevelada(calle)
@@ -77,3 +77,5 @@ public class IntencionContactoService {
                 .build();
     }
 }
+
+

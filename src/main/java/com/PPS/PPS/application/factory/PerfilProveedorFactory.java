@@ -1,6 +1,6 @@
 package com.PPS.PPS.application.factory;
 
-import com.PPS.PPS.dto.RegistroCompletoSolicitudDto;
+import com.PPS.PPS.application.dto.RegistroCompletoSolicitudDto;
 import com.PPS.PPS.entity.PerfilProveedor;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.entity.Usuario;
@@ -32,6 +32,8 @@ public class PerfilProveedorFactory implements IPerfilFactory {
                 .numero(Integer.parseInt(dto.getNumero()))
                 .codigoPostal(Integer.parseInt(dto.getCodigoPostal()))
                 .ubicacion(puntoUbicacion)
+                .redesSociales(com.PPS.PPS.application.dto.RedSocialDto.procesarUrls(dto.getRedesSocialesUrls()))
+                .sitioWebUrl(dto.getSitioWebUrl())
                 .especialidades(dto.getEspecialidades())
                 .condicionesServicio(dto.getCondicionesServicio())
                 .build();
@@ -43,3 +45,4 @@ public class PerfilProveedorFactory implements IPerfilFactory {
         return "PROVEEDOR";
     }
 }
+

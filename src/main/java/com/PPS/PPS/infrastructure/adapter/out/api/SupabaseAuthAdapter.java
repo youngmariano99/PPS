@@ -1,7 +1,7 @@
 package com.PPS.PPS.infrastructure.adapter.out.api;
 
 import com.PPS.PPS.application.usecase.ISupabaseAuthPort;
-import com.PPS.PPS.exception.ValidacionNegocioException;
+import com.PPS.PPS.domain.exception.ValidacionNegocioException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -125,3 +125,4 @@ public class SupabaseAuthAdapter implements ISupabaseAuthPort {
         return result;
     }
 }
+

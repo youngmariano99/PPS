@@ -1,14 +1,14 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.dto.AuthRespuestaDto;
-import com.PPS.PPS.dto.LoginSolicitudDto;
+import com.PPS.PPS.application.dto.AuthRespuestaDto;
+import com.PPS.PPS.application.dto.LoginSolicitudDto;
 import com.PPS.PPS.application.factory.IPerfilFactory;
-import com.PPS.PPS.dto.RegistroCompletoSolicitudDto;
-import com.PPS.PPS.dto.RegistroSolicitudDto;
+import com.PPS.PPS.application.dto.RegistroCompletoSolicitudDto;
+import com.PPS.PPS.application.dto.RegistroSolicitudDto;
 import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.exception.ValidacionNegocioException;
+import com.PPS.PPS.domain.exception.ValidacionNegocioException;
 import com.PPS.PPS.repository.PortafolioRepository;
 import com.PPS.PPS.repository.RubroRepository;
 import com.PPS.PPS.repository.UsuarioRepository;
@@ -183,3 +183,5 @@ public class AuthServiceImpl implements IAuthUseCase {
                 .build();
     }
 }
+
+

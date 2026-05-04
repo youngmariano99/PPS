@@ -1,13 +1,11 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.dto.PerfilDetalleDto;
-import com.PPS.PPS.dto.PerfilRespuestaDto;
-import com.PPS.PPS.dto.PerfilSolicitudDto;
-import com.PPS.PPS.dto.ResenaDetalleDto;
-import com.PPS.PPS.dto.UsuarioPerfilDto;
+import com.PPS.PPS.application.dto.PerfilSolicitudDto;
+import com.PPS.PPS.application.dto.UsuarioPerfilDto;
+import com.PPS.PPS.application.dto.RedSocialDto;
 import com.PPS.PPS.entity.*;
-import com.PPS.PPS.exception.RecursoNoEncontradoException;
-import com.PPS.PPS.exception.ValidacionNegocioException;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
+import com.PPS.PPS.domain.exception.ValidacionNegocioException;
 import com.PPS.PPS.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +17,8 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +29,7 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
     private final PerfilEmpresaRepository empresaRepository;
     private final RubroRepository rubroRepository;
     private final UsuarioRepository usuarioRepository;
-    private final SuscripcionUsuarioRepository suscripcionRepository;
     private final PortafolioRepository portafolioRepository;
-    private final ResenaRepository resenaRepository;
     private final GeocodingService geocodingService;
     private final GeometryFactory geometryFactory;
     private final IValidarMultimediaUseCase validarMultimediaUseCase;
@@ -142,9 +134,8 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         perfil.setDescripcionProfesional(dto.getDescripcion());
         perfil.setMatricula(dto.getMatricula());
         perfil.setFotoPerfilUrl(dto.getFotoPerfilUrl());
-        perfil.setInstagramUrl(dto.getInstagramUrl());
-        perfil.setFacebookUrl(dto.getFacebookUrl());
-        perfil.setLinkedinUrl(dto.getLinkedinUrl());
+        perfil.setRedesSociales(RedSocialDto.procesarUrls(dto.getRedesSocialesUrls()));
+        perfil.setSitioWebUrl(dto.getSitioWebUrl());
         perfil.setEspecialidades(dto.getEspecialidades());
         perfil.setCondicionesServicio(dto.getCondicionesServicio());
 
@@ -156,7 +147,8 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         perfil.setPais(dto.getPais());
         perfil.setCodigoPostal(dto.getCodigoPostal());
 
-        // Re-geocodificar siempre para asegurar precisión tras los cambios en GeocodingService
+        // Re-geocodificar siempre para asegurar precisión tras los cambios en
+        // GeocodingService
         // O al menos si hay cualquier cambio en los campos de ubicación
         perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
 
@@ -188,6 +180,7 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
 
         usuarioRepository.save(usuario);
     }
+
     public double[] geocodificarDireccion(String direccion) {
         return geocodingService.obtenerCoordenadas(direccion);
     }

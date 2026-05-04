@@ -1,5 +1,15 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-05-04
+* **Módulo/Tarea:** Refactorización JSONB para Redes Sociales
+* **Archivos Tocados:** `05_MIGRACION_REDES_SOCIALES.sql`, `PerfilProveedor.java`, `GestionarPerfilProfesionalUseCaseImpl.java`, `RedSocialDto.java`
+* **Qué y Por Qué (1 oración clara):** Se eliminaron las columnas hardcodeadas de redes sociales migrándolas a un campo JSONB con auto-detección por regex de la plataforma, permitiendo una escalabilidad infinita sin necesidad de alterar el esquema de base de datos en el futuro.
+
+* **Fecha:** 2026-05-04
+* **Módulo/Tarea:** Refactorización Profunda (Clean Architecture y Patrones de Diseño)
+* **Archivos Tocados:** `DirectorioServiceImpl.java` (Eliminado), `AuthServiceImpl.java`, Múltiples Controladores, Creación de `IPerfilFactory` y Casos de Uso, Migración de carpeta `dto`.
+* **Qué y Por Qué (1 oración clara):** Se descompuso la Clase Dios `DirectorioService` en Casos de Uso modulares (SRP), se aplicó el patrón Factory en `AuthService` para eliminar estructuras condicionales masivas (OCP) y se aisló la lógica de Supabase en un Adapter, logrando una Arquitectura Limpia escalable y segura.
+
 * **Fecha:** 2026-05-02
 * **Módulo/Tarea:** Prestige V2 y Blindaje de Privacidad (Seguridad Server-Side)
 * **Archivos Tocados:** `DirectorioService.java`, `IntencionContactoService.java`, `IntencionContactoController.java`, `PerfilPublicoProveedorChamba.jsx`, `ContactoRespuestaDto.java`

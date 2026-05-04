@@ -1,7 +1,7 @@
 package com.PPS.PPS.application.usecase;
 
-import com.PPS.PPS.dto.PerfilSolicitudDto;
-import com.PPS.PPS.dto.UsuarioPerfilDto;
+import com.PPS.PPS.application.dto.PerfilSolicitudDto;
+import com.PPS.PPS.application.dto.UsuarioPerfilDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.PerfilProveedor;
 
@@ -14,3 +14,4 @@ public interface IGestionarPerfilProfesionalUseCase {
     void actualizarUsuario(UUID id, UsuarioPerfilDto dto);
     double[] geocodificarDireccion(String direccion);
 }
+

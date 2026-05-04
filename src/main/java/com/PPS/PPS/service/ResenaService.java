@@ -1,11 +1,11 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.dto.CrearResenaDto;
-import com.PPS.PPS.dto.ResenaDetalleDto;
+import com.PPS.PPS.application.dto.CrearResenaDto;
+import com.PPS.PPS.application.dto.ResenaDetalleDto;
 import com.PPS.PPS.entity.IntencionContacto;
 import com.PPS.PPS.entity.Resena;
-import com.PPS.PPS.exception.RecursoNoEncontradoException;
-import com.PPS.PPS.exception.ValidacionNegocioException;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
+import com.PPS.PPS.domain.exception.ValidacionNegocioException;
 import com.PPS.PPS.entity.Usuario;
 import com.PPS.PPS.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -151,3 +151,5 @@ public class ResenaService {
         // Stub hasta implementar Módulo de Solicitudes
     }
 }
+
+

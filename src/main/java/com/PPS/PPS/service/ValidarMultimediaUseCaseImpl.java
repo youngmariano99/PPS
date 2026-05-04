@@ -1,11 +1,11 @@
 package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IValidarMultimediaUseCase;
-import com.PPS.PPS.dto.PerfilSolicitudDto;
+import com.PPS.PPS.application.dto.PerfilSolicitudDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.exception.ValidacionNegocioException;
+import com.PPS.PPS.domain.exception.ValidacionNegocioException;
 import com.PPS.PPS.repository.PortafolioRepository;
 import com.PPS.PPS.repository.SuscripcionUsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -85,3 +85,5 @@ public class ValidarMultimediaUseCaseImpl implements IValidarMultimediaUseCase {
         }
     }
 }
+
+

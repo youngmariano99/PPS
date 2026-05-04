@@ -21,6 +21,8 @@ import {
     Instagram,
     Facebook,
     Linkedin,
+    Youtube,
+    Github,
     ExternalLink,
     CheckCircle2,
     Clock,
@@ -469,8 +471,8 @@ export default function PerfilPublicoProveedorChamba(props) {
             })
 
             if (response.ok) {
-                setData({ ...tempData, location: `${tempData.city}, ${tempData.province}` })
                 setEditingSection(null)
+                discoverAndFetch()
             } else {
                 alert("Error al guardar los cambios")
             }
@@ -833,6 +835,9 @@ export default function PerfilPublicoProveedorChamba(props) {
                                                     if (red.plataforma === "INSTAGRAM") { Icono = Instagram; color = "#E1306C"; }
                                                     if (red.plataforma === "FACEBOOK") { Icono = Facebook; color = "#1877F2"; }
                                                     if (red.plataforma === "LINKEDIN") { Icono = Linkedin; color = "#0077B5"; }
+                                                    if (red.plataforma === "YOUTUBE") { Icono = Youtube; color = "#FF0000"; }
+                                                    if (red.plataforma === "GITHUB") { Icono = Github; color = "#333333"; }
+                                                    if (red.plataforma === "TIKTOK") { Icono = Video; color = "#000000"; }
                                                     
                                                     return (
                                                         <a key={idx} href={red.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>

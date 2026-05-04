@@ -147,10 +147,13 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         perfil.setPais(dto.getPais());
         perfil.setCodigoPostal(dto.getCodigoPostal());
 
-        // Re-geocodificar siempre para asegurar precisión tras los cambios en
-        // GeocodingService
-        // O al menos si hay cualquier cambio en los campos de ubicación
-        perfil.setUbicacion(obtenerPuntoDesdeDireccion(dto));
+        // Re-geocodificar si es posible, pero no fallar si Nominatim rechaza la petición
+        try {
+            Point nuevoPunto = obtenerPuntoDesdeDireccion(dto);
+            perfil.setUbicacion(nuevoPunto);
+        } catch (ValidacionNegocioException e) {
+            log.warn("Geolocalización fallida al actualizar perfil. Se mantendrá la ubicación anterior: {}", e.getMessage());
+        }
 
         // --- SOLUCIÓN AL PROBLEMA 2 ---
         // 1. Validar límites según el plan actual

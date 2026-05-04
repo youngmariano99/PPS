@@ -1,6 +1,6 @@
 # RESUMEN DEL PROYECTO: ESTADO ACTUAL Y MÓDULOS APLICADOS
 
-Este documento proporciona una visión consolidada de la arquitectura, los módulos implementados y el progreso técnico hasta la fecha (**2026-04-28**).
+Este documento proporciona una visión consolidada de la arquitectura, los módulos implementados y el progreso técnico hasta la fecha (**2026-05-02**).
 
 ---
 
@@ -57,7 +57,8 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 - **Validación de Límites:** Restricción estricta de fotos (5 para Gratis, 20 para Premium) y validación de dominios de video (YouTube, TikTok, Instagram, Google Drive).
 - **Graceful Downgrade:** Los recursos se mantienen en DB pero se filtran en la respuesta de la API basándose en la suscripción activa.
 
-### Módulo F: Sistema de Reseñas y Reputación (Sprint 5 - Implementado)
+### Módulo F: Sistema de Reseñas y Reputación (Prestige V2 - Implementado)
+- **Modelo de Prestigio Único:** Un usuario solo puede reseñar una vez a cada profesional, consolidando una reputación real y evitando el inflado artificial de métricas.
 - **Evaluación Dual:** Soporte para reseñas por "Intención de Contacto" (Baja Fricción) y "Trabajo Verificado" (Alta Confianza).
 - **Escudo Anti-Fraude:**
     - Validación de IP para evitar auto-reseñas (Astroturfing).
@@ -68,6 +69,11 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
     3.  **Proximidad:** Ante igual calidad, se prioriza al profesional más cercano al usuario.
     4.  **Presencia Visual:** Los perfiles con foto tienen prioridad sobre los anónimos.
     5.  **Popularidad (Volumen):** El número total de reseñas actúa como desempate final.
+
+### Módulo G: Privacidad y Seguridad de Datos (Implementado)
+- **Ofuscación Server-Side:** Protección de datos sensibles (Teléfono y Dirección Exacta) mediante enmascaramiento en el servidor.
+- **Secure Reveal Mechanic:** Los datos reales solo se transmiten al cliente tras un evento de registro de intención de contacto, garantizando que cada acceso a información privada sea trazable y legítimo.
+- **Blindaje contra Scraping:** El diseño impide que bots o usuarios malintencionados recolecten datos masivos mediante la inspección del DOM o el tráfico de red inicial.
 
 ---
 
@@ -83,8 +89,8 @@ El proyecto es una plataforma de **Marketplace de Servicios y Bolsa de Empleo** 
 
 ## 4. Próximos Pasos (Roadmap Inmediato)
 
-1.  **Módulo G: Bolsa de Empleo:** Implementación de Ofertas de Trabajo con "Knockout Questions" (Preguntas de Filtro).
-2.  **Módulo H: Postulaciones:** Sistema de envío de currículums nativos (JSONB) y gestión de estados.
+1.  **Módulo H: Bolsa de Empleo:** Implementación de Ofertas de Trabajo con "Knockout Questions" (Preguntas de Filtro).
+2.  **Módulo I: Postulaciones:** Sistema de envío de currículums nativos (JSONB) y gestión de estados.
 3.  **Sistema de Notificaciones:** Alertas push/email sobre cambios en el estado de las postulaciones.
 
 ---

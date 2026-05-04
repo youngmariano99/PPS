@@ -1,7 +1,9 @@
 package com.PPS.PPS.controller;
 
+import com.PPS.PPS.application.usecase.IBuscarPerfilesCercanosUseCase;
+import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
+import com.PPS.PPS.application.usecase.IGestionarPerfilProfesionalUseCase;
 import com.PPS.PPS.dto.PerfilRespuestaDto;
-import com.PPS.PPS.service.DirectorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 @Tag(name = "Directorio", description = "Búsqueda geolocalizada de servicios")
 public class DirectorioController {
 
-    private final DirectorioService directorioService;
+    private final IGestionarPerfilProfesionalUseCase gestionarPerfilProfesionalUseCase;
+    private final IBuscarPerfilesCercanosUseCase buscarPerfilesCercanosUseCase;
+    private final IConsultarDetallePerfilUseCase consultarDetallePerfilUseCase;
 
     @GetMapping("/buscar/lista")
     @Operation(summary = "Obtener lista paginada de proveedores", description = "Filtra solo proveedores con paginación y destaca suscriptores activos.")
@@ -33,7 +37,7 @@ public class DirectorioController {
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size) {
-        return ResponseEntity.ok(directorioService.buscarCercanosLista(lat, lon, radioKm, rubro, q, page, size));
+        return ResponseEntity.ok(buscarPerfilesCercanosUseCase.buscarCercanosLista(lat, lon, radioKm, rubro, q, page, size));
     }
 
     @GetMapping("/buscar/mapa")
@@ -43,7 +47,7 @@ public class DirectorioController {
             @RequestParam double lon,
             @RequestParam(defaultValue = "10") double radioKm,
             @RequestParam(required = false) String q) {
-        return ResponseEntity.ok(directorioService.buscarCercanosMapa(lat, lon, radioKm, q));
+        return ResponseEntity.ok(buscarPerfilesCercanosUseCase.buscarCercanosMapa(lat, lon, radioKm, q));
     }
 
     @GetMapping("/proveedor/{id}")
@@ -51,13 +55,13 @@ public class DirectorioController {
     public ResponseEntity<Object> obtenerDetalle(
             @PathVariable UUID id,
             @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) UUID requesterId) {
-        return ResponseEntity.ok(directorioService.obtenerDetalleProveedor(id, requesterId));
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerDetalleProveedor(id, requesterId));
     }
 
     @GetMapping("/geocodificar")
     @Operation(summary = "Validar y geocodificar una dirección", description = "Retorna longitud y latitud si la dirección existe.")
     public ResponseEntity<double[]> geocodificar(@RequestParam String direccion) {
-        double[] coords = directorioService.geocodificarDireccion(direccion);
+        double[] coords = gestionarPerfilProfesionalUseCase.geocodificarDireccion(direccion);
         if (coords == null) {
             return ResponseEntity.notFound().build();
         }

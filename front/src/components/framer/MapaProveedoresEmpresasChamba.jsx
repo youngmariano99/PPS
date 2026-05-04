@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
 import {
-    Map,
+    Map as PigeonMap,
     Marker,
     Overlay,
     ZoomControl,
 } from "https://esm.sh/pigeon-maps@0.21.3?external=react,react-dom"
+import Swal from "https://esm.sh/sweetalert2"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
 
 /**
  * MapaProveedoresEmpresasChamba
@@ -21,24 +23,37 @@ export default function MapaProveedoresEmpresasChamba(props) {
         primaryColor = "#A01EED", 
         alturaMapa = "100%",
         mostrarZoom = true,
-        radioInicial = 1000 // 1km por defecto
+        radioInicial = 1000,
+        defaultZoom = 12,
+        providerProfileUrl = "/perfiles-prov",
+        loginUrl = "/login"
     } = props
 
     // --- ESTADOS LÓGICOS (1:1 con el original) ---
     const [perfiles, setPerfiles] = useState([])
     const [perfilesFiltrados, setPerfilesFiltrados] = useState([])
+    const [rubrosBase, setRubrosBase] = useState([]) // Rubros oficiales de BD
+    const [rubrosSugeridos, setRubrosSugeridos] = useState([]) // Combinados y normalizados
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [isSearchActive, setIsSearchActive] = useState(false)
 
     const [coords, setCoords] = useState({ lat: -34.6037, lon: -58.3816 })
     const [ubicacionObtenida, setUbicacionObtenida] = useState(false)
     const [geolocalizacionError, setGeolocalizacionError] = useState(null)
+    const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+    // Configuración Supabase (Mismas credenciales que AuthNavButton)
+    const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
     const [terminoBusqueda, setTerminoBusqueda] = useState("")
     const [radioEfectivo, setRadioEfectivo] = useState(radioInicial)
     const [distanciaSeleccionada, setDistanciaSeleccionada] = useState(radioInicial)
     
     const [perfilSeleccionado, setPerfilSeleccionado] = useState(null)
+    const [selectedRubros, setSelectedRubros] = useState([])
     const [mostrarDropdownDistancia, setMostrarDropdownDistancia] = useState(false)
     
     const mapRef = useRef(null)
@@ -147,6 +162,36 @@ export default function MapaProveedoresEmpresasChamba(props) {
                 background: #e2e8f0;
                 border-radius: 10px;
             }
+
+            .chamba-pills-container::-webkit-scrollbar {
+                display: none;
+            }
+            .chamba-pill {
+                white-space: nowrap;
+                padding: 10px 20px;
+                background: white;
+                border: 1px solid #E2E8F0;
+                border-radius: 100px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #475569;
+                cursor: pointer;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            }
+            .chamba-pill:hover {
+                border-color: ${primaryColor};
+                color: ${primaryColor};
+                background: ${primaryColor}08;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            }
+            .chamba-pill-active {
+                background: ${primaryColor};
+                color: white !important;
+                border-color: ${primaryColor};
+                box-shadow: 0 8px 20px ${primaryColor}30;
+            }
         `
         document.head.appendChild(styleSheet)
 
@@ -213,26 +258,137 @@ export default function MapaProveedoresEmpresasChamba(props) {
         obtenerUbicacion()
     }, [])
 
+    // --- EFECTOS DE AUTENTICACIÓN ---
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            setIsLoggedIn(!!user)
+        }
+        checkUser()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setIsLoggedIn(!!session)
+        })
+
+        return () => subscription.unsubscribe()
+    }, [])
+
     // --- FILTRADO (1:1) ---
+    // 1. Cargar Rubros Oficiales desde la BD
+    useEffect(() => {
+        const fetchRubros = async () => {
+            try {
+                const response = await fetch(`${apiUrl}/rubros`)
+                if (response.ok) {
+                    const data = await response.json()
+                    const nombres = data.filter(r => r.activa).map(r => r.nombre)
+                    setRubrosBase(nombres)
+                }
+            } catch (err) {
+                console.error("Error al cargar rubros:", err)
+            }
+        }
+        fetchRubros()
+    }, [apiUrl])
+
+    // 2. Lógica de "Rubros Inteligentes" (Oficiales + Personalizados de Perfiles)
+    useEffect(() => {
+        const allRubros = new Map()
+        const normalize = (s) => (s || "").toLowerCase().trim()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+            .replace(/s$/, "") // Quitar plurales básicos (opcional, pero ayuda)
+
+        // Primero los oficiales (tienen prioridad de nombre "bonito")
+        rubrosBase.forEach(r => {
+            const norm = normalize(r)
+            if (norm && !allRubros.has(norm)) allRubros.set(norm, r)
+        })
+
+        // Luego los de los perfiles cargados en el mapa (Rubros secundarios/personalizados)
+        perfiles.forEach(p => {
+            const r = p.rubro
+            if (r) {
+                const norm = normalize(r)
+                if (!allRubros.has(norm)) {
+                    // Si no existe, lo agregamos. 
+                    // Si ya existe algo parecido (ej: "Plomero" vs "Plomeros"), se queda el primero
+                    allRubros.set(norm, r)
+                }
+            }
+        })
+
+        const sorted = Array.from(allRubros.values()).sort((a, b) => a.localeCompare(b))
+        setRubrosSugeridos(sorted)
+    }, [rubrosBase, perfiles])
+
     useEffect(() => {
         let filtrados = perfiles.map(p => ({
             ...p,
             distancia: calcularDistancia(coords.lat, coords.lon, p.latitud, p.longitud)
         })).filter(p => p.distancia <= radioEfectivo)
 
-        if (terminoBusqueda.trim()) {
+        // Filtrado por rubros seleccionados (Multi-select)
+        if (selectedRubros.length > 0) {
+            filtrados = filtrados.filter(p => {
+                const rubroProv = (p.rubro || "").toLowerCase().trim()
+                return selectedRubros.some(sel => sel.toLowerCase().trim() === rubroProv)
+            })
+        }
+
+        // Si hay búsqueda por texto y NO hay rubros seleccionados, o como filtro adicional?
+        // El usuario dice: "buscador que filtre las tarjetitas... al apretar una etiqueta filtrar"
+        // Pero una vez activo, tal vez quiera filtrar por nombre dentro de esos rubros.
+        // Lo mantendremos como filtro adicional si ya está activo.
+        if (isSearchActive && terminoBusqueda.trim()) {
             const t = terminoBusqueda.toLowerCase().trim()
             filtrados = filtrados.filter(p => 
-                (p.rubro && p.rubro.toLowerCase().includes(t)) ||
                 (p.nombrePublico && p.nombrePublico.toLowerCase().includes(t)) ||
                 (p.descripcion && p.descripcion.toLowerCase().includes(t))
             )
         }
+
         filtrados.sort((a, b) => a.distancia - b.distancia)
         setPerfilesFiltrados(filtrados)
-    }, [perfiles, coords, radioEfectivo, terminoBusqueda, calcularDistancia])
+    }, [perfiles, coords, radioEfectivo, terminoBusqueda, selectedRubros, isSearchActive, calcularDistancia])
+    
 
-    // --- MANEJADORES UI ---
+    const renderRubrosPills = () => {
+        return rubrosSugeridos
+            .filter(rub => !terminoBusqueda || rub.toLowerCase().includes(terminoBusqueda.toLowerCase()))
+            .map(rub => {
+                const isSelected = selectedRubros.includes(rub)
+                return (
+                    <button 
+                        key={rub}
+                        className={`chamba-pill ${isSelected ? 'chamba-pill-active' : ''}`}
+                        onClick={() => {
+                            let newSelected = [...selectedRubros]
+                            if (isSelected) {
+                                newSelected = newSelected.filter(r => r !== rub)
+                            } else {
+                                if (newSelected.length < 5) {
+                                    newSelected.push(rub)
+                                } else {
+                                    Swal.fire({
+                                        title: 'Límite alcanzado',
+                                        text: 'Puedes seleccionar hasta 5 rubros para tu búsqueda.',
+                                        icon: 'info',
+                                        confirmButtonColor: primaryColor,
+                                        confirmButtonText: 'Entendido'
+                                    })
+                                }
+                            }
+                            setSelectedRubros(newSelected)
+                            setIsSearchActive(newSelected.length > 0)
+                        }}
+                    >
+                        {rub}
+                        {isSelected && <span style={{ marginLeft: "6px", fontSize: "10px" }}>✕</span>}
+                    </button>
+                )
+            })
+    }
+
     const handleDistanciaSelect = (valor) => {
         setDistanciaSeleccionada(valor)
         setRadioEfectivo(valor)
@@ -266,221 +422,253 @@ export default function MapaProveedoresEmpresasChamba(props) {
                         </svg>
                         <input 
                             style={styles.inputSearch}
-                            placeholder="Nombre, rubro o descripción..."
+                            placeholder={isSearchActive ? "Filtra por nombre o busca otro rubro..." : "Escribe para filtrar rubros (ej: Plomero)..."}
                             value={terminoBusqueda}
-                            onChange={(e) => setTerminoBusqueda(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Input Ubicación (Visual/Mock) */}
-                    <div style={styles.locationBox}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-                        </svg>
-                        <input 
-                            style={styles.inputLocation}
-                            placeholder="Pringles, Buenos Aires"
-                            readOnly
-                        />
-                        <button style={styles.geoButton} onClick={obtenerUbicacion}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2">
-                                <circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    {/* Selector Distancia Dropdown */}
-                    <div style={{ position: "relative" }}>
-                        <button 
-                            style={{ 
-                                ...styles.distanceButton, 
-                                borderColor: mostrarDropdownDistancia ? primaryColor : "#E2E8F0" 
+                            onChange={(e) => {
+                                setTerminoBusqueda(e.target.value)
+                                // La activación del mapa solo ocurre al seleccionar una pill
                             }}
-                            onClick={() => setMostrarDropdownDistancia(!mostrarDropdownDistancia)}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2">
-                                <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
-                            </svg>
-                            <span>{formatearDistancia(distanciaSeleccionada)}</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                                <path d="m6 9 6 6 6-6" />
-                            </svg>
-                        </button>
+                        />
+                    </div>
 
-                        {mostrarDropdownDistancia && (
-                            <div className="chamba-dropdown" style={styles.dropdown}>
-                                {[500, 1000, 5000, 10000].map(val => (
-                                    <div 
-                                        key={val} 
-                                        className="chamba-dropdown-item"
-                                        onClick={() => handleDistanciaSelect(val)}
-                                    >
-                                        {formatearDistancia(val)}
-                                        {distanciaSeleccionada === val && (
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="3">
-                                                <path d="M20 6 9 17l-5-5" />
-                                            </svg>
-                                        )}
-                                    </div>
-                                ))}
+                    {/* Controles avanzados: Solo si el mapa está activo */}
+                    {isSearchActive && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", animation: "fadeIn 0.3s ease-out" }}>
+                            {/* ... (resto de controles igual) ... */}
+                            <div style={styles.locationBox}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                                </svg>
+                                <input 
+                                    style={styles.inputLocation}
+                                    placeholder="Pringles, Buenos Aires"
+                                    readOnly
+                                />
+                                <button style={styles.geoButton} onClick={obtenerUbicacion}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2">
+                                        <circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                                    </svg>
+                                </button>
                             </div>
-                        )}
-                    </div>
-
-                    {/* Resultados */}
-                    <div style={styles.resultsBadge}>
-                        <span style={{ color: primaryColor, fontWeight: "600" }}>
-                            {perfilesFiltrados.length}
-                        </span>
-                        <span style={{ color: "#94A3B8", marginLeft: "4px" }}>resultados</span>
-                    </div>
-
-                    {/* Botón Filtros */}
-                    <button style={styles.filterButton}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2">
-                            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-                        </svg>
-                        <span>Filtros</span>
-                    </button>
+                            
+                            <div style={styles.resultsBadge}>
+                                <span style={{ color: primaryColor, fontWeight: "600" }}>
+                                    {perfilesFiltrados.length}
+                                </span>
+                                <span style={{ color: "#94A3B8", marginLeft: "4px" }}>resultados</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
+
+                {/* Pills de Rubros: Solo en el header si el mapa está ACTIVO */}
+                {isSearchActive && (
+                    <div 
+                        className="chamba-pills-container"
+                        style={{ 
+                            display: "flex", 
+                            flexWrap: "wrap",
+                            justifyContent: "center",
+                            gap: "10px", 
+                            marginTop: "16px", 
+                            padding: "4px 0 12px 0",
+                            width: "100%",
+                            maxHeight: "120px",
+                            overflowY: "auto",
+                            scrollbarWidth: "none",
+                            msOverflowStyle: "none",
+                        }}
+                    >
+                        {renderRubrosPills()}
+                    </div>
+                )}
             </div>
 
             {/* MAPA PIGEON */}
-            <div style={styles.mapWrapper}>
-                <Map
-                    ref={mapRef}
-                    height={alturaMapa}
-                    center={[coords.lat, coords.lon]}
-                    zoom={getZoomLevel()}
-                    provider={(x, y, z) => `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`}
-                    onBoundsChanged={() => perfilSeleccionado && setPerfilSeleccionado(null)}
-                >
-                    {mostrarZoom && <ZoomControl />}
+            <div style={styles.mapContainerWithOverlay}>
+                <div style={{ ...styles.mapWrapper, filter: isSearchActive ? "none" : "blur(8px)", opacity: isSearchActive ? 1 : 0.6, transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }}>
+                    <PigeonMap
+                        ref={mapRef}
+                        height={alturaMapa}
+                        center={[coords.lat || -34.6037, coords.lon || -58.3816]}
+                        zoom={getZoomLevel() || 12}
+                        defaultCenter={[-34.6037, -58.3816]}
+                        defaultZoom={12}
+                        provider={(x, y, z) => `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`}
+                        onBoundsChanged={() => perfilSeleccionado && setPerfilSeleccionado(null)}
+                    >
+                        {mostrarZoom && <ZoomControl />}
 
-                    {/* Marcador Usuario (Punto con Radio) */}
-                    {ubicacionObtenida && (
-                        <Overlay anchor={[coords.lat, coords.lon]} offset={[0, 0]}>
-                            <div style={styles.userMarkerWrapper}>
-                                <div style={{ ...styles.userPulse, backgroundColor: primaryColor }} />
-                                <div style={{ ...styles.userDot, backgroundColor: primaryColor }} />
-                                {/* Radio visual */}
-                                <div style={{ 
-                                    ...styles.visualRadius, 
-                                    width: `${radioEfectivo / (40000 / Math.pow(2, getZoomLevel()))}px`, 
-                                    height: `${radioEfectivo / (40000 / Math.pow(2, getZoomLevel()))}px`,
-                                    borderColor: `${primaryColor}40`,
-                                    backgroundColor: `${primaryColor}08`
-                                }} />
-                            </div>
-                        </Overlay>
-                    )}
-
-                    {/* Marcadores de Perfiles (Propuesta A) */}
-                    {perfilesFiltrados.map(p => (
-                        <Overlay key={p.id} anchor={[p.latitud, p.longitud]} offset={[0, 0]}>
-                            <div 
-                                className="chamba-marker"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setPerfilSeleccionado(p)
-                                }}
-                                style={{ transform: "translate(-50%, -100%)", position: "absolute" }}
-                            >
-                                <div className="chamba-marker-pill">
-                                    {p.rubro || "Servicio"}
+                        {ubicacionObtenida && (
+                            <Overlay anchor={[coords.lat, coords.lon]} offset={[0, 0]}>
+                                <div style={styles.userMarkerWrapper}>
+                                    <div style={{ ...styles.userPulse, backgroundColor: primaryColor }} />
+                                    <div style={{ ...styles.userDot, backgroundColor: primaryColor }} />
+                                    <div style={{ 
+                                        ...styles.visualRadius, 
+                                        width: `${radioEfectivo / (40000 / Math.pow(2, getZoomLevel()))}px`, 
+                                        height: `${radioEfectivo / (40000 / Math.pow(2, getZoomLevel()))}px`,
+                                        borderColor: `${primaryColor}40`,
+                                        backgroundColor: `${primaryColor}08`
+                                    }} />
                                 </div>
-                            </div>
-                        </Overlay>
-                    ))}
+                            </Overlay>
+                        )}
 
-                    {/* Tooltip / Mini-Card (Premium Chamba Design) */}
-                    {perfilSeleccionado && (
-                        <Overlay anchor={[perfilSeleccionado.latitud, perfilSeleccionado.longitud]} offset={[0, 0]}>
-                            <div style={styles.cardOverlay}>
-                                <div style={styles.card}>
-                                    <button style={styles.cardClose} onClick={() => setPerfilSeleccionado(null)}>✕</button>
-                                    
-                                    <div style={styles.cardHeader}>
-                                        <div style={styles.avatarWrapper}>
-                                            {perfilSeleccionado.fotoPerfilUrl ? (
-                                                <img 
-                                                    src={perfilSeleccionado.fotoPerfilUrl} 
-                                                    style={styles.avatarImg}
-                                                    alt={perfilSeleccionado.nombrePublico}
-                                                />
-                                            ) : (
-                                                <div style={{ ...styles.avatarPlaceholder, backgroundColor: primaryColor + "20", color: primaryColor }}>
-                                                    {perfilSeleccionado.nombrePublico?.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div style={styles.cardMainInfo}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <h4 className="chamba-title" style={styles.cardName}>
-                                                    {perfilSeleccionado.nombrePublico}
-                                                </h4>
-                                                {perfilSeleccionado.destacado && (
-                                                    <span style={{ ...styles.proBadge, backgroundColor: primaryColor }}>PRO</span>
+                        {isSearchActive && perfilesFiltrados.map(p => (
+                            <Overlay key={p.id} anchor={[p.latitud, p.longitud]} offset={[0, 0]}>
+                                <div 
+                                    className="chamba-marker"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setPerfilSeleccionado(p)
+                                    }}
+                                    style={{ transform: "translate(-50%, -100%)", position: "absolute" }}
+                                >
+                                    <div className="chamba-marker-pill">
+                                        {p.rubro || "Servicio"}
+                                    </div>
+                                </div>
+                            </Overlay>
+                        ))}
+
+                        {perfilSeleccionado && (
+                            <Overlay anchor={[perfilSeleccionado.latitud, perfilSeleccionado.longitud]} offset={[0, 0]}>
+                                <div style={styles.cardOverlay}>
+                                    <div style={styles.card}>
+                                        <button style={styles.cardClose} onClick={() => setPerfilSeleccionado(null)}>✕</button>
+                                        
+                                        <div style={styles.cardHeader}>
+                                            <div style={styles.avatarWrapper}>
+                                                {perfilSeleccionado.fotoPerfilUrl ? (
+                                                    <img 
+                                                        src={perfilSeleccionado.fotoPerfilUrl} 
+                                                        style={styles.avatarImg}
+                                                        alt={perfilSeleccionado.nombrePublico}
+                                                    />
+                                                ) : (
+                                                    <div style={{ ...styles.avatarPlaceholder, backgroundColor: primaryColor + "20", color: primaryColor }}>
+                                                        {perfilSeleccionado.nombrePublico?.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)}
+                                                    </div>
                                                 )}
                                             </div>
-                                            <p style={styles.cardCategory}>{perfilSeleccionado.rubro}</p>
+                                            <div style={styles.cardMainInfo}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                    <h4 className="chamba-title" style={styles.cardName}>
+                                                        {perfilSeleccionado.nombrePublico}
+                                                    </h4>
+                                                    {perfilSeleccionado.destacado && (
+                                                        <span style={{ ...styles.proBadge, backgroundColor: primaryColor }}>PRO</span>
+                                                    )}
+                                                </div>
+                                                <p style={styles.cardCategory}>{perfilSeleccionado.rubro}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Especialidades / Tags */}
-                                    {perfilSeleccionado.especialidades && perfilSeleccionado.especialidades.length > 0 && (
-                                        <div style={styles.tagContainer}>
-                                            {perfilSeleccionado.especialidades.slice(0, 3).map((tag, idx) => (
-                                                <span key={idx} style={styles.tag}>
-                                                    {tag}{idx < 2 && idx < perfilSeleccionado.especialidades.length - 1 ? " •" : ""}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
+                                        {perfilSeleccionado.especialidades && perfilSeleccionado.especialidades.length > 0 && (
+                                            <div style={styles.tagContainer}>
+                                                {perfilSeleccionado.especialidades.slice(0, 3).map((tag, idx) => (
+                                                    <span key={idx} style={styles.tag}>
+                                                        {tag}{idx < 2 && idx < perfilSeleccionado.especialidades.length - 1 ? " •" : ""}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
 
-                                    {/* Métricas Reales */}
-                                    <div style={styles.cardMetrics}>
-                                        <div style={styles.metricItem}>
-                                            <span style={styles.starIcon}>⭐</span>
-                                            <span style={styles.metricText}>
-                                                {perfilSeleccionado.promedioEstrellas > 0 ? perfilSeleccionado.promedioEstrellas.toFixed(1) : "N/A"} 
-                                                <span style={{ color: "#94A3B8", fontWeight: "400", marginLeft: "4px" }}>
-                                                    ({perfilSeleccionado.cantidadResenas || 0})
+                                        <div style={styles.cardMetrics}>
+                                            <div style={styles.metricItem}>
+                                                <span style={styles.starIcon}>⭐</span>
+                                                <span style={styles.metricText}>
+                                                    {perfilSeleccionado.promedioEstrellas > 0 ? perfilSeleccionado.promedioEstrellas.toFixed(1) : "N/A"} 
+                                                    <span style={{ color: "#94A3B8", fontWeight: "400", marginLeft: "4px" }}>
+                                                        ({perfilSeleccionado.cantidadResenas || 0})
+                                                    </span>
                                                 </span>
-                                            </span>
+                                            </div>
+                                            <div style={styles.metricDivider} />
+                                            <div style={styles.metricItem}>
+                                                <span style={styles.metricText}>
+                                                    📍 {formatearDistancia(Math.round(perfilSeleccionado.distancia))}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div style={styles.metricDivider} />
-                                        <div style={styles.metricItem}>
-                                            <span style={styles.metricText}>
-                                                📍 {formatearDistancia(Math.round(perfilSeleccionado.distancia))}
-                                            </span>
+                                        
+                                        <div style={styles.cardActions}>
+                                            <button 
+                                                style={{ 
+                                                    ...styles.btnSecondary, 
+                                                    opacity: (isLoggedIn && perfilSeleccionado.telefono) ? 1 : 0.5, 
+                                                    cursor: (isLoggedIn && perfilSeleccionado.telefono) ? "pointer" : "not-allowed" 
+                                                }}
+                                                onClick={() => {
+                                                    if (!isLoggedIn) {
+                                                        Swal.fire({
+                                                            title: 'Inicia sesión',
+                                                            text: 'Debes estar conectado para contactar a los profesionales.',
+                                                            icon: 'info',
+                                                            showCancelButton: true,
+                                                            confirmButtonText: 'Ir al Login',
+                                                            confirmButtonColor: primaryColor
+                                                        }).then((result) => {
+                                                            if (result.isConfirmed) window.location.href = loginUrl
+                                                        })
+                                                        return
+                                                    }
+                                                    if (perfilSeleccionado.telefono) {
+                                                        const msg = encodeURIComponent(`Hola ${perfilSeleccionado.nombrePublico}, te contacto desde Chamba por tu servicio de ${perfilSeleccionado.rubro}.`)
+                                                        window.open(`https://wa.me/${perfilSeleccionado.telefono.replace(/\D/g, "")}?text=${msg}`, "_blank")
+                                                    }
+                                                }}
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-11.7 8.38 8.38 0 0 1 3.8.9L21 3z"/></svg>
+                                                {isLoggedIn ? "Contactar" : "Login para contactar"}
+                                            </button>
+                                            <button 
+                                                className="chamba-button-primary" 
+                                                style={{ ...styles.btnPrimary, backgroundColor: primaryColor }}
+                                                onClick={() => window.location.href = `${providerProfileUrl}?id=${perfilSeleccionado.id}`}
+                                            >
+                                                Ver perfil
+                                            </button>
                                         </div>
-                                    </div>
-                                    
-                                    <div style={styles.cardActions}>
-                                        <button 
-                                            style={styles.btnSecondary}
-                                            onClick={() => window.open(`https://wa.me/${perfilSeleccionado.telefono?.replace(/\D/g, '')}`, '_blank')}
-                                        >
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2">
-                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                            </svg>
-                                            Contactar
-                                        </button>
-                                        <button 
-                                            className="chamba-button-primary" 
-                                            style={{ ...styles.btnPrimary, backgroundColor: primaryColor }}
-                                            onClick={() => window.open(`/perfil/${perfilSeleccionado.id}`, '_blank')}
-                                        >
-                                            Ver perfil
-                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        </Overlay>
-                    )}
-                </Map>
+                            </Overlay>
+                        )}
+                    </PigeonMap>
+                </div>
 
+                {!isSearchActive && (
+                    <div style={styles.emptyStateOverlay}>
+                        <div style={styles.emptyStateCard}>
+                            <div style={{ ...styles.emptyStateIcon, backgroundColor: primaryColor + "15", color: primaryColor }}>
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                                </svg>
+                            </div>
+                            <h2 style={styles.emptyStateTitle}>¿Qué necesitas resolver hoy?</h2>
+                            <p style={styles.emptyStateSub}>Selecciona una categoría o busca lo que necesitas para comenzar.</p>
+                            
+                            {/* Rubros dinámicos AQUÍ para que no tapen el cartel y sean parte de la navegación */}
+                            <div style={{ 
+                                display: "flex", 
+                                flexWrap: "wrap", 
+                                gap: "8px", 
+                                justifyContent: "center",
+                                marginTop: "24px",
+                                maxHeight: "200px",
+                                overflowY: "auto",
+                                padding: "4px"
+                            }}>
+                                {renderRubrosPills()}
+                            </div>
+
+                            <div style={{ ...styles.emptyStateHint, marginTop: "24px" }}>
+                                <span>🚀 Prueba filtrando arriba por rubros específicos</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Footer Info (Radio de búsqueda) */}
                 <div style={styles.mapFooter}>
                     <div style={styles.footerInfo}>
@@ -500,8 +688,16 @@ const styles = {
     mainContainer: {
         width: "100%",
         position: "relative",
-        background: "#F1F5F9",
+        background: "#F8FAFC",
         overflow: "hidden",
+    },
+    mapContainerWithOverlay: {
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
     },
     headerFloating: {
         position: "absolute",
@@ -517,9 +713,12 @@ const styles = {
         background: "rgba(255, 255, 255, 0.95)",
         backdropFilter: "blur(12px)",
         padding: "10px",
-        borderRadius: "16px",
+        borderRadius: "100px",
         boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
         border: "1px solid rgba(255,255,255,0.3)",
+        width: "100%",
+        maxWidth: "fit-content",
+        margin: "0 auto",
     },
     searchBox: {
         flex: 2,
@@ -597,6 +796,61 @@ const styles = {
         height: "24px",
         display: "flex",
         alignItems: "center",
+        minWidth: "140px",
+    },
+    emptyStateOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 500,
+        background: "rgba(248, 250, 252, 0.4)",
+    },
+    emptyStateCard: {
+        background: "white",
+        padding: "40px 32px",
+        borderRadius: "24px",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.12)",
+        textAlign: "center",
+        maxWidth: "400px",
+        margin: "0 24px",
+        border: "1px solid rgba(255,255,255,0.8)",
+        animation: "fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+    },
+    emptyStateIcon: {
+        width: "64px",
+        height: "64px",
+        borderRadius: "20px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: "0 auto 24px auto",
+    },
+    emptyStateTitle: {
+        fontFamily: "'Poppins', sans-serif",
+        fontSize: "24px",
+        fontWeight: "700",
+        color: "#0F172A",
+        marginBottom: "12px",
+    },
+    emptyStateSub: {
+        fontSize: "15px",
+        color: "#64748B",
+        lineHeight: "1.6",
+        marginBottom: "24px",
+    },
+    emptyStateHint: {
+        background: "#F1F5F9",
+        padding: "10px 16px",
+        borderRadius: "12px",
+        fontSize: "13px",
+        color: "#475569",
+        fontWeight: "600",
+        display: "inline-block",
     },
     filterButton: {
         display: "flex",
@@ -614,7 +868,8 @@ const styles = {
     mapWrapper: {
         width: "100%",
         height: "100%",
-        background: "#E2E8F0",
+        background: "#F8FAFC", // Limpio y claro para el empty state
+        position: "relative",
     },
     userMarkerWrapper: {
         position: "relative",
@@ -875,5 +1130,22 @@ addPropertyControls(MapaProveedoresEmpresasChamba, {
         type: ControlType.Boolean,
         title: "Mostrar Zoom",
         defaultValue: true,
+    },
+    defaultZoom: {
+        type: ControlType.Number,
+        title: "Zoom por Defecto",
+        defaultValue: 12,
+        min: 1,
+        max: 20,
+    },
+    providerProfileUrl: {
+        type: ControlType.String,
+        title: "URL Perfil Proveedor",
+        defaultValue: "/perfiles-prov",
+    },
+    loginUrl: {
+        type: ControlType.String,
+        title: "URL Login",
+        defaultValue: "/login",
     },
 })

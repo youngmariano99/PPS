@@ -1,8 +1,9 @@
 package com.PPS.PPS.controller;
 
+import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
+import com.PPS.PPS.application.usecase.IGestionarPerfilProfesionalUseCase;
 import com.PPS.PPS.dto.PerfilSolicitudDto;
 import com.PPS.PPS.dto.UsuarioPerfilDto;
-import com.PPS.PPS.service.DirectorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +18,13 @@ import java.util.UUID;
 @Tag(name = "Perfil", description = "Gestión del perfil del usuario logueado")
 public class PerfilController {
 
-    private final DirectorioService directorioService;
+    private final IGestionarPerfilProfesionalUseCase gestionarPerfilProfesionalUseCase;
+    private final IConsultarDetallePerfilUseCase consultarDetallePerfilUseCase;
 
     @GetMapping("/me")
     @Operation(summary = "Obtener datos del usuario actual", description = "Detecta el rol y devuelve los datos del usuario logueado.")
     public ResponseEntity<UsuarioPerfilDto> obtenerMiPerfil(@RequestHeader("X-User-Id") UUID usuarioId) {
-        return ResponseEntity.ok(directorioService.obtenerPerfilUsuario(usuarioId));
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerPerfilUsuario(usuarioId));
     }
 
     @PutMapping("/usuario/me")
@@ -30,7 +32,7 @@ public class PerfilController {
     public ResponseEntity<Void> actualizarMisDatos(
             @RequestHeader("X-User-Id") UUID usuarioId,
             @RequestBody UsuarioPerfilDto dto) {
-        directorioService.actualizarUsuario(usuarioId, dto);
+        gestionarPerfilProfesionalUseCase.actualizarUsuario(usuarioId, dto);
         return ResponseEntity.ok().build();
     }
 
@@ -39,7 +41,7 @@ public class PerfilController {
     public ResponseEntity<Void> actualizarMiPerfilProfesional(
             @RequestHeader("X-User-Id") UUID usuarioId,
             @RequestBody PerfilSolicitudDto dto) {
-        directorioService.actualizarPerfilProveedor(usuarioId, dto);
+        gestionarPerfilProfesionalUseCase.actualizarPerfilProveedor(usuarioId, dto);
         return ResponseEntity.ok().build();
     }
 }

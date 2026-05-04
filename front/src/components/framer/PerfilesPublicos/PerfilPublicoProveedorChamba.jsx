@@ -76,13 +76,17 @@ const SUPABASE_ANON_KEY =
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // --- HELPER MULTIMEDIA ---
-function openUploadWidget(callback, multiple) {
+function openUploadWidget(callback, multipleOrOptions) {
+    const options = typeof multipleOrOptions === 'object' 
+        ? multipleOrOptions 
+        : { multiple: !!multipleOrOptions };
+
     if (window.cloudinary) {
         window.cloudinary.openUploadWidget({
             cloudName: "denfvu7zy",
             uploadPreset: "unsigned_preset",
-            multiple: multiple,
-            sources: ["local", "url", "camera"]
+            sources: ["local", "url", "camera"],
+            ...options
         }, (error, result) => {
             if (!error && result && result.event === "success") {
                 callback(result.info.secure_url)
@@ -618,7 +622,13 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     onClick={() => openUploadWidget((url) => {
                                         setTempData(prev => ({ ...prev, avatar: url }))
                                         setEditingSection("avatar")
-                                    }, false)}
+                                    }, { 
+                                        multiple: false, 
+                                        cropping: true, 
+                                        showSkipCropButton: false,
+                                        croppingAspectRatio: 1,
+                                        croppingDefaultSelectionRatio: 1
+                                    })}
                                     style={{
                                         position: "absolute",
                                         bottom: "-10px",
@@ -1032,39 +1042,42 @@ export default function PerfilPublicoProveedorChamba(props) {
                     </div>
 
                     {/* Reseñas */}
-                    <div className="chamba-card">
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-                            <h3 className="chamba-title" style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Reseñas</h3>
+                    <div className="chamba-card" style={{ padding: "32px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
+                            <div style={{ width: "32px", height: "32px", borderRadius: "8px", border: `2px solid ${primaryColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Star size={18} color={primaryColor} />
+                            </div>
+                            <h3 className="chamba-title" style={{ fontSize: "22px", fontWeight: "800", margin: 0 }}>Reseñas</h3>
                         </div>
 
-                        <div style={{ display: "flex", gap: "40px", marginBottom: "40px", flexWrap: "wrap", alignItems: "center" }}>
-                            <div style={{ textAlign: "center", padding: "24px", background: "#F8FAFC", borderRadius: "20px", border: "1px solid #F1F5F9", minWidth: "140px" }}>
-                                <div style={{ fontSize: "48px", fontWeight: "800", color: data.reviewCount > 0 ? "#0F172A" : "#CBD5E1" }}>{data.rating > 0 ? data.rating : "0"}</div>
-                                <div style={{ display: "flex", gap: "4px", justifyContent: "center", margin: "8px 0" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "160px 1fr 240px", gap: "40px", marginBottom: "48px", alignItems: "center" }}>
+                            <div style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: "56px", fontWeight: "800", color: data.reviewCount > 0 ? "#0F172A" : "#CBD5E1", lineHeight: 1 }}>{data.rating > 0 ? data.rating : "0"}</div>
+                                <div style={{ display: "flex", gap: "3px", justifyContent: "center", margin: "12px 0" }}>
                                     {[1, 2, 3, 4, 5].map(i => (
                                         <Star
                                             key={i}
-                                            size={20}
-                                            fill={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"}
-                                            color={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#D1D5DB"}
+                                            size={18}
+                                            fill={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "none"}
+                                            color={data.reviewCount > 0 && i <= data.rating ? "#F59E0B" : "#CBD5E1"}
                                         />
                                     ))}
                                 </div>
-                                <div style={{ color: "#94A3B8", fontSize: "14px" }}>{data.reviewCount} reseñas</div>
+                                <div style={{ color: "#94A3B8", fontSize: "13px", fontWeight: "600" }}>{data.reviewCount} reseñas</div>
                             </div>
 
-                            <div style={{ flex: 1, minWidth: "200px" }}>
+                            <div style={{ flex: 1 }}>
                                 {[5, 4, 3, 2, 1].map(star => {
                                     const count = data.reviewCount > 0 ? (data.reviews.filter(r => Math.round(r.estrellas) === star).length) : 0;
                                     const percentage = data.reviewCount > 0 ? (count / data.reviewCount) * 100 : 0;
                                     return (
-                                        <div key={star} style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                                            <span style={{ fontSize: "13px", fontWeight: "600", width: "12px" }}>{star}</span>
-                                            <Star size={12} fill="#CBD5E1" color="#CBD5E1" />
-                                            <div style={{ flex: 1, height: "8px", background: "#F1F5F9", borderRadius: "4px", overflow: "hidden" }}>
-                                                <div style={{ width: `${percentage}%`, height: "100%", background: "#F59E0B", transition: "width 0.3s ease" }} />
+                                        <div key={star} style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
+                                            <span style={{ fontSize: "12px", fontWeight: "700", width: "10px", color: "#64748B" }}>{star}</span>
+                                            <Star size={12} fill="#F59E0B" color="#F59E0B" style={{ opacity: percentage > 0 ? 1 : 0.3 }} />
+                                            <div style={{ flex: 1, height: "6px", background: "#F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
+                                                <div style={{ width: `${percentage}%`, height: "100%", background: "#F59E0B", borderRadius: "10px" }} />
                                             </div>
-                                            <span style={{ fontSize: "12px", color: "#94A3B8", width: "24px", textAlign: "right" }}>{count}</span>
+                                            <span style={{ fontSize: "12px", color: "#94A3B8", width: "24px", textAlign: "right", fontWeight: "600" }}>{count}</span>
                                         </div>
                                     );
                                 })}
@@ -1108,38 +1121,49 @@ export default function PerfilPublicoProveedorChamba(props) {
                         </div>
 
                         {/* Recent Reviews List (Real) */}
-                        <div style={{ display: "flex", gap: "20px", overflowX: data.reviews.length > 0 ? "auto" : "visible", paddingBottom: "16px" }}>
+                        <div style={{ display: "flex", gap: "24px", overflowX: "auto", paddingBottom: "24px", scrollbarWidth: "none" }}>
                             {data.reviews.length > 0 ? (
                                 data.reviews.map((rev, i) => (
-                                    <div key={i} style={{ minWidth: "280px", padding: "24px", background: "#F8FAFC", borderRadius: "24px", border: "1px solid #F1F5F9" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                                                <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: primaryColor + "10", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", color: primaryColor }}>
+                                    <div key={i} style={{ 
+                                        minWidth: "320px", 
+                                        padding: "24px", 
+                                        background: "white", 
+                                        borderRadius: "24px", 
+                                        border: "1px solid #F1F5F9",
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
+                                    }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                                <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: primaryColor + "10", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", color: primaryColor, fontSize: "16px", border: `2px solid ${primaryColor}20` }}>
                                                     {rev.nombreCliente.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A" }}>{rev.nombreCliente}</div>
-                                                    <div style={{ fontSize: "12px", color: "#94A3B8" }}>
+                                                    <div style={{ fontSize: "15px", fontWeight: "800", color: "#0F172A" }}>{rev.nombreCliente}</div>
+                                                    <div style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "600" }}>
                                                         {new Date(rev.fecha).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div style={{ display: "flex", gap: "2px" }}>
-                                                {[1, 2, 3, 4, 5].map(s => <Star key={s} size={12} fill={s <= rev.estrellas ? "#F59E0B" : "none"} color={s <= rev.estrellas ? "#F59E0B" : "#CBD5E1"} />)}
-                                            </div>
+                                            <div style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "700" }}>{new Date(rev.fecha).getFullYear()}</div>
                                         </div>
-                                        <p style={{ fontSize: "14px", color: "#475569", lineHeight: "1.6", marginBottom: "16px", minHeight: "60px" }}>
+
+                                        <div style={{ display: "flex", gap: "2px", marginBottom: "12px" }}>
+                                            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill={s <= rev.estrellas ? "#F59E0B" : "none"} color={s <= rev.estrellas ? "#F59E0B" : "#E2E8F0"} />)}
+                                        </div>
+
+                                        <p style={{ fontSize: "14px", color: "#475569", lineHeight: "1.6", marginBottom: "20px", minHeight: "50px", fontWeight: "500" }}>
                                             {rev.comentario}
                                         </p>
+
                                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                                             {rev.intencionContactoId && (
-                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#F1F5F9", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", color: "#3B6790", fontWeight: "700" }}>
-                                                    👁️ Contacto Verificado
+                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: primaryColor + "08", padding: "6px 12px", borderRadius: "100px", fontSize: "11px", color: primaryColor, fontWeight: "800" }}>
+                                                    <span style={{ fontSize: "14px" }}>🎯</span> Contacto Directo
                                                 </span>
                                             )}
                                             {rev.trabajoVerificado && (
-                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#F1F5F9", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", color: "#64748B", fontWeight: "600" }}>
-                                                    <CheckCircle2 size={12} /> Trabajo verificado
+                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ECFDF5", padding: "6px 12px", borderRadius: "100px", fontSize: "11px", color: "#059669", fontWeight: "800" }}>
+                                                    <CheckCircle2 size={12} /> Trabajo Realizado
                                                 </span>
                                             )}
                                         </div>
@@ -1153,7 +1177,21 @@ export default function PerfilPublicoProveedorChamba(props) {
                             )}
                         </div>
                         {data.reviews.length > 0 && (
-                            <button className="chamba-btn-outline" style={{ margin: "32px auto 0 auto" }}>Ver todas las reseñas ({data.reviewCount})</button>
+                            <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
+                                <button 
+                                    className="chamba-btn-outline" 
+                                    style={{ 
+                                        width: "auto", 
+                                        padding: "12px 32px", 
+                                        borderRadius: "100px", 
+                                        fontSize: "14px", 
+                                        fontWeight: "700",
+                                        borderColor: "#E2E8F0"
+                                    }}
+                                >
+                                    Ver todas las reseñas ({data.reviewCount})
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

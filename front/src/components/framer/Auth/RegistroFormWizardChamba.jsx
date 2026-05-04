@@ -568,7 +568,13 @@ const Step6 = ({ data, setFormData }) => {
             <div style={mediaRow}>
                 <div style={uploadCard}>
                     <label style={labelStyle}>Foto de perfil</label>
-                    <div style={photoUploadBox} onClick={() => openUploadWidget(handlePhoto, false)}>
+                    <div style={photoUploadBox} onClick={() => openUploadWidget(handlePhoto, { 
+                        multiple: false, 
+                        cropping: true, 
+                        showSkipCropButton: false,
+                        croppingAspectRatio: 1,
+                        croppingDefaultSelectionRatio: 1
+                    })}>
                         {data.fotoPerfilUrl ? (
                             <img src={data.fotoPerfilUrl} style={photoPreview} alt="Perfil" />
                         ) : (
@@ -636,13 +642,17 @@ const Step6 = ({ data, setFormData }) => {
 
 // --- SUB-COMPONENTES UI ---
 
-const openUploadWidget = (callback, multiple) => {
+const openUploadWidget = (callback, multipleOrOptions) => {
+    const options = typeof multipleOrOptions === 'object' 
+        ? multipleOrOptions 
+        : { multiple: !!multipleOrOptions };
+
     if (window.cloudinary) {
         window.cloudinary.openUploadWidget({
             cloudName: "denfvu7zy",
             uploadPreset: "unsigned_preset",
-            multiple: multiple,
-            sources: ["local", "url", "camera"]
+            sources: ["local", "url", "camera"],
+            ...options
         }, (error, result) => {
             if (!error && result && result.event === "success") {
                 callback(result.info.secure_url)

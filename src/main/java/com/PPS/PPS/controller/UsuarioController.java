@@ -1,7 +1,7 @@
 package com.PPS.PPS.controller;
 
+import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
 import com.PPS.PPS.dto.UsuarioPerfilDto;
-import com.PPS.PPS.service.DirectorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +18,7 @@ import java.util.UUID;
 @SecurityRequirement(name = "bearerAuth")
 public class UsuarioController {
 
-    private final DirectorioService directorioService;
+    private final IConsultarDetallePerfilUseCase consultarDetallePerfilUseCase;
 
     @GetMapping("/me")
     @Operation(summary = "Obtener perfil del usuario actual", description = "Descubre el rol y datos del usuario logueado usando su UUID")
@@ -32,12 +32,12 @@ public class UsuarioController {
             return ResponseEntity.badRequest().build();
         }
         
-        return ResponseEntity.ok(directorioService.obtenerPerfilUsuario(userIdHeader));
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerPerfilUsuario(userIdHeader));
     }
     
     @GetMapping("/{id}")
     @Operation(summary = "Obtener perfil por ID")
     public ResponseEntity<UsuarioPerfilDto> obtenerPorId(@PathVariable UUID id) {
-        return ResponseEntity.ok(directorioService.obtenerPerfilUsuario(id));
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerPerfilUsuario(id));
     }
 }

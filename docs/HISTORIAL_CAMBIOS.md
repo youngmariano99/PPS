@@ -1,5 +1,10 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-05-02
+* **Módulo/Tarea:** Prestige V2 y Blindaje de Privacidad (Seguridad Server-Side)
+* **Archivos Tocados:** `DirectorioService.java`, `IntencionContactoService.java`, `IntencionContactoController.java`, `PerfilPublicoProveedorChamba.jsx`, `ContactoRespuestaDto.java`
+* **Qué y Por Qué (1 oración clara):** Se implementó un sistema de reseñas basado en el prestigio del vínculo (un voto por usuario) y un mecanismo de seguridad server-side que ofusca datos sensibles (teléfono/dirección) hasta que se registra una intención de contacto real, eliminando vulnerabilidades de inspección de código.
+
 * **Fecha:** 2026-04-28
 * **Módulo/Tarea:** Rediseño Premium de Autenticación y Registro Atómico
 * **Archivos Tocados:** `AuthService.java`, `AuthController.java`, `RegistroCompletoSolicitudDto.java`, `FormularioLogin.jsx`, `RegirstroFormWizard.jsx`

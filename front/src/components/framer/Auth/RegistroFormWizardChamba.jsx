@@ -709,7 +709,12 @@ const openUploadWidget = (callback, multipleOrOptions) => {
             ...options
         }, (error, result) => {
             if (!error && result && result.event === "success") {
-                callback(result.info.secure_url)
+                let finalUrl = result.info.secure_url;
+                if (result.info.coordinates && result.info.coordinates.custom && result.info.coordinates.custom.length > 0) {
+                    const [x, y, w, h] = result.info.coordinates.custom[0];
+                    finalUrl = finalUrl.replace("/upload/", `/upload/c_crop,x_${Math.round(x)},y_${Math.round(y)},w_${Math.round(w)},h_${Math.round(h)}/`);
+                }
+                callback(finalUrl)
             }
         })
     }

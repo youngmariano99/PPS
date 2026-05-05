@@ -1,10 +1,10 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.application.dto.AuthRespuestaDto;
-import com.PPS.PPS.application.dto.LoginSolicitudDto;
+import com.PPS.PPS.application.dto.response.AuthRespuestaDto;
+import com.PPS.PPS.application.dto.request.LoginSolicitudDto;
 import com.PPS.PPS.application.factory.IPerfilFactory;
-import com.PPS.PPS.application.dto.RegistroCompletoSolicitudDto;
-import com.PPS.PPS.application.dto.RegistroSolicitudDto;
+import com.PPS.PPS.application.dto.request.RegistroCompletoSolicitudDto;
+import com.PPS.PPS.application.dto.request.RegistroSolicitudDto;
 import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.entity.Usuario;

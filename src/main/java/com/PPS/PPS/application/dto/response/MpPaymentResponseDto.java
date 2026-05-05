@@ -1,4 +1,4 @@
-package com.PPS.PPS.application.dto.suscripcion;
+package com.PPS.PPS.application.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,4 +1,4 @@
-package com.PPS.PPS.application.dto;
+package com.PPS.PPS.application.dto.response;
 
 import lombok.Builder;
 import lombok.Data;

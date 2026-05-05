@@ -1,9 +1,9 @@
 package com.PPS.PPS.application.usecase;
 
-import com.PPS.PPS.application.dto.AuthRespuestaDto;
-import com.PPS.PPS.application.dto.LoginSolicitudDto;
-import com.PPS.PPS.application.dto.RegistroCompletoSolicitudDto;
-import com.PPS.PPS.application.dto.RegistroSolicitudDto;
+import com.PPS.PPS.application.dto.response.AuthRespuestaDto;
+import com.PPS.PPS.application.dto.request.LoginSolicitudDto;
+import com.PPS.PPS.application.dto.request.RegistroCompletoSolicitudDto;
+import com.PPS.PPS.application.dto.request.RegistroSolicitudDto;
 
 public interface IAuthUseCase {
     AuthRespuestaDto registrar(RegistroSolicitudDto dto);

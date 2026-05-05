@@ -1,6 +1,6 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
-import com.PPS.PPS.application.dto.suscripcion.CrearSuscripcionRequestDto;
+import com.PPS.PPS.application.dto.request.CrearSuscripcionRequestDto;
 import com.PPS.PPS.repository.UsuarioRepository;
 import com.PPS.PPS.service.MercadoPagoService;
 import com.PPS.PPS.service.SuscripcionService;
@@ -83,7 +83,7 @@ public class SuscripcionController {
             String paymentId = String.valueOf(data.get("id"));
             log.info("Procesando pago ID: {}", paymentId);
 
-            com.PPS.PPS.application.dto.suscripcion.MpPaymentResponseDto pago = mercadoPagoService
+            com.PPS.PPS.application.dto.response.MpPaymentResponseDto pago = mercadoPagoService
                     .consultarPago(paymentId);
 
             if (pago != null && "approved".equals(pago.getStatus())) {

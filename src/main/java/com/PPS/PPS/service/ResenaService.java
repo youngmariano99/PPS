@@ -1,7 +1,7 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.application.dto.CrearResenaDto;
-import com.PPS.PPS.application.dto.ResenaDetalleDto;
+import com.PPS.PPS.application.dto.request.CrearResenaDto;
+import com.PPS.PPS.application.dto.response.ResenaDetalleDto;
 import com.PPS.PPS.entity.IntencionContacto;
 import com.PPS.PPS.entity.Resena;
 import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;

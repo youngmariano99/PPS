@@ -1,8 +1,8 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
-import com.PPS.PPS.application.dto.CrearResenaDto;
-import com.PPS.PPS.application.dto.ResenaDetalleDto;
-import com.PPS.PPS.application.dto.RespuestaResenaDto;
+import com.PPS.PPS.application.dto.request.CrearResenaDto;
+import com.PPS.PPS.application.dto.response.ResenaDetalleDto;
+import com.PPS.PPS.application.dto.request.RespuestaResenaDto;
 import com.PPS.PPS.service.ResenaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

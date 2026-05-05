@@ -1,9 +1,9 @@
 package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
-import com.PPS.PPS.application.dto.PerfilDetalleDto;
-import com.PPS.PPS.application.dto.ResenaDetalleDto;
-import com.PPS.PPS.application.dto.UsuarioPerfilDto;
+import com.PPS.PPS.application.dto.response.PerfilDetalleDto;
+import com.PPS.PPS.application.dto.response.ResenaDetalleDto;
+import com.PPS.PPS.application.dto.response.UsuarioPerfilDto;
 import com.PPS.PPS.entity.PerfilProveedor;
 import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Resena;

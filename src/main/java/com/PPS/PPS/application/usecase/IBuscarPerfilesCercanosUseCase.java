@@ -1,6 +1,6 @@
 package com.PPS.PPS.application.usecase;
 
-import com.PPS.PPS.application.dto.PerfilRespuestaDto;
+import com.PPS.PPS.application.dto.response.PerfilRespuestaDto;
 import org.springframework.data.domain.Page;
 
 import java.util.List;

@@ -1,8 +1,9 @@
-package com.PPS.PPS.application.dto;
+package com.PPS.PPS.application.dto.response;
 
 import lombok.*;
 import java.util.List;
 import java.util.UUID;
+import com.PPS.PPS.application.dto.RedSocialDto;
 
 @Getter
 @Setter

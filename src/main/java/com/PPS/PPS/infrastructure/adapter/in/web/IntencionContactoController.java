@@ -1,6 +1,6 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
-import com.PPS.PPS.application.dto.ContactoSolicitudDto;
+import com.PPS.PPS.application.dto.request.ContactoSolicitudDto;
 import com.PPS.PPS.service.IntencionContactoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +23,7 @@ public class IntencionContactoController {
 
     @PostMapping
     @Operation(summary = "Registrar intención de contacto", description = "Registra que un usuario está interesado en contactar a un proveedor o empresa.")
-    public ResponseEntity<com.PPS.PPS.application.dto.ContactoRespuestaDto> registrarContacto(
+    public ResponseEntity<com.PPS.PPS.application.dto.response.ContactoRespuestaDto> registrarContacto(
             @RequestHeader("X-User-Id") UUID interesadoId,
             @Valid @RequestBody ContactoSolicitudDto dto,
             HttpServletRequest request) {

@@ -1,4 +1,4 @@
-package com.PPS.PPS.application.dto.suscripcion;
+package com.PPS.PPS.application.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;

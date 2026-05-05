@@ -1,6 +1,6 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
-import com.PPS.PPS.application.dto.RubroDto;
+import com.PPS.PPS.application.dto.response.RubroDto;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.repository.RubroRepository;
 import io.swagger.v3.oas.annotations.Operation;

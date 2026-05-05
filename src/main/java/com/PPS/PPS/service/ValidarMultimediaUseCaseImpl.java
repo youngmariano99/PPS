@@ -1,7 +1,7 @@
 package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IValidarMultimediaUseCase;
-import com.PPS.PPS.application.dto.PerfilSolicitudDto;
+import com.PPS.PPS.application.dto.request.PerfilSolicitudDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.Portafolio;
 import com.PPS.PPS.entity.Usuario;

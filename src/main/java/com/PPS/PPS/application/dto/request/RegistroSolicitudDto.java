@@ -1,4 +1,4 @@
-package com.PPS.PPS.application.dto;
+package com.PPS.PPS.application.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

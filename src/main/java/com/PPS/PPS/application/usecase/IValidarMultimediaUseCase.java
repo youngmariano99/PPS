@@ -1,6 +1,6 @@
 package com.PPS.PPS.application.usecase;
 
-import com.PPS.PPS.application.dto.PerfilSolicitudDto;
+import com.PPS.PPS.application.dto.request.PerfilSolicitudDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.Usuario;
 

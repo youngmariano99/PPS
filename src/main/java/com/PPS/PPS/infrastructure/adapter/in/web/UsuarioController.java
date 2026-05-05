@@ -1,7 +1,7 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
 import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
-import com.PPS.PPS.application.dto.UsuarioPerfilDto;
+import com.PPS.PPS.application.dto.response.UsuarioPerfilDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

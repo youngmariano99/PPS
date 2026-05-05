@@ -1,7 +1,7 @@
 package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IBuscarPerfilesCercanosUseCase;
-import com.PPS.PPS.application.dto.PerfilRespuestaDto;
+import com.PPS.PPS.application.dto.response.PerfilRespuestaDto;
 import com.PPS.PPS.entity.PerfilEmpresa;
 import com.PPS.PPS.entity.PerfilProveedor;
 import com.PPS.PPS.repository.PerfilEmpresaRepository;

@@ -2,7 +2,7 @@ package com.PPS.PPS.infrastructure.config;
 
 import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.domain.exception.ValidacionNegocioException;
-import com.PPS.PPS.application.dto.ErrorRespuestaDto;
+import com.PPS.PPS.application.dto.response.ErrorRespuestaDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

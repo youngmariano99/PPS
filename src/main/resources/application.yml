@@ -21,6 +21,19 @@ spring:
         jdbc:
           time_zone: UTC
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: serviciosya312@gmail.com
+    password: "fqng fhtg dqkl twhh"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
 supabase:
   url: ${SUPABASE_URL:https://qlciljbuexklxjzxgitk.supabase.co}
   anon-key: ${SUPABASE_ANON_KEY:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps}
@@ -47,18 +60,3 @@ cloudinary:
   cloud_name: ${CLOUDINARY_CLOUD_NAME:denfvu7zy}
   api_key: ${CLOUDINARY_API_KEY:612442988948125}
   api_secret: ${CLOUDINARY_API_SECRET:6abLUReq7Ox7yPg8EdFERviyR00}
-
-# Configuracion de Correo (Gmail SMTP)
-spring:
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: serviciosya312@gmail.com
-    password: "fqng fhtg dqkl twhh"
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true

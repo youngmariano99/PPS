@@ -35,6 +35,7 @@ public class RubroController {
                         .id(r.getId())
                         .nombre(r.getNombre())
                         .descripcion(r.getDescripcion())
+                        .activa(r.isActiva())
                         .build())
                 .collect(Collectors.toList());
         return ResponseEntity.ok(rubros);

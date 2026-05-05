@@ -626,7 +626,10 @@ export default function MapaProveedoresEmpresasChamba(props) {
                                             <button 
                                                 className="chamba-button-primary" 
                                                 style={{ ...styles.btnPrimary, backgroundColor: primaryColor }}
-                                                onClick={() => window.location.href = `${providerProfileUrl}?id=${perfilSeleccionado.id}`}
+                                                onClick={() => {
+                                                    const target = perfilSeleccionado.slug ? `p=${perfilSeleccionado.slug}` : `id=${perfilSeleccionado.id}`
+                                                    window.location.href = `${providerProfileUrl}?${target}`
+                                                }}
                                             >
                                                 Ver perfil
                                             </button>

@@ -185,7 +185,10 @@ export default function ListadoProfesionalesChamba(props) {
                                 <ProfessionalCard 
                                     key={p.id} 
                                     prof={p} 
-                                    onView={() => window.location.href = `${providerProfileUrl}?id=${p.id}`}
+                                    onView={() => {
+                                        const target = p.slug ? `p=${p.slug}` : `id=${p.id}`
+                                        window.location.href = `${providerProfileUrl}?${target}`
+                                    }}
                                 />
                             ))}
                         </motion.div>

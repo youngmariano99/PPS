@@ -1,3 +1,6 @@
+-- 0. Habilitar extensión para remover acentos (tildes)
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
 -- 1. Agregar la columna slug a la tabla de perfiles
 ALTER TABLE public.perfiles_proveedor ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
 
@@ -18,10 +21,14 @@ $$ LANGUAGE plpgsql;
 -- 3. Actualizar registros existentes (Asegurar que unaccent esté disponible)
 -- CREATE EXTENSION IF NOT EXISTS unaccent;
 UPDATE public.perfiles_proveedor p
-SET slug = generate_slug(u.nombre, u.apellido, COALESCE(r.nombre, p.rubro_personalizado))
-FROM public.usuarios u
-LEFT JOIN public.rubros r ON p.rubro_principal_id = r.id
-WHERE p.usuario_id = u.id AND p.slug IS NULL;
+SET slug = sub.new_slug
+FROM (
+    SELECT p2.id, generate_slug(u.nombre, u.apellido, COALESCE(r.nombre, p2.rubro_personalizado)) as new_slug
+    FROM public.perfiles_proveedor p2
+    JOIN public.usuarios u ON p2.usuario_id = u.id
+    LEFT JOIN public.rubros r ON p2.rubro_principal_id = r.id
+) as sub
+WHERE p.id = sub.id AND p.slug IS NULL;
 
 -- 4. (Opcional) Si hay duplicados, agregar el ID para desempatar en la migración
 UPDATE public.perfiles_proveedor

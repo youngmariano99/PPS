@@ -11,6 +11,7 @@ import java.util.UUID;
 @Builder
 public class PerfilDetalleDto {
     private UUID id;
+    private UUID usuarioId;
     private String nombrePublico;
     private String rubro;
     private String descripcion;

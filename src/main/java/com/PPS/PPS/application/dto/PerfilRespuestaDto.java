@@ -10,6 +10,8 @@ import java.util.UUID;
 public class PerfilRespuestaDto {
     @com.fasterxml.jackson.annotation.JsonProperty("id")
     private UUID id;
+    @com.fasterxml.jackson.annotation.JsonProperty("slug")
+    private String slug;
     @com.fasterxml.jackson.annotation.JsonProperty("nombrePublico")
     private String nombrePublico;
     @com.fasterxml.jackson.annotation.JsonProperty("rubro")

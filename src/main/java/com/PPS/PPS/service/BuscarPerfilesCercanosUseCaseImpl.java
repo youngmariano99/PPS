@@ -113,6 +113,7 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
 
                     return PerfilRespuestaDto.builder()
                             .id(p.getId())
+                            .slug(p.getSlug())
                             .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
                             .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
                                     : p.getRubroPersonalizado())
@@ -184,6 +185,7 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
         resultados.addAll(proveedoresCrudos.stream()
                 .map(p -> PerfilRespuestaDto.builder()
                         .id(p.getId())
+                        .slug(p.getSlug())
                         .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
                         .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
                                 : p.getRubroPersonalizado())

@@ -90,6 +90,7 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
 
         return PerfilDetalleDto.builder()
                 .id(p.getId())
+                .usuarioId(p.getUsuario().getId())
                 .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
                 .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre() : p.getRubroPersonalizado())
                 .descripcion(p.getDescripcionProfesional())

@@ -289,90 +289,116 @@ export default function PerfilPublicoProveedorChamba(props) {
         setLoading(true)
         setError(null)
         const params = new URLSearchParams(window.location.search)
+        const slug = params.get("p") || params.get("slug")
         const externalId = params.get("id")
+        
         const { data: { user } } = await supabase.auth.getUser()
-        const targetId = externalId || (user ? user.id : null)
+        const { data: { session } } = await supabase.auth.getSession()
 
-        if (targetId) {
-            try {
-                setIsOwner(user && user.id === targetId)
-                const { data: { session } } = await supabase.auth.getSession()
-                const headers = { "X-User-Id": targetId }
-                if (session) headers["Authorization"] = `Bearer ${session.access_token}`
+        try {
+            let response;
+            const headers = {}
+            if (session) headers["Authorization"] = `Bearer ${session.access_token}`
 
-                const response = await fetch(`${apiUrl}/directorio/proveedor/${targetId}`, { headers })
-                if (response.ok) {
-                    const res = await response.json()
-                    const mapped = {
-                        id: res.id,
-                        name: res.nombrePublico || "Profesional",
-                        category: res.rubro || "Especialista",
-                        description: res.descripcion || "Sin descripción disponible.",
-                        location: res.ciudad ? `${res.ciudad}, ${res.provincia}` : "Ubicación no especificada",
-                        address: res.direccion || "",
-                        calle: res.calle || "",
-                        numero: res.numero || "",
-                        city: res.ciudad || "",
-                        province: res.provincia || "",
-                        pais: res.pais || "Argentina",
-                        codigoPostal: res.codigoPostal || "",
-                        rating: res.promedioEstrellas || 0,
-                        reviewCount: res.totalResenas || 0,
-                        isPro: res.esPremium,
-                        avatar: res.fotoPerfilUrl || "https://framerusercontent.com/images/4jB1l8K3z0V4nZlXWz7m6.png",
-                        portfolio: res.fotosPortafolio || [],
-                        specialties: res.especialidades || [],
-                        conditions: res.condicionesServicio || [],
-                        reviews: res.resenas || [],
-                        phone: res.telefono || "",
-                        email: res.email || (user && user.id === targetId ? user.email : ""),
-                        matricula: res.matricula || "Sin matrícula registrada",
-                        redesSociales: res.redesSociales || [],
-                        sitioWebUrl: res.sitioWebUrl || "",
-                        videoLinks: res.videoLinks || [],
+            if (slug) {
+                response = await fetch(`${apiUrl}/directorio/proveedor/slug/${slug}`, { headers })
+            } else {
+                const targetId = externalId || (user ? user.id : null)
+                if (!targetId) {
+                    if (enableDemoMode) {
+                        cargarModoDemo(isProDemo)
+                        setLoading(false)
+                        return
                     }
-                    setData(mapped)
-                    setTempData(mapped)
+                    throw new Error("No se especificó un perfil.")
+                }
+                headers["X-User-Id"] = targetId
+                response = await fetch(`${apiUrl}/directorio/proveedor/${targetId}`, { headers })
+            }
+
+            if (response && response.ok) {
+                const res = await response.json()
+                setIsOwner(user && user.id === res.usuarioId)
+                
+                const mapped = {
+                    id: res.id,
+                    usuarioId: res.usuarioId,
+                    name: res.nombrePublico || "Profesional",
+                    category: res.rubro || "Especialista",
+                    description: res.descripcion || "Sin descripción disponible.",
+                    location: res.ciudad ? `${res.ciudad}, ${res.provincia}` : "Ubicación no especificada",
+                    address: res.direccion || "",
+                    calle: res.calle || "",
+                    numero: res.numero || "",
+                    city: res.ciudad || "",
+                    province: res.provincia || "",
+                    pais: res.pais || "Argentina",
+                    codigoPostal: res.codigoPostal || "",
+                    rating: res.promedioEstrellas || 0,
+                    reviewCount: res.totalResenas || 0,
+                    isPro: res.esPremium,
+                    avatar: res.fotoPerfilUrl || "https://framerusercontent.com/images/4jB1l8K3z0V4nZlXWz7m6.png",
+                    portfolio: res.fotosPortafolio || [],
+                    specialties: res.especialidades || [],
+                    conditions: res.condicionesServicio || [],
+                    reviews: res.resenas || [],
+                    phone: res.telefono || "",
+                    email: res.email || (user && user.id === res.usuarioId ? user.email : ""),
+                    matricula: res.matricula || "Sin matrícula registrada",
+                    redesSociales: res.redesSociales || [],
+                    sitioWebUrl: res.sitioWebUrl || "",
+                    videoLinks: res.videoLinks || [],
+                }
+                setData(mapped)
+                setTempData(mapped)
+            } else {
+                if (enableDemoMode) {
+                    cargarModoDemo(isProDemo)
                 } else {
                     setError("No se pudo cargar el perfil.")
                 }
-            } catch (err) {
-                setError("Error de conexión.")
             }
-        } else if (enableDemoMode) {
-            const demo = {
-                name: "Mariano Lombardo",
-                category: "Carpintería",
-                description: "Carpintero con más de 10 años de experiencia en muebles a medida, reformas y trabajos de madera. Calidad, compromiso y atención personalizada.",
-                location: "Moreno 1675, Pringles",
-                rating: 4.8,
-                reviewCount: 56,
-                isPro: isProDemo, // Usamos el control de Framer
-                avatar: "https://framerusercontent.com/images/4jB1l8K3z0V4nZlXWz7m6.png",
-                portfolio: [
-                    "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=400",
-                    "https://images.unsplash.com/photo-1556909212-d5b604ad056f?auto=format&fit=crop&q=80&w=400",
-                    "https://images.unsplash.com/photo-1556911261-6bd741363f39?auto=format&fit=crop&q=80&w=400",
-                    "https://images.unsplash.com/photo-1600585154340-be6199f7a096?auto=format&fit=crop&q=80&w=400",
-                    "https://images.unsplash.com/photo-1600607687940-47a093c3c930?auto=format&fit=crop&q=80&w=400",
-                    "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&q=80&w=400",
-                ],
-                phone: "291 44556677",
-                email: "mariano.lombardo@gmail.com",
-                matricula: "M.P No registrada",
-                redesSociales: [
-                    { plataforma: "INSTAGRAM", url: "https://instagram.com/marianolombardo" },
-                    { plataforma: "LINKEDIN", url: "https://linkedin.com/in/marianolombardo" }
-                ],
-                sitioWebUrl: "https://marianolombardo.com",
+        } catch (err) {
+            if (enableDemoMode) {
+                cargarModoDemo(isProDemo)
+            } else {
+                setError(err.message || "Error de conexión.")
             }
-            setData(demo)
-            setTempData(demo)
-            setIsOwner(true)
-        } else {
-            setError("No se encontró el perfil solicitado.")
         }
         setLoading(false)
+    }
+
+    const cargarModoDemo = (pro) => {
+        const demo = {
+            name: "Mariano Lombardo",
+            category: "Carpintería",
+            description: "Carpintero con más de 10 años de experiencia en muebles a medida, reformas y trabajos de madera. Calidad, compromiso y atención personalizada.",
+            location: "Moreno 1675, Pringles",
+            rating: 4.8,
+            reviewCount: 56,
+            isPro: pro,
+            avatar: "https://framerusercontent.com/images/4jB1l8K3z0V4nZlXWz7m6.png",
+            portfolio: [
+                "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1556909212-d5b604ad056f?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1556911261-6bd741363f39?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1600585154340-be6199f7a096?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1600607687940-47a093c3c930?auto=format&fit=crop&q=80&w=400",
+                "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&q=80&w=400",
+            ],
+            phone: "291 44556677",
+            email: "mariano.lombardo@gmail.com",
+            matricula: "M.P No registrada",
+            redesSociales: [
+                { plataforma: "INSTAGRAM", url: "https://instagram.com/marianolombardo" },
+                { plataforma: "LINKEDIN", url: "https://linkedin.com/in/marianolombardo" }
+            ],
+            sitioWebUrl: "https://marianolombardo.com",
+            videoLinks: [],
+        }
+        setData(demo)
+        setTempData(demo)
+        setIsOwner(true)
     }
 
     useEffect(() => { discoverAndFetch() }, [apiUrl, enableDemoMode])

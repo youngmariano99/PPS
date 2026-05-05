@@ -41,6 +41,21 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
                             return new RecursoNoEncontradoException("Proveedor no encontrado");
                         }));
 
+        return mapearADetalleDto(p, requesterId);
+    }
+
+    @Override
+    public PerfilDetalleDto obtenerDetalleProveedorPorSlug(String slug, UUID requesterId) {
+        log.info("Obteniendo detalle de proveedor para Slug: {}", slug);
+        PerfilProveedor p = proveedorRepository.findBySlug(slug)
+                .orElseThrow(() -> {
+                    log.error("Proveedor no encontrado para Slug: {}", slug);
+                    return new RecursoNoEncontradoException("Proveedor no encontrado");
+                });
+        return mapearADetalleDto(p, requesterId);
+    }
+
+    private PerfilDetalleDto mapearADetalleDto(PerfilProveedor p, UUID requesterId) {
         boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(p.getUsuario().getId(), "ACTIVA")
                 .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
                          s.getPlan().getNombre().equalsIgnoreCase("PRO"))

@@ -4,6 +4,8 @@ import com.PPS.PPS.application.dto.suscripcion.CrearSuscripcionRequestDto;
 import com.PPS.PPS.repository.UsuarioRepository;
 import com.PPS.PPS.service.MercadoPagoService;
 import com.PPS.PPS.service.SuscripcionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @RequestMapping("/suscripciones")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Suscripciones", description = "Gestión de pagos y membresías con Mercado Pago")
 public class SuscripcionController {
 
     private final MercadoPagoService mercadoPagoService;
@@ -32,6 +35,7 @@ public class SuscripcionController {
     private String frontendUrl;
 
     @PostMapping("/crear")
+    @Operation(summary = "Crear preferencia de pago", description = "Genera un init_point de Mercado Pago para iniciar el flujo de suscripción Premium.")
     public ResponseEntity<Map<String, String>> crear(@Valid @RequestBody CrearSuscripcionRequestDto request) {
         log.info("Iniciando creacion de suscripcion para usuarioId: {}, planId: {}",
                 request.getUsuarioId(), request.getPlanId());
@@ -49,6 +53,7 @@ public class SuscripcionController {
     }
 
     @GetMapping("/success")
+    @Operation(summary = "Retorno de éxito", description = "Endpoint de retorno tras un pago exitoso. Redirige al frontend.")
     public void success(
             @RequestParam(value = "preapproval_id", required = false) String preapprovalId,
             @RequestParam(value = "payment_id", required = false) String paymentId,
@@ -65,6 +70,7 @@ public class SuscripcionController {
     }
 
     @PostMapping("/webhook")
+    @Operation(summary = "Webhook de Mercado Pago", description = "Recibe notificaciones asíncronas de pagos para activar suscripciones en segundo plano.")
     public ResponseEntity<Void> webhook(@RequestBody Map<String, Object> notification) {
         log.info("Webhook recibido desde Mercado Pago: {}", notification);
 

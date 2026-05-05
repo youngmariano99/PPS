@@ -16,6 +16,8 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
     @Query("SELECT p FROM PerfilProveedor p WHERE p.usuario.id = :usuarioId")
     Optional<PerfilProveedor> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
+    Optional<PerfilProveedor> findBySlug(String slug);
+
     /**
      * Busca IDs cercanos aplicando un ranking inicial por Suscripción Premium y Distancia.
      * Permite filtrar por Rubro (nombre del rubro principal o personalizado).

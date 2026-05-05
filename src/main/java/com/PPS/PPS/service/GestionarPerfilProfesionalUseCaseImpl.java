@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.PPS.PPS.application.usecase.IGestionarPerfilProfesionalUseCase;
 import com.PPS.PPS.application.usecase.IValidarMultimediaUseCase;
+import com.PPS.PPS.util.SlugUtils;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -50,9 +51,12 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         }
 
         Point punto = obtenerPuntoDesdeDireccion(dto);
+        String slug = generarSlugUnico(usuario.getNombre(), usuario.getApellido(), 
+                rubro != null ? rubro.getNombre() : dto.getRubroPersonalizado());
 
         PerfilProveedor perfil = PerfilProveedor.builder()
                 .usuario(usuario)
+                .slug(slug)
                 .rubroPrincipal(rubro)
                 .rubroPersonalizado(dto.getRubroPersonalizado())
                 .dni(dto.getDni())
@@ -139,6 +143,14 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         perfil.setEspecialidades(dto.getEspecialidades());
         perfil.setCondicionesServicio(dto.getCondicionesServicio());
 
+        // Actualizar slug si no tiene uno (migración)
+        if (perfil.getSlug() == null || perfil.getSlug().isBlank()) {
+            String nuevoSlug = generarSlugUnico(perfil.getUsuario().getNombre(), 
+                    perfil.getUsuario().getApellido(), 
+                    perfil.getRubroPrincipal() != null ? perfil.getRubroPrincipal().getNombre() : perfil.getRubroPersonalizado());
+            perfil.setSlug(nuevoSlug);
+        }
+
         // Siempre actualizar los campos de texto de dirección
         perfil.setCalle(dto.getCalle());
         perfil.setNumero(dto.getNumero());
@@ -186,5 +198,16 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
 
     public double[] geocodificarDireccion(String direccion) {
         return geocodingService.obtenerCoordenadas(direccion);
+    }
+
+    private String generarSlugUnico(String nombre, String apellido, String rubro) {
+        String baseSlug = SlugUtils.makeSlug(nombre, apellido, rubro);
+        String currentSlug = baseSlug;
+        int count = 1;
+        while (proveedorRepository.findBySlug(currentSlug).isPresent()) {
+            count++;
+            currentSlug = baseSlug + "-" + count;
+        }
+        return currentSlug;
     }
 }

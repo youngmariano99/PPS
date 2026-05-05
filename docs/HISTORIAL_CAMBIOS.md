@@ -1,5 +1,10 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-05-05
+* **Módulo/Tarea:** Documentación de API y Ajustes de Seguridad
+* **Archivos Tocados:** `docs/11_DOCUMENTACION_SWAGGER_Y_API.md`, `SecurityConfig.java`, `HISTORIAL_CAMBIOS.md`
+* **Qué y Por Qué (1 oración clara):** Se creó una guía detallada de uso de Swagger/OpenAPI y se corrigieron los filtros de Spring Security para garantizar el acceso a la documentación y facilitar el testeo de endpoints.
+
 * **Fecha:** 2026-05-04
 * **Módulo/Tarea:** Refactorización JSONB para Redes Sociales
 * **Archivos Tocados:** `05_MIGRACION_REDES_SOCIALES.sql`, `PerfilProveedor.java`, `GestionarPerfilProfesionalUseCaseImpl.java`, `RedSocialDto.java`

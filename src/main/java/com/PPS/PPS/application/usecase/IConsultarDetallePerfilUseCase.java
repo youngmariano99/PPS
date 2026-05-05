@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface IConsultarDetallePerfilUseCase {
     PerfilDetalleDto obtenerDetalleProveedor(UUID id, UUID requesterId);
+    PerfilDetalleDto obtenerDetalleProveedorPorSlug(String slug, UUID requesterId);
     UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId);
 }
 

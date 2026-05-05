@@ -44,6 +44,6 @@ mercadopago:
 
 # Configuracion de Cloudinary
 cloudinary:
-  cloud_name: ${CLOUDINARY_CLOUD_NAME=denfvu7zy}
-  api_key: ${CLOUDINARY_API_KEY=612442988948125}
-  api_secret: ${CLOUDINARY_API_SECRET=6abLUReq7Ox7yPg8EdFERviyR00}
+  cloud_name: ${CLOUDINARY_CLOUD_NAME:denfvu7zy}
+  api_key: ${CLOUDINARY_API_KEY:612442988948125}
+  api_secret: ${CLOUDINARY_API_SECRET:6abLUReq7Ox7yPg8EdFERviyR00}

@@ -4,6 +4,7 @@ import com.PPS.PPS.application.usecase.IBuscarPerfilesCercanosUseCase;
 import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
 import com.PPS.PPS.application.usecase.IGestionarPerfilProfesionalUseCase;
 import com.PPS.PPS.application.dto.PerfilRespuestaDto;
+import com.PPS.PPS.application.dto.PerfilDetalleDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +57,14 @@ public class DirectorioController {
             @PathVariable UUID id,
             @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) UUID requesterId) {
         return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerDetalleProveedor(id, requesterId));
+    }
+
+    @GetMapping("/proveedor/slug/{slug}")
+    @Operation(summary = "Obtener detalle de perfil por SLUG", description = "Busca el perfil usando el slug amigable para SEO.")
+    public ResponseEntity<PerfilDetalleDto> obtenerDetallePorSlug(
+            @PathVariable String slug,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) UUID requesterId) {
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerDetalleProveedorPorSlug(slug, requesterId));
     }
 
     @GetMapping("/geocodificar")

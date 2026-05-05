@@ -9,7 +9,12 @@ import { addPropertyControls, ControlType, motion, AnimatePresence } from "frame
  */
 
 export default function RegistroFormWizardChamba(props) {
-    const { apiUrl, btnText = "Siguiente" } = props
+    let { apiUrl, btnText = "Siguiente", providerProfileUrl } = props
+
+    // Corrección dinámica por si Framer guardó el valor viejo en el panel de propiedades
+    if (providerProfileUrl && providerProfileUrl.includes("/perfiles-prov")) {
+        providerProfileUrl = providerProfileUrl.replace("/perfiles-prov", "/proveedor")
+    }
 
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
@@ -834,7 +839,7 @@ const SuccessView = ({ nombre, userId, profileUrl, tipo }) => (
                 <button 
                     style={primaryBtn} 
                     onClick={() => {
-                        const url = profileUrl || "https://overly-mindset-259417.framer.app/perfiles-prov"
+                        const url = profileUrl || "https://overly-mindset-259417.framer.app/proveedor"
                         window.location.href = `${url}?id=${userId}`
                     }}
                 >
@@ -1071,6 +1076,6 @@ addPropertyControls(RegistroFormWizardChamba, {
     providerProfileUrl: {
         type: ControlType.String,
         title: "URL Perfil Prov",
-        defaultValue: "https://overly-mindset-259417.framer.app/perfiles-prov",
+        defaultValue: "https://overly-mindset-259417.framer.app/proveedor",
     },
 })

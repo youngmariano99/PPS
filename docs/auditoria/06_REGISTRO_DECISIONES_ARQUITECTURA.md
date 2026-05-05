@@ -67,3 +67,18 @@ Este documento centraliza todas las decisiones críticas de arquitectura, diseñ
 **Contexto:** Confirmar pagos de Suscripciones Premium "confiando" en que el Frontend redirija a la pantalla de éxito es una vulnerabilidad clásica que permite ataques o fallos por cierres de conexión.
 **Decisión:** Se configuró a Spring Boot como la única fuente de verdad, reaccionando de forma asíncrona a los Webhooks oficiales de Mercado Pago.
 **Por qué:** Garantiza la integridad del negocio. Las membresías solo se activan si Mercado Pago le avisa directamente a nuestro servidor de fondo, haciendo imposible que un usuario forje o evada un pago.
+
+## 12. Navegación SEO-Friendly mediante Slugs Dinámicos
+**Contexto:** Los perfiles públicos se cargaban mediante parámetros de ID (`?id=uuid`), lo cual es ilegible para humanos y nulo para el posicionamiento en motores de búsqueda.
+**Decisión:** Se implementó una columna `slug` indexada en la base de datos y una lógica de generación automática basada en `nombre + apellido + rubro`. El frontend ahora prioriza el parámetro `?p=slug` en todas las navegaciones desde el listado y el mapa.
+**Por qué:** 
+- **SEO (Search Engine Optimization):** Permite que Google indexe los perfiles por el oficio y nombre del profesional.
+- **UX Premium:** URLs como `/perfiles-prov?p=juan-perez-plomero` generan más confianza y son más fáciles de compartir que un código alfanumérico aleatorio.
+
+## 13. Organización de DTOs por Dirección de Datos (Request/Response)
+**Contexto:** La carpeta de DTOs contenía más de 20 archivos mezclados, dificultando saber qué objeto era para recibir datos y cuál para enviarlos.
+**Decisión:** Se refactorizó la estructura a subpaquetes `application.dto.request` y `application.dto.response`.
+**Por qué:** 
+- **Semántica:** Mejora la legibilidad del código. Al importar un DTO, el desarrollador sabe inmediatamente su propósito.
+- **Seguridad:** Evita la reutilización accidental de objetos de entrada para salida, previniendo la fuga de datos sensibles.
+- **Estándar Profesional:** Alinea el proyecto con prácticas de nivel corporativo en Spring Boot.

@@ -675,6 +675,6 @@ addPropertyControls(ListadoProfesionales, {
     providerProfileUrl: {
         type: ControlType.String,
         title: "URL Perfil Prov",
-        defaultValue: "https://overly-mindset-259417.framer.app/perfiles-prov",
+        defaultValue: "https://overly-mindset-259417.framer.app/proveedor",
     },
 })

@@ -9,7 +9,12 @@ import { addPropertyControls, ControlType } from "framer"
  */
 
 export default function ListadoProfesionalesChamba(props) {
-    const { apiUrl, defaultLat, defaultLon, radioKm, providerProfileUrl } = props
+    let { apiUrl, defaultLat, defaultLon, radioKm, providerProfileUrl } = props
+
+    // Corrección dinámica por si Framer guardó el valor viejo en el panel de propiedades
+    if (providerProfileUrl === "/perfiles-prov") {
+        providerProfileUrl = "/proveedor"
+    }
 
     // Estados Core
     const [rubros, setRubros] = useState([{ id: "Todos", nombre: "Todos" }])
@@ -386,5 +391,5 @@ addPropertyControls(ListadoProfesionalesChamba, {
     defaultLat: { type: ControlType.Number, title: "Latitud", defaultValue: -34.6037 },
     defaultLon: { type: ControlType.Number, title: "Longitud", defaultValue: -58.3816 },
     radioKm: { type: ControlType.Number, title: "Radio (Km)", defaultValue: 1 },
-    providerProfileUrl: { type: ControlType.String, title: "URL Perfil", defaultValue: "/perfiles-prov" },
+    providerProfileUrl: { type: ControlType.String, title: "URL Perfil", defaultValue: "/proveedor" },
 })

@@ -189,7 +189,7 @@ export default function AuthNavButton(props) {
 addPropertyControls(AuthNavButton, {
     apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
     loginUrl: { type: ControlType.String, title: "Login URL", defaultValue: "https://overly-mindset-259417.framer.app/login" },
-    providerProfileUrl: { type: ControlType.String, title: "Provider Profile URL", defaultValue: "https://overly-mindset-259417.framer.app/perfiles-prov" },
+    providerProfileUrl: { type: ControlType.String, title: "Provider Profile URL", defaultValue: "https://overly-mindset-259417.framer.app/proveedor" },
     userProfileUrl: { type: ControlType.String, title: "User Profile URL", defaultValue: "https://overly-mindset-259417.framer.app/perfil-base" },
     primaryColor: { type: ControlType.Color, title: "Color Botón", defaultValue: "#7c3aed" },
     textColor: { type: ControlType.Color, title: "Color Texto", defaultValue: "#ffffff" },

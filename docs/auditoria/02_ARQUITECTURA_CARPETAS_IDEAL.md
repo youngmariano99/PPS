@@ -16,7 +16,9 @@ com.PPS.PPS
 ├── application                 # CASOS DE USO: Orquestan la lógica del dominio.
 │   ├── usecase                 # Interfaces de los casos de uso (Puertos de Entrada). Ej: IRegistrarUsuarioUseCase.
 │   ├── service                 # Implementaciones concretas de los Use Cases (aquí van las anotaciones @Service).
-│   └── dto                     # Objetos de Transferencia de Datos entre la capa de entrada (API) y la Aplicación.
+│   └── dto                     # Objetos de Transferencia de Datos.
+│       ├── request             # Contratos de entrada (Solicitudes del cliente).
+│       └── response            # Contratos de salida (Respuestas de la API).
 │
 ├── infrastructure              # IMPLEMENTACIONES Y ADAPTADORES: Todo lo que interactúa con el mundo exterior.
 │   ├── adapter

@@ -18,16 +18,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
  * @param {Object} props - Propiedades de Framer
  */
 export default function MapaProveedoresEmpresasChamba(props) {
-    const { 
+    let { 
         apiUrl = "https://tu-api.com", 
         primaryColor = "#A01EED", 
         alturaMapa = "100%",
         mostrarZoom = true,
         radioInicial = 1000,
         defaultZoom = 12,
-        providerProfileUrl = "/perfiles-prov",
+        providerProfileUrl = "/proveedor",
         loginUrl = "/login"
     } = props
+
+    // Corrección dinámica por si Framer guardó el valor viejo en el panel de propiedades
+    if (providerProfileUrl === "/perfiles-prov") {
+        providerProfileUrl = "/proveedor"
+    }
 
     // --- ESTADOS LÓGICOS (1:1 con el original) ---
     const [perfiles, setPerfiles] = useState([])
@@ -1144,7 +1149,7 @@ addPropertyControls(MapaProveedoresEmpresasChamba, {
     providerProfileUrl: {
         type: ControlType.String,
         title: "URL Perfil Proveedor",
-        defaultValue: "/perfiles-prov",
+        defaultValue: "/proveedor",
     },
     loginUrl: {
         type: ControlType.String,

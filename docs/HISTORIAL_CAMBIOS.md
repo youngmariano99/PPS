@@ -1,6 +1,16 @@
 # HISTORIAL DE CAMBIOS
 
 * **Fecha:** 2026-05-05
+* **Módulo/Tarea:** Refactorización Arquitectónica de DTOs (Request/Response)
+* **Archivos Tocados:** Más de 40 archivos Java, incluyendo todos los DTOs, Controllers y Services.
+* **Qué y Por Qué (1 oración clara):** Se reorganizaron los DTOs en subpaquetes `request` y `response` para mejorar la semántica del código, facilitar el mantenimiento y cumplir con estándares de Arquitectura Limpia al separar claramente los contratos de entrada y salida.
+
+* **Fecha:** 2026-05-05
+* **Módulo/Tarea:** Implementación de Slugs SEO Dinámicos
+* **Archivos Tocados:** `PerfilProveedor.java`, `DirectorioController.java`, `PerfilDetalleDto.java`, `PerfilRespuestaDto.java`, `ListadoProfesionalesChamba.jsx`, `MapaProveedoresEmpresasChamba.jsx`
+* **Qué y Por Qué (1 oración clara):** Se reemplazó el uso de UUIDs crudos en las URLs por "Slugs" humanamente legibles (ej: `/p/kevin-yanez-programador`), optimizando radicalmente el posicionamiento en motores de búsqueda (SEO) y la estética de los enlaces compartidos.
+
+* **Fecha:** 2026-05-05
 * **Módulo/Tarea:** Documentación de API y Ajustes de Seguridad
 * **Archivos Tocados:** `docs/11_DOCUMENTACION_SWAGGER_Y_API.md`, `SecurityConfig.java`, `HISTORIAL_CAMBIOS.md`
 * **Qué y Por Qué (1 oración clara):** Se creó una guía detallada de uso de Swagger/OpenAPI y se corrigieron los filtros de Spring Security para garantizar el acceso a la documentación y facilitar el testeo de endpoints.

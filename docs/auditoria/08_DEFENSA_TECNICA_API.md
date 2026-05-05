@@ -7,11 +7,91 @@ Este documento sirve como guion y estructura de soporte para la defensa del exam
 
 ---
 
-## 📽️ SECCIÓN 1: INTRODUCCIÓN A LA API Y ARQUITECTURA
+## 📽️ SECCIÓN 1: ARQUITECTURA DE CARPETAS (CLEAN ARCHITECTURE)
 ### 🗣️ Explicación para el Profesor:
-"Buenos días/tardes. Para el desarrollo del backend de **CHAMBA**, hemos optado por una arquitectura de **N-Capas** basada en **Spring Boot 3**. Mi objetivo principal fue separar la lógica de infraestructura de la lógica de negocio.
+"Antes de profundizar en el código, quiero explicar cómo hemos organizado el corazón de nuestra aplicación. Hemos adoptado una estructura inspirada en **Clean Architecture** (Arquitectura Limpia). 
 
-Nuestra API sigue fielmente el estilo arquitectónico **RESTful**. En la capa de controladores, utilizamos la anotación `@RestController`, lo que nos permite manejar respuestas en formato JSON de manera nativa. Como pueden observar en mis controladores, hemos respetado la convención de usar **sustantivos en plural** para los recursos (ejemplo: `/api/v1/perfiles`, `/api/v1/rubros`), cumpliendo así con las buenas prácticas de diseño de APIs exigidas."
+El objetivo es separar las responsabilidades para que el sistema sea fácil de mantener. Nuestra estructura se divide en 4 grandes capas:
+
+1.  **Capa de Dominio (Domain):** Es el núcleo. Aquí están nuestras reglas de negocio puras y las entidades de base de datos.
+2.  **Capa de Aplicación (Application):** Aquí residen los 'Casos de Uso'. Son los orquestadores que dicen qué debe pasar cuando, por ejemplo, un profesional se registra.
+3.  **Capa de Infraestructura (Infrastructure):** Es la que habla con el mundo exterior. Aquí están los **Controladores REST** (que reciben los clics del usuario) y los **Adaptadores** (que hablan con Supabase o Mercado Pago).
+4.  **Capa de Configuración (Config):** Donde definimos los 'ajustes globales' como la seguridad o la conexión con Cloudinary."
+
+### 💻 Mapa Visual de la Arquitectura Completa:
+```text
+com.PPS.PPS
+├── config                      # Ajustes generales y seguridad.
+├── domain                      # EL NÚCLEO: Independiente de frameworks.
+│   ├── model                   # Entidades puras (Reglas de negocio).
+│   ├── repository              # Interfaces de datos (Puertos de salida).
+│   └── exception               # Excepciones de negocio.
+├── application                 # CASOS DE USO: Orquestadores de lógica.
+│   ├── usecase                 # Interfaces de entrada.
+│   ├── service                 # Implementaciones (@Service).
+│   └── dto                     # Objetos de Transferencia de Datos.
+│       ├── request             # Contratos de entrada.
+│       └── response            # Contratos de salida.
+└── infrastructure              # ADAPTADORES: El mundo exterior.
+    ├── adapter
+    │   ├── in                  # Entrada (Web/Controllers).
+    │   └── out                 # Salida (Persistencia/APIs externas).
+    └── common                  # Utilidades y Patrones (Factories).
+```
+
+### 🧠 Responsabilidad por Capas:
+1.  **Dominio (`domain`):** Es la razón de ser de la aplicación. Aquí viven los objetos de negocio puros. **Regla de oro:** No importa nada de Spring ni JPA; es Java puro para garantizar que las reglas de negocio no dependan de la tecnología.
+2.  **Aplicación (`application`):** Es el director de orquesta. Recibe solicitudes, invoca reglas del Dominio y coordina el guardado en la base de datos sin conocer los detalles técnicos de la misma.
+3.  **Infraestructura (`infrastructure`):** Es la capa técnica. Contiene los Controladores REST, la integración con PostgreSQL/PostGIS, y los clientes para Supabase o Mercado Pago. Adapta el mundo exterior al lenguaje de nuestra aplicación.
+
+### 🛣️ El Camino de una Petición (Ejemplo: Registro de Profesional)
+"Para que vean cómo interactúan estas capas en la vida real, sigamos el camino de un usuario que se registra en **CHAMBA**:"
+
+1.  **Entrada (Infrastructure In):** El `AuthController` recibe un JSON. Este controlador pertenece a la capa de **Infraestructura**.
+```java
+@PostMapping("/registro-completo")
+public ResponseEntity<AuthRespuestaDto> registrarCompleto(@Valid @RequestBody RegistroCompletoSolicitudDto solicitud) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(authUseCase.registrarCompleto(solicitud));
+}
+```
+2.  **Validación (Application DTO):** El JSON se convierte en un `RegistroCompletoSolicitudDto` (capa de **Aplicación**). Aquí usamos anotaciones de Jakarta para validar el contrato.
+```java
+public class RegistroCompletoSolicitudDto {
+    @Email @NotBlank private String email;
+    @NotBlank private String password;
+    @NotBlank private String tipoUsuario; // PROVEEDOR o EMPRESA
+}
+```
+3.  **Orquestación (Application Service):** El `AuthServiceImpl` coordina el flujo. Es el director de orquesta que llama a los demás componentes.
+```java
+@Transactional
+public AuthRespuestaDto registrarCompleto(RegistroCompletoSolicitudDto dto) {
+    // 1. Registro en Supabase
+    AuthRespuestaDto auth = registrar(new RegistroSolicitudDto(...));
+    // 2. Patrón Factory para el Perfil
+    IPerfilFactory factory = perfilFactories.stream()
+            .filter(f -> f.getTipo().equalsIgnoreCase(dto.getTipoUsuario()))
+            .findFirst().orElseThrow();
+    factory.crearYGuardarPerfil(usuario, rubro, puntoUbicacion, dto);
+    return auth;
+}
+```
+4.  **Identidad Exterior (Infrastructure Out - API):** El servicio llama al `SupabaseAuthAdapter` para crear el usuario en Supabase mediante una petición HTTP.
+5.  **Creación de Perfil (Common - Factory):** Usamos la `PerfilProveedorFactory` para construir el objeto del perfil con toda su lógica y persistirlo.
+```java
+public void crearYGuardarPerfil(...) {
+    PerfilProveedor perfil = PerfilProveedor.builder()
+            .usuario(usuario).slug(slug).ubicacion(puntoUbicacion).build();
+    perfilProveedorRepository.save(perfil); // Capa de Persistencia
+}
+```
+6.  **Respuesta (Application DTO):** Finalmente, devolvemos un `AuthRespuestaDto` con el token JWT para que el frontend pueda autenticar al usuario en las siguientes peticiones.
+
+---
+
+## 📽️ SECCIÓN 2: DISEÑO RESTFUL Y CONTROLADORES
+### 🗣️ Explicación para el Profesor:
+"Una vez entendida la estructura, pasamos a cómo exponemos estas funcionalidades. Para el desarrollo del backend de **CHAMBA**, hemos optado por una API que sigue fielmente el estilo arquitectónico **RESTful**. 
 
 ### 💻 Bloque de Código de Referencia:
 ```java
@@ -31,14 +111,16 @@ public class ResenaController {
 
 ---
 
-## 📽️ SECCIÓN 2: SEGURIDAD Y BUENAS PRÁCTICAS - EL USO DE DTOs
+## 📽️ SECCIÓN 3: SEGURIDAD Y BUENAS PRÁCTICAS - EL USO DE DTOs
 ### 🗣️ Explicación para el Profesor:
 "Un punto fundamental de nuestra implementación es que **las Entidades JPA (@Entity) nunca abandonan la capa de servicio**. Todo el intercambio de información con el cliente se realiza mediante **DTOs (Data Transfer Objects)**.
 
 Esta decisión técnica se basa en tres pilares:
 1.  **Seguridad:** Al no exponer la entidad directamente, evitamos filtrar campos internos como contraseñas, estados de auditoría o IDs sensibles.
 2.  **Integridad del JSON:** Evitamos el error común de recursividad infinita (Circular Reference) al serializar relaciones bidireccionales de la base de datos.
-3.  **Contrato Estable:** Si el esquema de nuestra base de datos cambia, el DTO se mantiene igual, por lo que el frontend (Framer/React) no sufre roturas. Es lo que llamamos 'desacoplamiento'."
+3.  **Contrato Estable:** Si el esquema de nuestra base de datos cambia, el DTO se mantiene igual, por lo que el frontend (Framer/React) no sufre roturas. 
+
+Recientemente hemos llevado esto un paso más allá **reorganizando los DTOs en subpaquetes `request` y `response`**. Esto no solo mejora la organización, sino que permite aplicar validaciones de entrada (`@Valid`) exclusivamente en los objetos de solicitud, manteniendo los objetos de respuesta limpios y enfocados solo en la visualización."
 
 ### 💻 Bloque de Código de Referencia:
 ```java
@@ -63,7 +145,7 @@ public ResponseEntity<List<RubroDto>> listarRubros() {
 
 ---
 
-## 📽️ SECCIÓN 3: ENDPOINTS CRUD Y MANEJO DE ESTADOS HTTP
+## 📽️ SECCIÓN 4: ENDPOINTS CRUD Y MANEJO DE ESTADOS HTTP
 ### 🗣️ Explicación para el Profesor:
 "Hemos mapeado las operaciones de negocio a los verbos HTTP correspondientes, asegurándonos de que cada acción retorne el código de estado semántico adecuado utilizando `ResponseEntity`."
 
@@ -133,7 +215,7 @@ public ResponseEntity<Void> eliminarMiCuenta(@RequestHeader("X-User-Id") UUID us
 
 ---
 
-## 📽️ SECCIÓN 4: DOCUMENTACIÓN Y VALIDACIÓN (HITO OBLIGATORIO)
+## 📽️ SECCIÓN 5: DOCUMENTACIÓN Y VALIDACIÓN (HITO OBLIGATORIO)
 ### 🗣️ Explicación para el Profesor:
 "Para finalizar la exposición de la capa de control, quiero destacar que el proyecto está 100% documentado bajo el estándar de la industria. Integramos **Swagger (OpenAPI 3)**, lo que genera una interfaz web interactiva donde cualquier desarrollador puede explorar y probar los endpoints sin leer una línea de código.
 
@@ -141,7 +223,7 @@ Además, toda la lógica de los controladores fue validada con **Jakarta Bean Va
 
 ---
 
-## 📽️ SECCIÓN 5: DECISIONES ARQUITECTÓNICAS Y ESCALABILIDAD
+## 📽️ SECCIÓN 6: DECISIONES ARQUITECTÓNICAS Y ESCALABILIDAD
 ### 🗣️ Explicación para el Profesor:
 "Como cierre de esta defensa, quiero presentar las decisiones de ingeniería que garantizan que esta plataforma no sea solo un prototipo, sino un sistema escalable y resiliente. Hemos documentado 11 puntos clave que definen nuestra arquitectura:
 
@@ -159,7 +241,7 @@ Además, toda la lógica de los controladores fue validada con **Jakarta Bean Va
 
 ---
 
-## 📽️ SECCIÓN 6: INTEGRACIONES EXTERNAS Y SEGURIDAD
+## 📽️ SECCIÓN 7: INTEGRACIONES EXTERNAS Y SEGURIDAD
 ### 🗣️ Explicación para el Profesor:
 "Finalmente, la robustez de nuestro ecosistema se apoya en integraciones estratégicas y un enfoque de 'Seguridad por Diseño':
 
@@ -202,7 +284,7 @@ private String password;
 
 ---
 
-## 📽️ SECCIÓN 7: PRÓXIMOS PASOS Y OPTIMIZACIÓN SEO (SLUGS)
+## 📽️ SECCIÓN 8: PRÓXIMOS PASOS Y OPTIMIZACIÓN SEO (SLUGS)
 ### 🗣️ Explicación para el Profesor:
 "Como última mejora estratégica, estamos migrando nuestro sistema de URLs de identificadores crudos (**UUIDs**) a **Slugs Amigables**. 
 

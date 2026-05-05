@@ -248,7 +248,7 @@ addPropertyControls(AuthNavButton, {
     providerProfileUrl: {
         type: ControlType.String,
         title: "Provider Profile URL",
-        defaultValue: "https://overly-mindset-259417.framer.app/perfiles-prov",
+        defaultValue: "https://overly-mindset-259417.framer.app/proveedor",
     },
     userProfileUrl: {
         type: ControlType.String,

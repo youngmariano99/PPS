@@ -17,8 +17,21 @@ public class PerfilProveedorFactory implements IPerfilFactory {
 
     @Override
     public void crearYGuardarPerfil(Usuario usuario, Rubro rubro, Point puntoUbicacion, RegistroCompletoSolicitudDto dto) {
+        String baseSlug = com.PPS.PPS.util.SlugUtils.makeSlug(
+                usuario.getNombre(), 
+                usuario.getApellido(), 
+                rubro != null ? rubro.getNombre() : dto.getRubroPersonalizado()
+        );
+        String slug = baseSlug;
+        int count = 1;
+        while (perfilProveedorRepository.findBySlug(slug).isPresent()) {
+            count++;
+            slug = baseSlug + "-" + count;
+        }
+
         PerfilProveedor perfil = PerfilProveedor.builder()
                 .usuario(usuario)
+                .slug(slug)
                 .rubroPrincipal(rubro)
                 .rubroPersonalizado(dto.getRubroPersonalizado())
                 .descripcionProfesional(dto.getDescripcion())

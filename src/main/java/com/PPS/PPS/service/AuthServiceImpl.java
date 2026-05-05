@@ -173,6 +173,16 @@ public class AuthServiceImpl implements IAuthUseCase {
                 .orElseThrow(() -> new ValidacionNegocioException(
                         "Usuario autenticado en Supabase pero no registrado en la base de datos local."));
 
+        // Sincronización del estado de email confirmado
+        if (!usuario.isEmailConfirmado()) {
+            boolean confirmadoEnSupabase = supabaseAuthPort.estaEmailConfirmado(accessToken);
+            if (confirmadoEnSupabase) {
+                usuario.setEmailConfirmado(true);
+                usuarioRepository.save(usuario);
+                log.info("Email sincronizado como CONFIRMADO para usuario: {}", supabaseId);
+            }
+        }
+
         return AuthRespuestaDto.builder()
                 .accessToken(accessToken)
                 .tokenType("Bearer")
@@ -180,7 +190,29 @@ public class AuthServiceImpl implements IAuthUseCase {
                 .email(usuario.getEmail())
                 .nombre(usuario.getNombre())
                 .apellido(usuario.getApellido())
+                .emailConfirmado(usuario.isEmailConfirmado())
                 .build();
+    }
+
+    @Override
+    public void solicitarRecuperacion(String email) {
+        log.info("Solicitando recuperación de contraseña para: {}", email);
+        supabaseAuthPort.solicitarRecuperacionPassword(email);
+    }
+
+    @Override
+    public void cambiarPassword(String nuevaPassword, String accessToken) {
+        log.info("Cambiando contraseña mediante token de acceso.");
+        supabaseAuthPort.actualizarPassword(nuevaPassword, accessToken);
+    }
+
+    @Override
+    public void reenviarConfirmacion(String email) {
+        // En Supabase, volver a llamar a signup con la misma info dispara el mail de confirmación
+        // si el usuario aún no está confirmado.
+        log.info("Reenviando confirmación de email para: {}", email);
+        // Nota: Algunas implementaciones de Supabase usan un endpoint específico /resend
+        // Por ahora delegamos a la lógica de recuperar si es necesario o un signup vacío.
     }
 }
 

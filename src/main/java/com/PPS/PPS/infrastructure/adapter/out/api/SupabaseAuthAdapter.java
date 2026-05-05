@@ -124,5 +124,56 @@ public class SupabaseAuthAdapter implements ISupabaseAuthPort {
 
         return result;
     }
+
+    @Override
+    public void solicitarRecuperacionPassword(String email) {
+        Map<String, Object> body = Map.of("email", email);
+
+        supabaseRestClient.post()
+                .uri("/recover")
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (request, response) -> {
+                    throw new ValidacionNegocioException("Error al solicitar recuperación de contraseña.");
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
+    public void actualizarPassword(String nuevaPassword, String accessToken) {
+        Map<String, Object> body = Map.of("password", nuevaPassword);
+
+        supabaseRestClient.put()
+                .uri("/user")
+                .header("Authorization", "Bearer " + accessToken)
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (request, response) -> {
+                    throw new ValidacionNegocioException("Error al actualizar la contraseña en Supabase.");
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
+    public boolean estaEmailConfirmado(String accessToken) {
+        try {
+            Map<String, Object> response = supabaseRestClient.get()
+                    .uri("/user")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, responseError) -> {
+                        throw new ValidacionNegocioException("Error al obtener perfil de usuario en Supabase.");
+                    })
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            if (response != null && response.containsKey("email_confirmed_at")) {
+                return response.get("email_confirmed_at") != null;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("Error consultando estado de email en Supabase: {}", e.getMessage());
+            return false;
+        }
+    }
 }
 

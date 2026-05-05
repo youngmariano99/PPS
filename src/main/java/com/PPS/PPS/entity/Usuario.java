@@ -47,4 +47,8 @@ public class Usuario {
     @Builder.Default
     @Column(nullable = false)
     private boolean activo = true;
+
+    @Builder.Default
+    @Column(name = "email_confirmado", nullable = false)
+    private boolean emailConfirmado = false;
 }

@@ -27,6 +27,10 @@ export default function FormularioLogin(props) {
     const [intentos, setIntentos] = useState(0)
     const [bloqueado, setBloqueado] = useState(false)
 
+    const [isForgotPassword, setIsForgotPassword] = useState(false)
+    const [forgotLoading, setForgotLoading] = useState(false)
+    const [forgotSuccess, setForgotSuccess] = useState(false)
+
     // Inyectar Google Fonts
     useEffect(() => {
         const link = document.createElement("link")
@@ -49,6 +53,25 @@ export default function FormularioLogin(props) {
             return () => clearTimeout(timer)
         }
     }, [intentos])
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault()
+        setForgotLoading(true)
+        setError(null)
+        
+        try {
+            const base = (apiUrl || "").replace(/\/+$/, "")
+            const response = await fetch(`${base}/auth/recuperar-password?email=${email}`, {
+                method: "POST"
+            })
+            if (!response.ok) throw new Error("ERROR_SENDING_EMAIL")
+            setForgotSuccess(true)
+        } catch (err) {
+            setError("No pudimos enviar el correo. Verificá que el email sea correcto.")
+        } finally {
+            setForgotLoading(false)
+        }
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -127,108 +150,143 @@ export default function FormularioLogin(props) {
                     <AnimatePresence mode="wait">
                         {!success ? (
                             <motion.div
-                                key="login-form"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
+                                key={isForgotPassword ? "forgot-form" : "login-form"}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}
                             >
-                                <h1 style={titleStyle}>¡Bienvenido a <span style={{ color: "#A01EED" }}>Chamba</span>!</h1>
-                                <p style={subtitleStyle}>Ingresá a tu cuenta y seguí conectando talento con oportunidades.</p>
+                                <h1 style={titleStyle}>
+                                    {isForgotPassword ? "Recuperar cuenta" : <span>¡Bienvenido a <span style={{ color: "#A01EED" }}>Chamba</span>!</span>}
+                                </h1>
+                                <p style={subtitleStyle}>
+                                    {isForgotPassword 
+                                        ? "Ingresá tu email y te enviaremos las instrucciones para restablecer tu contraseña." 
+                                        : "Ingresá a tu cuenta y seguí conectando talento con oportunidades."}
+                                </p>
 
-                                <form onSubmit={handleSubmit} style={formStyle}>
-                                    {/* Email Input */}
-                                    <div style={inputGroup}>
-                                        <label style={labelStyle}>Email</label>
-                                        <div style={inputWrapper}>
-                                            <div style={inputIcon}><IconMail /></div>
-                                            <input
-                                                type="email"
-                                                placeholder="tu@email.com"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                style={inputField}
-                                                required
-                                            />
+                                {isForgotPassword && forgotSuccess ? (
+                                    <div style={{ textAlign: "center" }}>
+                                        <div style={{ ...successIconWrapper, width: "60px", height: "60px", margin: "0 auto 20px" }}>
+                                            <IconCheck />
                                         </div>
+                                        <p style={{ ...subtitleStyle, color: "#000", fontWeight: "600" }}>¡Mail enviado!</p>
+                                        <p style={subtitleStyle}>Revisá tu bandeja de entrada para continuar.</p>
+                                        <span style={linkVioletBold} onClick={() => { setIsForgotPassword(false); setForgotSuccess(false); }}>Volver al login</span>
                                     </div>
-
-                                    {/* Password Input */}
-                                    <div style={inputGroup}>
-                                        <label style={labelStyle}>Contraseña</label>
-                                        <div style={inputWrapper}>
-                                            <div style={inputIcon}><IconLock /></div>
-                                            <input
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="••••••••"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                style={inputField}
-                                                required
-                                            />
-                                            <div 
-                                                style={passwordToggle} 
-                                                onClick={() => setShowPassword(!showPassword)}
-                                            >
-                                                <IconEye show={showPassword} />
+                                ) : (
+                                    <form onSubmit={isForgotPassword ? handleForgotPassword : handleSubmit} style={formStyle}>
+                                        {/* Email Input */}
+                                        <div style={inputGroup}>
+                                            <label style={labelStyle}>Email</label>
+                                            <div style={inputWrapper}>
+                                                <div style={inputIcon}><IconMail /></div>
+                                                <input
+                                                    type="email"
+                                                    placeholder="tu@email.com"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    style={inputField}
+                                                    required
+                                                />
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div style={forgotPasswordWrapper}>
-                                        <span style={linkViolet}>¿Olvidaste tu contraseña?</span>
-                                    </div>
+                                        {!isForgotPassword && (
+                                            <>
+                                                {/* Password Input */}
+                                                <div style={inputGroup}>
+                                                    <label style={labelStyle}>Contraseña</label>
+                                                    <div style={inputWrapper}>
+                                                        <div style={inputIcon}><IconLock /></div>
+                                                        <input
+                                                            type={showPassword ? "text" : "password"}
+                                                            placeholder="••••••••"
+                                                            value={password}
+                                                            onChange={(e) => setPassword(e.target.value)}
+                                                            style={inputField}
+                                                            required
+                                                        />
+                                                        <div 
+                                                            style={passwordToggle} 
+                                                            onClick={() => setShowPassword(!showPassword)}
+                                                        >
+                                                            <IconEye show={showPassword} />
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                                    {/* Submit Button */}
-                                    <motion.button
-                                        whileHover={{ scale: 1.01 }}
-                                        whileTap={{ scale: 0.99 }}
-                                        type="submit"
-                                        disabled={loading || bloqueado}
-                                        style={{
-                                            ...submitButton,
-                                            background: loading ? "#94A3B8" : "#A01EED"
-                                        }}
-                                    >
-                                        {loading ? "Ingresando..." : btnText}
-                                    </motion.button>
-
-                                    {/* Separator */}
-                                    <div style={separatorWrapper}>
-                                        <div style={line} />
-                                        <span style={separatorText}>o continuá con</span>
-                                        <div style={line} />
-                                    </div>
-
-                                    {/* Social Buttons */}
-                                    <div style={socialRow}>
-                                        <div style={socialButton}>
-                                            <IconGoogle />
-                                            <span>Continuar con Google</span>
-                                        </div>
-                                        <div style={socialButton}>
-                                            <IconFacebook />
-                                            <span>Continuar con Facebook</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Error Message */}
-                                    <AnimatePresence>
-                                        {error && (
-                                            <motion.p 
-                                                initial={{ opacity: 0 }} 
-                                                animate={{ opacity: 1 }} 
-                                                style={errorTextStyle}
-                                            >
-                                                {error}
-                                            </motion.p>
+                                                <div style={forgotPasswordWrapper}>
+                                                    <span style={linkViolet} onClick={() => setIsForgotPassword(true)}>¿Olvidaste tu contraseña?</span>
+                                                </div>
+                                            </>
                                         )}
-                                    </AnimatePresence>
 
-                                    <div style={footerText}>
-                                        ¿No tenés cuenta? <span style={linkVioletBold} onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}>Crear cuenta nueva</span>
-                                    </div>
-                                </form>
+                                        {/* Submit Button */}
+                                        <motion.button
+                                            whileHover={{ scale: 1.01 }}
+                                            whileTap={{ scale: 0.99 }}
+                                            type="submit"
+                                            disabled={loading || forgotLoading || bloqueado}
+                                            style={{
+                                                ...submitButton,
+                                                background: (loading || forgotLoading) ? "#94A3B8" : "#A01EED"
+                                            }}
+                                        >
+                                            {isForgotPassword 
+                                                ? (forgotLoading ? "Enviando..." : "Enviar instrucciones") 
+                                                : (loading ? "Ingresando..." : btnText)}
+                                        </motion.button>
+
+                                        {isForgotPassword && (
+                                            <div style={footerText}>
+                                                <span style={linkViolet} onClick={() => setIsForgotPassword(false)}>Volver al login</span>
+                                            </div>
+                                        )}
+
+                                        {!isForgotPassword && (
+                                            <>
+                                                {/* Separator */}
+                                                <div style={separatorWrapper}>
+                                                    <div style={line} />
+                                                    <span style={separatorText}>o continuá con</span>
+                                                    <div style={line} />
+                                                </div>
+
+                                                {/* Social Buttons */}
+                                                <div style={socialRow}>
+                                                    <div style={socialButton}>
+                                                        <IconGoogle />
+                                                        <span>Continuar con Google</span>
+                                                    </div>
+                                                    <div style={socialButton}>
+                                                        <IconFacebook />
+                                                        <span>Continuar con Facebook</span>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Error Message */}
+                                        <AnimatePresence>
+                                            {error && (
+                                                <motion.p 
+                                                    initial={{ opacity: 0 }} 
+                                                    animate={{ opacity: 1 }} 
+                                                    style={errorTextStyle}
+                                                >
+                                                    {error}
+                                                </motion.p>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {!isForgotPassword && (
+                                            <div style={footerText}>
+                                                ¿No tenés cuenta? <span style={linkVioletBold} onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}>Crear cuenta nueva</span>
+                                            </div>
+                                        )}
+                                    </form>
+                                )}
                             </motion.div>
                         ) : (
                             <motion.div

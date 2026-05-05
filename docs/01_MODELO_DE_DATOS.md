@@ -57,6 +57,7 @@ CREATE TABLE public.rubros (
 CREATE TABLE public.usuarios (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL, apellido TEXT NOT NULL, email TEXT NOT NULL UNIQUE, telefono TEXT NOT NULL,
+    email_confirmado BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -264,6 +265,10 @@ ALTER TABLE public.resenas ALTER COLUMN usuario_id SET NOT NULL;
 ALTER TABLE public.resenas ADD CONSTRAINT resenas_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id) ON DELETE CASCADE;
 ALTER TABLE public.resenas ADD CONSTRAINT unique_resena_usuario_propietario UNIQUE (usuario_id, propietario_id);
 ALTER TABLE public.resenas DROP CONSTRAINT IF EXISTS chk_resena_origen;
+
+-- [2026-05-05] Seguridad y Autenticación
+-- Propósito: Rastrear si el usuario ha verificado su email para habilitar funciones críticas.
+ALTER TABLE public.usuarios ADD COLUMN email_confirmado BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
 ### 12. Extensión Multimedia (Consolidada + Degradación Suave)

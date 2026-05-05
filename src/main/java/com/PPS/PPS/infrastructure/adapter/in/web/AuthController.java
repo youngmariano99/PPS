@@ -13,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -43,6 +45,24 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthRespuestaDto> login(@Valid @RequestBody LoginSolicitudDto solicitud) {
         return ResponseEntity.ok(authUseCase.login(solicitud));
+    }
+
+    @Operation(summary = "Solicitar recuperación de contraseña")
+    @PostMapping("/recuperar-password")
+    public ResponseEntity<Void> recuperar(@RequestParam String email) {
+        authUseCase.solicitarRecuperacion(email);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Cambiar contraseña (después de recuperar)")
+    @PostMapping("/actualizar-password")
+    public ResponseEntity<Void> actualizarPassword(
+            @RequestHeader("Authorization") String token,
+            @RequestParam String nuevaPassword) {
+        // El token viene como "Bearer ..."
+        String jwt = token.replace("Bearer ", "");
+        authUseCase.cambiarPassword(nuevaPassword, jwt);
+        return ResponseEntity.ok().build();
     }
 }
 

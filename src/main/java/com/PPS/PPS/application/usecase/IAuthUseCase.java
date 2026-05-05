@@ -9,5 +9,8 @@ public interface IAuthUseCase {
     AuthRespuestaDto registrar(RegistroSolicitudDto dto);
     AuthRespuestaDto registrarCompleto(RegistroCompletoSolicitudDto dto);
     AuthRespuestaDto login(LoginSolicitudDto dto);
+    void solicitarRecuperacion(String email);
+    void cambiarPassword(String nuevaPassword, String accessToken);
+    void reenviarConfirmacion(String email);
 }
 

@@ -21,5 +21,6 @@ public class AuthRespuestaDto {
     private String email;
     private String nombre;
     private String apellido;
+    private boolean emailConfirmado;
 }
 

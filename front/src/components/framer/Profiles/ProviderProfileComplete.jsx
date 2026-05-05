@@ -210,7 +210,7 @@ export default function ProviderProfileComplete(props) {
         
         try {
             // 1. Actualizar Datos Profesionales
-            await fetch(`${apiUrl}/perfil/proveedor/me`, {
+            await fetch(`${apiUrl}/perfiles/proveedor/me`, {
                 method: "PUT",
                 headers: { 
                     "Content-Type": "application/json",
@@ -233,7 +233,7 @@ export default function ProviderProfileComplete(props) {
             })
 
             // 2. Actualizar Teléfono en Usuario Base
-            await fetch(`${apiUrl}/perfil/usuario/me`, {
+            await fetch(`${apiUrl}/perfiles/usuario/me`, {
                 method: "PUT",
                 headers: { 
                     "Content-Type": "application/json",

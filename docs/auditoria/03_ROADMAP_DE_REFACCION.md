@@ -66,3 +66,15 @@ DEBES ejecutar estrictamente **UNA tarea a la vez**. Por cada tarea (checkbox), 
 > **Nota de Progreso (Mayo 2026):**  
 > La refactorización ha sido pausada de forma segura tras completar la Fase 3 y la Tarea 4.1. El código se encuentra estable, compila correctamente y gran parte de la deuda técnica central ha sido saneada.  
 > Los pasos restantes de la Fase 4 (Migración de Controladores, Excepciones y Repositorios) se retomarán en una iteración futura para terminar de afianzar la arquitectura limpia.
+
+---
+
+## FASE 5: Optimización de Rendimiento y Búsqueda Diferida
+**Objetivo:** Optimizar las consultas a la base de datos y la carga de red en componentes de alta demanda como el Mapa de Proveedores, implementando Server-Side Filtering en lugar de Client-Side Filtering masivo.
+
+- [ ] **Tarea 5.1: Actualizar Endpoint Espacial (Backend).**
+  Modificar el endpoint `/directorio/buscar/mapa` y su caso de uso para que acepte un parámetro opcional de `rubro`, permitiendo filtrar desde la base de datos de PostgreSQL.
+- [ ] **Tarea 5.2: Refactorizar MapaProveedoresEmpresasChamba (Frontend).**
+  Implementar la "Búsqueda Diferida". El mapa debe iniciar bloqueado/borroso y SOLO ejecutar la búsqueda al backend (`buscarServicios()`) cuando el usuario seleccione explícitamente una etiqueta (pill) de rubro.
+- [ ] **Tarea 5.3: Revisión de ListadoProfesionalesChamba (Mantenimiento).**
+  *Nota Arquitectónica:* A diferencia del Mapa, el componente `ListadoProfesionalesChamba` **YA** se encuentra optimizado porque utiliza paginación nativa desde el servidor (`page`, `size`) para el endpoint `/directorio/buscar/lista`. Descargar la primera página de 8 elementos de "Todos" tiene un impacto ínfimo (aprox 50ms) y es excelente para mostrar recomendaciones iniciales. No requiere Búsqueda Diferida estricta como el mapa.

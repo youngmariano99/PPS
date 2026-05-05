@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +29,7 @@ public class IntencionContactoController {
             HttpServletRequest request) {
         
         String ip = request.getRemoteAddr();
-        return ResponseEntity.ok(intencionContactoService.registrarContacto(interesadoId, dto.getDestinoId(), ip));
+        return ResponseEntity.status(HttpStatus.CREATED).body(intencionContactoService.registrarContacto(interesadoId, dto.getDestinoId(), ip));
     }
 }
 

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/perfil")
+@RequestMapping("/perfiles")
 @RequiredArgsConstructor
 @Tag(name = "Perfil", description = "Gestión del perfil del usuario logueado")
 public class PerfilController {

@@ -30,7 +30,7 @@ public class ResenaService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional
-    public Resena crearResena(CrearResenaDto dto, UUID usuarioAutenticadoId, String ipCliente) {
+    public ResenaDetalleDto crearResena(CrearResenaDto dto, UUID usuarioAutenticadoId, String ipCliente) {
 
         // 1. ESCUDO ANTI-FRAUDE (Astroturfing)
         UUID propietarioPerfilUserId = obtenerUserIdDelPropietario(dto);
@@ -75,11 +75,12 @@ public class ResenaService {
             log.info("Creando reseña estándar para el perfil: {}", dto.getPropietarioId());
         }
 
-        return resenaRepository.save(nuevaResena);
+        Resena guardada = resenaRepository.save(nuevaResena);
+        return mapToDetalleDto(guardada);
     }
 
     @Transactional
-    public Resena responderResena(UUID resenaId, UUID proveedorUserId, String respuesta) {
+    public ResenaDetalleDto responderResena(UUID resenaId, UUID proveedorUserId, String respuesta) {
         Resena resena = resenaRepository.findById(resenaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reseña no encontrada."));
 
@@ -105,7 +106,8 @@ public class ResenaService {
 
         resena.setRespuestaProveedor(respuesta);
         resena.setFechaRespuesta(OffsetDateTime.now());
-        return resenaRepository.save(resena);
+        Resena guardada = resenaRepository.save(resena);
+        return mapToDetalleDto(guardada);
     }
 
     @Transactional(readOnly = true)

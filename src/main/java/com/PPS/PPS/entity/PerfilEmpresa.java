@@ -2,12 +2,16 @@ package com.PPS.PPS.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.locationtech.jts.geom.Point;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "perfiles_empresa", schema = "public")
+@SQLDelete(sql = "UPDATE perfiles_empresa SET activo = false WHERE id = ?")
+@SQLRestriction("activo = true")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -68,4 +72,8 @@ public class PerfilEmpresa {
 
     @Column(name = "updated_at", updatable = false, insertable = false)
     private OffsetDateTime fechaActualizacion;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean activo = true;
 }

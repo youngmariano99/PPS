@@ -465,7 +465,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                 videoLinks: (tempData.videoLinks || []).filter(l => l.trim() !== "")
             }
 
-            const response = await fetch(`${apiUrl}/perfil/proveedor/me`, {
+            const response = await fetch(`${apiUrl}/perfiles/proveedor/me`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

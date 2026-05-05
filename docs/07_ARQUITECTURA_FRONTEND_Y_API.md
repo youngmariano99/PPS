@@ -63,3 +63,4 @@ export async function fetchConAuth(endpoint, options = {}) {
 Cuando la IA desarrolle un nuevo endpoint en Spring Boot:
 1.  Debe crear su contrato en `/front/src/api/`.
 2.  Debe crear un componente visual en `/front/src/components/framer/` siguiendo el branding oficial.
+

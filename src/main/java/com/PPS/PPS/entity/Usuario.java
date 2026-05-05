@@ -2,6 +2,8 @@ package com.PPS.PPS.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -11,6 +13,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "usuarios", schema = "public")
+@SQLDelete(sql = "UPDATE usuarios SET activo = false WHERE id = ?")
+@SQLRestriction("activo = true")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -39,4 +43,8 @@ public class Usuario {
 
     @Column(name = "updated_at", updatable = false, insertable = false)
     private OffsetDateTime fechaActualizacion;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean activo = true;
 }

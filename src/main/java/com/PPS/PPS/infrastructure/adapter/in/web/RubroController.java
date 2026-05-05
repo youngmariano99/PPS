@@ -1,5 +1,6 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
+import com.PPS.PPS.application.dto.RubroDto;
 import com.PPS.PPS.entity.Rubro;
 import com.PPS.PPS.repository.RubroRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controlador para la gestión de rubros de servicios.
@@ -26,9 +28,16 @@ public class RubroController {
 
     @GetMapping
     @Operation(summary = "Obtener todos los rubros activos", description = "Lista los rubros precargados en el sistema para usar en dropdowns.")
-    public ResponseEntity<List<Rubro>> listarRubros() {
+    public ResponseEntity<List<RubroDto>> listarRubros() {
         // En un futuro podríamos filtrar por rubros activos
-        return ResponseEntity.ok(rubroRepository.findAll());
+        List<RubroDto> rubros = rubroRepository.findAll().stream()
+                .map(r -> RubroDto.builder()
+                        .id(r.getId())
+                        .nombre(r.getNombre())
+                        .descripcion(r.getDescripcion())
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rubros);
     }
 }
 

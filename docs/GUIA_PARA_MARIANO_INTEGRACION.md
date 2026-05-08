@@ -1,20 +1,38 @@
 # 📘 GUÍA PARA MARIANO: Integración de Suscripciones y Webhook
 
-¡Hola Mariano! Esta guía resume cómo funciona el módulo de Mercado Pago para que puedas integrarlo con el resto de la plataforma (checks azules, perfiles destacados, prioridad en búsqueda, etc.).
+¡Hola Mariano! Esta guía ha sido expandida para darte un control total sobre el sistema de pagos. Aquí encontrarás no solo qué tablas mirar, sino **cómo funciona por dentro** y cómo puedes extenderlo con total seguridad.
 
 ---
 
 ## 1. El Corazón del Sistema: La Base de Datos
 Las tablas clave que vas a consultar son:
 
-*   **`planes_suscripcion`**: Aquí están los precios y nombres de los planes (ej. Plan PRO).
-*   **`suscripciones_usuario`**: Es la tabla que vincula a un usuario con un plan.
-    *   **Estado Crítico:** Solo debes considerar un usuario como "Premium" si su estado es **`ACTIVA`**.
-    *   **Columna `usuario_id`**: Es el UUID del usuario (FK a la tabla `usuarios`).
+*   **`planes_suscripcion`**: Fuente de verdad de precios. Contiene el nombre (ej. "Plan PRO") y el costo mensual.
+*   **`suscripciones_usuario`**: Vincula al usuario con su membresía.
+    *   **Estado Crítico:** Un usuario solo es "Premium" si su estado es **`ACTIVA`**.
+    *   **Columna `usuario_id`**: UUID del usuario (FK a `usuarios`).
+    *   **Ciclo de Vida:** Cuando un usuario paga, se genera un registro `PENDIENTE`. Al confirmarse el pago vía Webhook, pasa a `ACTIVA`.
 
 ---
 
-## 2. Dónde meter la lógica de "Check Azul" y "Destacados"
+## 2. Flujo de Implementación (Cómo funciona la API)
+
+Nuestra integración usa **Mercado Pago Checkout Pro**. A diferencia de las suscripciones automáticas (que requieren tarjeta de crédito fija), esto permite pagar con cualquier medio (Débito, Crédito, Dinero en cuenta).
+
+### Paso 1: Generación de la Preferencia (`/crear`)
+Cuando el usuario hace clic en "Comprar", el Backend:
+1. Crea una suscripción local en estado `PENDIENTE`.
+2. Llama a Mercado Pago enviando nuestro ID interno como `external_reference`.
+3. Devuelve un `init_point` (URL de pago).
+
+### Paso 2: El Webhook (El Único que manda)
+Mercado Pago nos avisa mediante un POST a `/api/v1/suscripciones/webhook`.
+*   **Seguridad:** El sistema consulta a MP el estado del pago usando el ID recibido. Solo si MP dice `"approved"`, activamos la suscripción.
+*   **Vínculo:** Usamos el `external_reference` para saber a qué suscripción de nuestra BD corresponde el dinero.
+
+---
+
+## 3. Dónde meter la lógica de "Check Azul" y "Destacados"
 
 El punto de entrada de cada pago exitoso es el Webhook. He dejado el terreno preparado en el código de Java para que puedas expandirlo:
 
@@ -27,33 +45,43 @@ suscripcion.setEstado("ACTIVA");
 suscripcionUsuarioRepository.save(suscripcion);
 
 // 🚀 AQUÍ ES DONDE DEBES AGREGAR TU LÓGICA MARIANO:
-// Ej: perfilService.activarBeneficiosPremium(suscripcion.getUsuario().getId());
+// 1. Activar el check azul en la tabla perfiles.
+// 2. Notificar al usuario vía email (Resend).
+// 3. Registrar el evento en el log de auditoría.
 ```
 
 ---
 
-## 3. Guía de Endpoints (API)
+## 4. Referencia Técnica para Implementación
 
-Si necesitas llamar a estas funciones desde el Frontend o extenderlas:
+Si necesitas replicar esto en otro módulo o entender el código:
 
-| Endpoint | Método | Descripción |
+| Componente | Responsabilidad | Archivo Clave |
 | :--- | :--- | :--- |
-| `/api/v1/suscripciones/crear` | `POST` | Recibe `{usuarioId, planId}` y devuelve el `init_point` (link de pago). |
-| `/api/v1/suscripciones/webhook` | `POST` | Lo llama Mercado Pago automáticamente. Valida el pago y activa al usuario. |
-| `/api/v1/suscripciones/success` | `GET` | Endpoint de retorno tras pagar. Redirige al usuario de vuelta a Framer. |
+| **Controlador** | Expone `/crear` y `/webhook`. | `SuscripcionController.java` |
+| **Lógica de Negocio** | Gestiona estados en BD (PENDIENTE -> ACTIVA). | `SuscripcionService.java` |
+| **Cliente API** | Se comunica con los servidores de Mercado Pago. | `MercadoPagoService.java` |
 
 ---
 
-## 4. Consideraciones de Seguridad y Testing
+## 5. Control de Preguntas (FAQ & Troubleshooting)
 
-### El Hook "Sandbox"
-Para probar, estamos usando el subdominio de **Sandbox** de Mercado Pago. Esto significa que **siempre** debes usar las tarjetas de prueba oficiales (de esas que empiezan con 4509 o 4444).
+Para que estés "bien atento" a posibles fallos:
 
-### Prioridad en Búsquedas
-Cuando hagas la query para mostrar la lista de proveedores, podés usar un **`LEFT JOIN`** con la tabla de suscripciones:
+**P: ¿Qué pasa si el usuario paga pero cierra la ventana antes de volver al sitio?**
+*   **R:** No pasa nada. El Webhook corre por detrás (servidor a servidor). El usuario será activado aunque se le corte la luz después de pagar.
 
+**P: ¿Cómo pruebo el flujo sin gastar dinero real?**
+*   **R:** Usa las [Tarjetas de Prueba de MP](https://www.mercadopago.com.ar/developers/es/docs/checkout-pro/additional-content/test-cards). El sistema está configurado en **Sandbox Mode**, por lo que solo aceptará estas tarjetas.
+
+**P: El Webhook no está activando la cuenta, ¿qué reviso?**
+*   1. Mira los logs del Backend: Busca "Webhook recibido".
+*   2. Verifica que el `external_reference` en MP coincida con un ID en tu tabla `suscripciones_usuario`.
+*   3. Asegúrate de que el túnel (si usas localhost) o la URL en `application.yml` sea pública.
+
+**P: ¿Cómo ordeno a los proveedores para que los Premium salgan primero?**
+*   Usa este SQL de referencia en tus repositorios:
 ```sql
--- Idea para Mariano: Ordenar por activos primero
 SELECT p.* FROM perfiles_proveedor p
 LEFT JOIN suscripciones_usuario s ON p.usuario_id = s.usuario_id 
   AND s.estado = 'ACTIVA' AND s.fecha_fin > NOW()
@@ -62,9 +90,9 @@ ORDER BY s.estado DESC, p.created_at DESC;
 
 ---
 
-## 5. Glosario de Estados
-- **`PENDIENTE`**: El usuario hizo click pero aún no terminó el pago o el Webhook no llegó.
-- **`ACTIVA`**: Pago verificado. Tiene acceso total.
-- **`VENCIDA`**: Se acabó el tiempo o compró un plan nuevo (el sistema viejo se marca como vencido automáticamente).
+## 6. Glosario de Estados
+- **`PENDIENTE`**: Intento de pago iniciado. No tiene beneficios.
+- **`ACTIVA`**: Pago verificado por MP. Beneficios habilitados.
+- **`VENCIDA`**: El tiempo de 30 días expiró o se reemplazó por un plan nuevo.
 
-¡Cualquier duda, el código en `MercadoPagoService` y `SuscripcionService` está súper comentado! 🚀✨
+¡Cualquier duda, revisa `MercadoPagoService.java`, está todo documentado! 🚀✨

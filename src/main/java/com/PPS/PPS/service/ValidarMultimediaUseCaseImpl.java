@@ -2,12 +2,12 @@ package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IValidarMultimediaUseCase;
 import com.PPS.PPS.application.dto.request.PerfilSolicitudDto;
-import com.PPS.PPS.entity.PerfilEmpresa;
-import com.PPS.PPS.entity.Portafolio;
-import com.PPS.PPS.entity.Usuario;
+import com.PPS.PPS.domain.model.PerfilEmpresa;
+import com.PPS.PPS.domain.model.Portafolio;
+import com.PPS.PPS.domain.model.Usuario;
 import com.PPS.PPS.domain.exception.ValidacionNegocioException;
-import com.PPS.PPS.repository.PortafolioRepository;
-import com.PPS.PPS.repository.SuscripcionUsuarioRepository;
+import com.PPS.PPS.domain.repository.PortafolioRepository;
+import com.PPS.PPS.domain.repository.SuscripcionUsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

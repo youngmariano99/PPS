@@ -1,14 +1,14 @@
 package com.PPS.PPS.service;
 
-import com.PPS.PPS.entity.IntencionContacto;
-import com.PPS.PPS.entity.PerfilEmpresa;
-import com.PPS.PPS.entity.PerfilProveedor;
-import com.PPS.PPS.entity.Usuario;
+import com.PPS.PPS.domain.model.IntencionContacto;
+import com.PPS.PPS.domain.model.PerfilEmpresa;
+import com.PPS.PPS.domain.model.PerfilProveedor;
+import com.PPS.PPS.domain.model.Usuario;
 import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
-import com.PPS.PPS.repository.IntencionContactoRepository;
-import com.PPS.PPS.repository.PerfilEmpresaRepository;
-import com.PPS.PPS.repository.PerfilProveedorRepository;
-import com.PPS.PPS.repository.UsuarioRepository;
+import com.PPS.PPS.domain.repository.IntencionContactoRepository;
+import com.PPS.PPS.domain.repository.PerfilEmpresaRepository;
+import com.PPS.PPS.domain.repository.PerfilProveedorRepository;
+import com.PPS.PPS.domain.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

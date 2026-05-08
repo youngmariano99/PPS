@@ -1,6 +1,6 @@
-package com.PPS.PPS.repository;
+package com.PPS.PPS.domain.repository;
 
-import com.PPS.PPS.entity.SuscripcionUsuario;
+import com.PPS.PPS.domain.model.SuscripcionUsuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;

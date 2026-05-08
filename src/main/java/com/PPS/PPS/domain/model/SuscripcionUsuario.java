@@ -1,4 +1,4 @@
-package com.PPS.PPS.entity;
+package com.PPS.PPS.domain.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

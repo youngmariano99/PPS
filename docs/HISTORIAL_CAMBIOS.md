@@ -1,6 +1,11 @@
 # HISTORIAL DE CAMBIOS
 
 * **Fecha:** 2026-05-05
+* **Módulo/Tarea:** Seguridad y Comunicación: Gmail SMTP y Recuperación de Password
+* **Archivos Tocados:** `pom.xml`, `application.yml`, `AuthController.java`, `AuthServiceImpl.java`, `SupabaseAuthAdapter.java`, `FormularioLogin.jsx`
+* **Qué y Por Qué (1 oración clara):** Se migró el sistema de notificaciones a Gmail SMTP para garantizar la entrega de correos de confirmación, y se implementó el flujo completo de recuperación de contraseña con detección automática de tokens en el frontend y validaciones de seguridad robustas en el backend.
+
+* **Fecha:** 2026-05-05
 * **Módulo/Tarea:** Refactorización Arquitectónica de DTOs (Request/Response)
 * **Archivos Tocados:** Más de 40 archivos Java, incluyendo todos los DTOs, Controllers y Services.
 * **Qué y Por Qué (1 oración clara):** Se reorganizaron los DTOs en subpaquetes `request` y `response` para mejorar la semántica del código, facilitar el mantenimiento y cumplir con estándares de Arquitectura Limpia al separar claramente los contratos de entrada y salida.

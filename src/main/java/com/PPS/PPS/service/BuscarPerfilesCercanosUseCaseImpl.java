@@ -2,12 +2,12 @@ package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.usecase.IBuscarPerfilesCercanosUseCase;
 import com.PPS.PPS.application.dto.response.PerfilRespuestaDto;
-import com.PPS.PPS.entity.PerfilEmpresa;
-import com.PPS.PPS.entity.PerfilProveedor;
-import com.PPS.PPS.repository.PerfilEmpresaRepository;
-import com.PPS.PPS.repository.PerfilProveedorRepository;
-import com.PPS.PPS.repository.ResenaRepository;
-import com.PPS.PPS.repository.SuscripcionUsuarioRepository;
+import com.PPS.PPS.domain.model.PerfilEmpresa;
+import com.PPS.PPS.domain.model.PerfilProveedor;
+import com.PPS.PPS.domain.repository.PerfilEmpresaRepository;
+import com.PPS.PPS.domain.repository.PerfilProveedorRepository;
+import com.PPS.PPS.domain.repository.ResenaRepository;
+import com.PPS.PPS.domain.repository.SuscripcionUsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;

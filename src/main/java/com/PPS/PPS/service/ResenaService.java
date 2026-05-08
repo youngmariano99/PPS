@@ -2,12 +2,12 @@ package com.PPS.PPS.service;
 
 import com.PPS.PPS.application.dto.request.CrearResenaDto;
 import com.PPS.PPS.application.dto.response.ResenaDetalleDto;
-import com.PPS.PPS.entity.IntencionContacto;
-import com.PPS.PPS.entity.Resena;
+import com.PPS.PPS.domain.model.IntencionContacto;
+import com.PPS.PPS.domain.model.Resena;
 import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.domain.exception.ValidacionNegocioException;
-import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.repository.*;
+import com.PPS.PPS.domain.model.Usuario;
+import com.PPS.PPS.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -31,12 +31,32 @@ export default function FormularioLogin(props) {
     const [forgotLoading, setForgotLoading] = useState(false)
     const [forgotSuccess, setForgotSuccess] = useState(false)
 
+    // Estados para Restablecimiento (Viniendo del mail)
+    const [isResettingPassword, setIsResettingPassword] = useState(false)
+    const [newPassword, setNewPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+    const [resetToken, setResetToken] = useState("")
+    const [resetLoading, setResetLoading] = useState(false)
+    const [resetSuccess, setResetSuccess] = useState(false)
+
     // Inyectar Google Fonts
     useEffect(() => {
         const link = document.createElement("link")
         link.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap"
         link.rel = "stylesheet"
         document.head.appendChild(link)
+        
+        // Detección de Token de Recuperación en la URL
+        const hash = window.location.hash
+        if (hash && hash.includes("type=recovery")) {
+            const params = new URLSearchParams(hash.replace("#", "?"))
+            const token = params.get("access_token")
+            if (token) {
+                setResetToken(token)
+                setIsResettingPassword(true)
+            }
+        }
+
         return () => document.head.removeChild(link)
     }, [])
 
@@ -70,6 +90,51 @@ export default function FormularioLogin(props) {
             setError("No pudimos enviar el correo. Verificá que el email sea correcto.")
         } finally {
             setForgotLoading(false)
+        }
+    }
+
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault()
+
+        // Validación de requisitos (Igual que en el registro)
+        const regexPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+        if (!regexPassword.test(newPassword)) {
+            setError("La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo (@$!%*?&).")
+            return
+        }
+
+        if (newPassword !== confirmPassword) {
+            setError("Las contraseñas no coinciden.")
+            return
+        }
+        setResetLoading(true)
+        setError(null)
+
+        try {
+            const base = (apiUrl || "").replace(/\/+$/, "")
+            // El backend espera POST y el parámetro 'nuevaPassword' por query string
+            const urlConParametro = `${base}/auth/actualizar-password?nuevaPassword=${encodeURIComponent(newPassword)}`
+            
+            const response = await fetch(urlConParametro, {
+                method: "POST",
+                headers: { 
+                    "Authorization": "Bearer " + resetToken
+                }
+            })
+
+            if (!response.ok) throw new Error("ERROR_UPDATING")
+            setResetSuccess(true)
+            
+            // Limpiar y volver al login después de éxito
+            setTimeout(() => {
+                setIsResettingPassword(false)
+                setResetSuccess(false)
+                window.location.hash = ""
+            }, 3000)
+        } catch (err) {
+            setError("No pudimos actualizar la contraseña. El link puede haber expirado o es inválido.")
+        } finally {
+            setResetLoading(false)
         }
     }
 
@@ -157,15 +222,30 @@ export default function FormularioLogin(props) {
                                 style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}
                             >
                                 <h1 style={titleStyle}>
-                                    {isForgotPassword ? "Recuperar cuenta" : <span>¡Bienvenido a <span style={{ color: "#A01EED" }}>Chamba</span>!</span>}
+                                    {isResettingPassword 
+                                        ? "Nueva contraseña" 
+                                        : isForgotPassword 
+                                            ? "Recuperar cuenta" 
+                                            : <span>¡Bienvenido a <span style={{ color: "#A01EED" }}>Chamba</span>!</span>
+                                    }
                                 </h1>
                                 <p style={subtitleStyle}>
-                                    {isForgotPassword 
-                                        ? "Ingresá tu email y te enviaremos las instrucciones para restablecer tu contraseña." 
-                                        : "Ingresá a tu cuenta y seguí conectando talento con oportunidades."}
+                                    {isResettingPassword 
+                                        ? "Ingresá tu nueva clave para volver a acceder a tu cuenta." 
+                                        : isForgotPassword 
+                                            ? "Ingresá tu email y te enviaremos las instrucciones para restablecer tu contraseña." 
+                                            : "Ingresá a tu cuenta y seguí conectando talento con oportunidades."}
                                 </p>
 
-                                {isForgotPassword && forgotSuccess ? (
+                                {isResettingPassword && resetSuccess ? (
+                                    <div style={{ textAlign: "center" }}>
+                                        <div style={{ ...successIconWrapper, width: "60px", height: "60px", margin: "0 auto 20px" }}>
+                                            <IconCheck />
+                                        </div>
+                                        <p style={{ ...subtitleStyle, color: "#000", fontWeight: "600" }}>¡Contraseña actualizada!</p>
+                                        <p style={subtitleStyle}>Ya podés ingresar con tu nueva clave.</p>
+                                    </div>
+                                ) : isForgotPassword && forgotSuccess ? (
                                     <div style={{ textAlign: "center" }}>
                                         <div style={{ ...successIconWrapper, width: "60px", height: "60px", margin: "0 auto 20px" }}>
                                             <IconCheck />
@@ -175,50 +255,88 @@ export default function FormularioLogin(props) {
                                         <span style={linkVioletBold} onClick={() => { setIsForgotPassword(false); setForgotSuccess(false); }}>Volver al login</span>
                                     </div>
                                 ) : (
-                                    <form onSubmit={isForgotPassword ? handleForgotPassword : handleSubmit} style={formStyle}>
-                                        {/* Email Input */}
-                                        <div style={inputGroup}>
-                                            <label style={labelStyle}>Email</label>
-                                            <div style={inputWrapper}>
-                                                <div style={inputIcon}><IconMail /></div>
-                                                <input
-                                                    type="email"
-                                                    placeholder="tu@email.com"
-                                                    value={email}
-                                                    onChange={(e) => setEmail(e.target.value)}
-                                                    style={inputField}
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {!isForgotPassword && (
+                                    <form onSubmit={isResettingPassword ? handleUpdatePassword : isForgotPassword ? handleForgotPassword : handleSubmit} style={formStyle}>
+                                        
+                                        {isResettingPassword ? (
                                             <>
-                                                {/* Password Input */}
+                                                {/* New Password */}
                                                 <div style={inputGroup}>
-                                                    <label style={labelStyle}>Contraseña</label>
+                                                    <label style={labelStyle}>Nueva Contraseña</label>
                                                     <div style={inputWrapper}>
                                                         <div style={inputIcon}><IconLock /></div>
                                                         <input
-                                                            type={showPassword ? "text" : "password"}
-                                                            placeholder="••••••••"
-                                                            value={password}
-                                                            onChange={(e) => setPassword(e.target.value)}
+                                                            type="password"
+                                                            placeholder="Mínimo 8 caracteres"
+                                                            value={newPassword}
+                                                            onChange={(e) => setNewPassword(e.target.value)}
                                                             style={inputField}
                                                             required
                                                         />
-                                                        <div 
-                                                            style={passwordToggle} 
-                                                            onClick={() => setShowPassword(!showPassword)}
-                                                        >
-                                                            <IconEye show={showPassword} />
-                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {/* Confirm Password */}
+                                                <div style={inputGroup}>
+                                                    <label style={labelStyle}>Confirmar Contraseña</label>
+                                                    <div style={inputWrapper}>
+                                                        <div style={inputIcon}><IconLock /></div>
+                                                        <input
+                                                            type="password"
+                                                            placeholder="Repetí tu clave"
+                                                            value={confirmPassword}
+                                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                                            style={inputField}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {/* Email Input */}
+                                                <div style={inputGroup}>
+                                                    <label style={labelStyle}>Email</label>
+                                                    <div style={inputWrapper}>
+                                                        <div style={inputIcon}><IconMail /></div>
+                                                        <input
+                                                            type="email"
+                                                            placeholder="tu@email.com"
+                                                            value={email}
+                                                            onChange={(e) => setEmail(e.target.value)}
+                                                            style={inputField}
+                                                            required
+                                                        />
                                                     </div>
                                                 </div>
 
-                                                <div style={forgotPasswordWrapper}>
-                                                    <span style={linkViolet} onClick={() => setIsForgotPassword(true)}>¿Olvidaste tu contraseña?</span>
-                                                </div>
+                                                {!isForgotPassword && (
+                                                    <>
+                                                        {/* Password Input */}
+                                                        <div style={inputGroup}>
+                                                            <label style={labelStyle}>Contraseña</label>
+                                                            <div style={inputWrapper}>
+                                                                <div style={inputIcon}><IconLock /></div>
+                                                                <input
+                                                                    type={showPassword ? "text" : "password"}
+                                                                    placeholder="••••••••"
+                                                                    value={password}
+                                                                    onChange={(e) => setPassword(e.target.value)}
+                                                                    style={inputField}
+                                                                    required
+                                                                />
+                                                                <div 
+                                                                    style={passwordToggle} 
+                                                                    onClick={() => setShowPassword(!showPassword)}
+                                                                >
+                                                                    <IconEye show={showPassword} />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={forgotPasswordWrapper}>
+                                                            <span style={linkViolet} onClick={() => setIsForgotPassword(true)}>¿Olvidaste tu contraseña?</span>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </>
                                         )}
 
@@ -227,24 +345,26 @@ export default function FormularioLogin(props) {
                                             whileHover={{ scale: 1.01 }}
                                             whileTap={{ scale: 0.99 }}
                                             type="submit"
-                                            disabled={loading || forgotLoading || bloqueado}
+                                            disabled={loading || forgotLoading || resetLoading || bloqueado}
                                             style={{
                                                 ...submitButton,
-                                                background: (loading || forgotLoading) ? "#94A3B8" : "#A01EED"
+                                                background: (loading || forgotLoading || resetLoading) ? "#94A3B8" : "#A01EED"
                                             }}
                                         >
-                                            {isForgotPassword 
-                                                ? (forgotLoading ? "Enviando..." : "Enviar instrucciones") 
-                                                : (loading ? "Ingresando..." : btnText)}
+                                            {isResettingPassword 
+                                                ? (resetLoading ? "Guardando..." : "Actualizar contraseña")
+                                                : isForgotPassword 
+                                                    ? (forgotLoading ? "Enviando..." : "Enviar instrucciones") 
+                                                    : (loading ? "Ingresando..." : btnText)}
                                         </motion.button>
 
-                                        {isForgotPassword && (
+                                        {isForgotPassword && !isResettingPassword && (
                                             <div style={footerText}>
                                                 <span style={linkViolet} onClick={() => setIsForgotPassword(false)}>Volver al login</span>
                                             </div>
                                         )}
 
-                                        {!isForgotPassword && (
+                                        {!isForgotPassword && !isResettingPassword && (
                                             <>
                                                 {/* Separator */}
                                                 <div style={separatorWrapper}>
@@ -280,7 +400,7 @@ export default function FormularioLogin(props) {
                                             )}
                                         </AnimatePresence>
 
-                                        {!isForgotPassword && (
+                                        {!isForgotPassword && !isResettingPassword && (
                                             <div style={footerText}>
                                                 ¿No tenés cuenta? <span style={linkVioletBold} onClick={() => window.location.href = "https://overly-mindset-259417.framer.app/registro-general"}>Crear cuenta nueva</span>
                                             </div>

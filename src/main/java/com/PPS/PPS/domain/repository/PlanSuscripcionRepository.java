@@ -1,6 +1,6 @@
-package com.PPS.PPS.repository;
+package com.PPS.PPS.domain.repository;
 
-import com.PPS.PPS.entity.PlanSuscripcion;
+import com.PPS.PPS.domain.model.PlanSuscripcion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

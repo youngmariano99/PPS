@@ -1,8 +1,8 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
 import com.PPS.PPS.application.dto.response.RubroDto;
-import com.PPS.PPS.entity.Rubro;
-import com.PPS.PPS.repository.RubroRepository;
+import com.PPS.PPS.domain.model.Rubro;
+import com.PPS.PPS.domain.repository.RubroRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
-package com.PPS.PPS.repository;
+package com.PPS.PPS.domain.repository;
 
-import com.PPS.PPS.entity.PerfilProveedor;
+import com.PPS.PPS.domain.model.PerfilProveedor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -1,8 +1,8 @@
 package com.PPS.PPS.application.factory;
 
 import com.PPS.PPS.application.dto.request.RegistroCompletoSolicitudDto;
-import com.PPS.PPS.entity.Rubro;
-import com.PPS.PPS.entity.Usuario;
+import com.PPS.PPS.domain.model.Rubro;
+import com.PPS.PPS.domain.model.Usuario;
 import org.locationtech.jts.geom.Point;
 
 public interface IPerfilFactory {

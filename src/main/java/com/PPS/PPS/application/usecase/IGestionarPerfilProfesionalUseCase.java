@@ -2,8 +2,8 @@ package com.PPS.PPS.application.usecase;
 
 import com.PPS.PPS.application.dto.request.PerfilSolicitudDto;
 import com.PPS.PPS.application.dto.response.UsuarioPerfilDto;
-import com.PPS.PPS.entity.PerfilEmpresa;
-import com.PPS.PPS.entity.PerfilProveedor;
+import com.PPS.PPS.domain.model.PerfilEmpresa;
+import com.PPS.PPS.domain.model.PerfilProveedor;
 
 import java.util.UUID;
 

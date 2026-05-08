@@ -1,10 +1,10 @@
 package com.PPS.PPS.application.factory;
 
 import com.PPS.PPS.application.dto.request.RegistroCompletoSolicitudDto;
-import com.PPS.PPS.entity.PerfilProveedor;
-import com.PPS.PPS.entity.Rubro;
-import com.PPS.PPS.entity.Usuario;
-import com.PPS.PPS.repository.PerfilProveedorRepository;
+import com.PPS.PPS.domain.model.PerfilProveedor;
+import com.PPS.PPS.domain.model.Rubro;
+import com.PPS.PPS.domain.model.Usuario;
+import com.PPS.PPS.domain.repository.PerfilProveedorRepository;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Component;

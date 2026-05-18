@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
-import { User, LogIn, ChevronRight, RefreshCw, LogOut } from "lucide-react"
+import { User, LogIn, ChevronDown, LogOut, Plus, Building, Briefcase } from "lucide-react"
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
+import { useIdentityStore } from "./useIdentityStore"
 
 /**
- * BOTÓN DE NAVEGACIÓN PPS (AUTH DINÁMICO) - V4 (ANTI-CACHE)
+ * BOTÓN DE NAVEGACIÓN MULTI-IDENTIDAD CHAMBA
  * --------------------------------------------------------
- * - Usa getUser() para validación real del servidor (evita sesiones viejas).
- * - Cierre de sesión con limpieza total de localStorage.
- * - Logs de auditoría por email de usuario.
+ * - Se conecta al store global de Zustand.
+ * - Muestra un Switcher desplegable con las entidades del usuario.
+ * - Soporta la creación de nuevas páginas desde el menú.
  */
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
@@ -21,167 +22,192 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 export default function AuthNavButton(props) {
     const { 
         apiUrl, loginUrl, providerProfileUrl, userProfileUrl,
-        primaryColor, textColor, fontSize, borderRadius, padding,
-        showLogoutWhenLoggedIn
+        primaryColor, textColor, showLogoutWhenLoggedIn
     } = props
 
-    const [status, setStatus] = useState("checking") 
-    const [userRole, setUserRole] = useState(null)
-    const [userEmail, setUserEmail] = useState("")
+    const [isHovered, setIsHovered] = useState(false)
+    
+    // Conexión al Cerebro Global
+    const { 
+        isHydrated, cuentaBase, contextosDisponibles, contextoActivo, 
+        setContextoActivo, hydrateFromApi, setShowUpgradeModal 
+    } = useIdentityStore()
 
     useEffect(() => {
-        const fetchFreshUser = async () => {
-            // getUser() es mejor que getSession() porque valida con el servidor
-            const { data: { user }, error } = await supabase.auth.getUser()
-            
-            if (user) {
-                console.log("AuthNav: Valid user found:", user.email)
-                setUserEmail(user.email)
-                // Obtenemos la sesión para el token necesario en discoverRole
-                const { data: { session } } = await supabase.auth.getSession()
-                if (session) await discoverRole(session)
-                else setStatus("guest")
-            } else {
-                console.log("AuthNav: No valid user detected.")
-                setStatus("guest")
-            }
-        }
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("AuthNav: Auth Event triggered:", event)
+        // Al montar el botón en el Navbar, hidratamos el estado global
+        hydrateFromApi(apiUrl, supabase)
+        
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-                if (session) {
-                    setUserEmail(session.user.email)
-                    await discoverRole(session)
-                }
-            } else if (event === "SIGNED_OUT") {
-                setStatus("guest")
-                setUserRole(null)
-                setUserEmail("")
+                hydrateFromApi(apiUrl, supabase)
             }
         })
-
-        const discoverRole = async (session) => {
-            try {
-                const response = await fetch(`${apiUrl}/usuarios/me`, {
-                    headers: {
-                        "Authorization": `Bearer ${session.access_token}`,
-                        "X-User-Id": session.user.id
-                    }
-                })
-                if (response.ok) {
-                    const data = await response.json()
-                    console.log(`AuthNav: Role for ${session.user.email} is ${data.rol}`)
-                    setUserRole(data.rol)
-                    setStatus("authenticated")
-                } else {
-                    console.warn("AuthNav: Discovery failed for user.")
-                    setStatus("authenticated")
-                }
-            } catch (err) {
-                console.error("AuthNav: Discovery fetch error:", err)
-                setStatus("authenticated")
-            }
-        }
-
-        fetchFreshUser()
         return () => subscription.unsubscribe()
-    }, [apiUrl])
-
-    const handleClick = () => {
-        if (status === "guest") {
-            window.location.href = loginUrl
-        } else if (status === "authenticated") {
-            const targetUrl = userRole === "PROVEEDOR" ? providerProfileUrl : userProfileUrl
-            window.location.href = targetUrl
-        }
-    }
+    }, [apiUrl, hydrateFromApi])
 
     const handleLogout = async (e) => {
-        e.stopPropagation()
-        console.log("AuthNav: Initiating total logout and cache clear...")
-        
-        // 1. Sign out de Supabase
+        e?.stopPropagation()
         await supabase.auth.signOut()
-        
-        // 2. Limpieza agresiva de localStorage para evitar persistencia de sesion vieja
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i)
-            if (key && (key.includes("supabase") || key.includes("sb-"))) {
-                localStorage.removeItem(key)
-            }
-        }
-        
-        // 3. Redirección y recarga total
+        localStorage.removeItem('chamba_active_context')
         window.location.href = loginUrl
-        // Dejamos un pequeño delay para asegurar que el storage se limpie
         setTimeout(() => window.location.reload(), 200)
     }
 
-    const btnStyle = {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "10px",
-        backgroundColor: primaryColor,
-        color: textColor,
-        fontSize: "13px",
-        fontWeight: "700",
-        borderRadius: `10px`, 
-        padding: "0 22px",
-        border: "none",
-        cursor: "pointer",
-        width: "100%",
-        fontFamily: "Inter, sans-serif",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
-        height: "38px"
+    const handleSwitchContext = (ctx) => {
+        setContextoActivo(ctx)
+        setIsHovered(false)
+        
+        // Redirigir al perfil adecuado
+        if (ctx.tipo === 'USUARIO_BASE') {
+            window.location.href = userProfileUrl
+        } else {
+            // Asumimos que providerProfileUrl es el Dashboard para Proveedores/Empresas
+            window.location.href = providerProfileUrl
+        }
     }
 
-    if (status === "checking") {
+    // Mientras carga
+    if (!isHydrated) return <div style={{ width: "120px", height: "42px", borderRadius: "21px", background: "#f1f5f9" }} />
+
+    // Usuario Invitado
+    if (!cuentaBase) {
         return (
-            <button style={{ ...btnStyle, opacity: 0.7, cursor: "wait" }}>
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
-                    <RefreshCw size={18} />
-                </motion.div>
-            </button>
+            <motion.button 
+                whileHover={{ scale: 1.02 }}
+                onClick={() => window.location.href = loginUrl}
+                style={{ 
+                    display: "flex", alignItems: "center", gap: "8px",
+                    background: primaryColor, color: textColor,
+                    padding: "0 22px", height: "42px", borderRadius: "10px",
+                    border: "none", fontWeight: "700", cursor: "pointer", fontFamily: "Inter"
+                }}
+            >
+                <LogIn size={18} /> Iniciar Sesión
+            </motion.button>
         )
     }
 
+    // Lógica visual del Contexto Activo
+    const currentName = contextoActivo.tipo === 'USUARIO_BASE' 
+        ? cuentaBase.nombre 
+        : contextoActivo.nombreContexto;
+
+    const currentIcon = contextoActivo.tipo === 'EMPRESA' 
+        ? <Building size={16} /> 
+        : contextoActivo.tipo === 'PROVEEDOR' ? <Briefcase size={16} /> : <User size={16} />;
+
     return (
-        <div style={{ display: "flex", gap: "8px", width: "100%" }}>
-            <motion.button 
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleClick}
-                style={btnStyle}
+        <div 
+            style={{ position: "relative", fontFamily: "Inter" }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            {/* Botón Principal (Indicador de Contexto Activo) */}
+            <motion.div 
+                whileHover={{ scale: 1.02 }}
+                style={{ 
+                    display: "flex", alignItems: "center", gap: "12px",
+                    background: "white", color: "#1e293b",
+                    padding: "6px 16px 6px 6px", height: "42px", borderRadius: "21px",
+                    border: "1px solid #e2e8f0", cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+                }}
             >
-                {status === "guest" ? (
-                    <>
-                        <LogIn size={18} />
-                        <span>Iniciar Sesión</span>
-                    </>
-                ) : (
-                    <>
-                        <User size={18} />
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
-                            <span style={{ fontSize: "12px", opacity: 0.8, lineHeight: 1 }}>{userRole === "PROVEEDOR" ? "PRO" : "USUARIO"}</span>
-                            <span style={{ fontSize: "14px", lineHeight: 1 }}>Mi Perfil</span>
+                <div style={{
+                    width: "30px", height: "30px", borderRadius: "50%",
+                    background: primaryColor, color: "white",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    backgroundImage: contextoActivo.fotoUrl ? `url(${contextoActivo.fotoUrl})` : 'none',
+                    backgroundSize: 'cover', backgroundPosition: 'center'
+                }}>
+                    {!contextoActivo.fotoUrl && currentIcon}
+                </div>
+                <span style={{ fontSize: "14px", fontWeight: "600", maxWidth: "120px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {currentName}
+                </span>
+                <ChevronDown size={16} style={{ color: "#94a3b8", transform: isHovered ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s ease" }} />
+            </motion.div>
+
+            {/* Menú Desplegable (Dropdown Multi-Identidad) */}
+            <AnimatePresence>
+                {isHovered && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.15 }}
+                        style={{
+                            position: "absolute", top: "100%", right: 0, marginTop: "8px",
+                            width: "240px", background: "white", borderRadius: "16px",
+                            boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+                            border: "1px solid #f1f5f9", overflow: "hidden", zIndex: 1000
+                        }}
+                    >
+                        <div style={{ padding: "8px" }}>
+                            <div style={{ padding: "8px 12px", fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase" }}>Cambiar de Perfil</div>
+                            
+                            {/* Opción 1: Cuenta Base */}
+                            <div 
+                                onClick={() => handleSwitchContext({ tipo: 'USUARIO_BASE', idPerfil: null, nombreContexto: 'Cuenta Personal', fotoUrl: null })}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
+                                    borderRadius: "10px", cursor: "pointer",
+                                    background: contextoActivo.tipo === 'USUARIO_BASE' ? "#f8fafc" : "transparent"
+                                }}
+                            >
+                                <User size={16} style={{ color: contextoActivo.tipo === 'USUARIO_BASE' ? primaryColor : "#64748b" }} />
+                                <span style={{ fontSize: "14px", fontWeight: contextoActivo.tipo === 'USUARIO_BASE' ? "600" : "500", color: "#334155" }}>Mi Cuenta Personal</span>
+                            </div>
+
+                            {/* Opciones Dinámicas: Empresas y Proveedor */}
+                            {contextosDisponibles.map((ctx, i) => (
+                                <div 
+                                    key={i}
+                                    onClick={() => handleSwitchContext(ctx)}
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
+                                        borderRadius: "10px", cursor: "pointer", marginTop: "4px",
+                                        background: contextoActivo.idPerfil === ctx.idPerfil ? "#f8fafc" : "transparent"
+                                    }}
+                                >
+                                    {ctx.tipo === 'EMPRESA' ? 
+                                        <Building size={16} style={{ color: contextoActivo.idPerfil === ctx.idPerfil ? primaryColor : "#64748b" }} /> : 
+                                        <Briefcase size={16} style={{ color: contextoActivo.idPerfil === ctx.idPerfil ? primaryColor : "#64748b" }}/>
+                                    }
+                                    <span style={{ fontSize: "14px", fontWeight: contextoActivo.idPerfil === ctx.idPerfil ? "600" : "500", color: "#334155", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {ctx.nombreContexto}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
-                        <ChevronRight size={14} style={{ opacity: 0.6 }} />
-                    </>
+
+                        {/* Botonera Inferior */}
+                        <div style={{ borderTop: "1px solid #f1f5f9", padding: "8px" }}>
+                            <div 
+                                onClick={() => { setIsHovered(false); setShowUpgradeModal(true); }}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
+                                    borderRadius: "10px", cursor: "pointer", color: primaryColor, fontWeight: "600"
+                                }}
+                            >
+                                <Plus size={16} /> <span style={{ fontSize: "14px" }}>Crear Página Nueva</span>
+                            </div>
+                            
+                            {showLogoutWhenLoggedIn && (
+                                <div 
+                                    onClick={handleLogout}
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
+                                        borderRadius: "10px", cursor: "pointer", color: "#ef4444", fontWeight: "600", marginTop: "4px"
+                                    }}
+                                >
+                                    <LogOut size={16} /> <span style={{ fontSize: "14px" }}>Cerrar Sesión</span>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
                 )}
-            </motion.button>
-            
-            {status === "authenticated" && showLogoutWhenLoggedIn && (
-                <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    onClick={handleLogout}
-                    style={{ ...btnStyle, width: "60px", padding: 0, backgroundColor: "#fee2e2", color: "#ef4444" }}
-                    title={`Cerrar Sesión (${userEmail})`}
-                >
-                    <LogOut size={20} />
-                </motion.button>
-            )}
+            </AnimatePresence>
         </div>
     )
 }
@@ -189,12 +215,9 @@ export default function AuthNavButton(props) {
 addPropertyControls(AuthNavButton, {
     apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
     loginUrl: { type: ControlType.String, title: "Login URL", defaultValue: "https://overly-mindset-259417.framer.app/login" },
-    providerProfileUrl: { type: ControlType.String, title: "Provider Profile URL", defaultValue: "https://overly-mindset-259417.framer.app/proveedor" },
+    providerProfileUrl: { type: ControlType.String, title: "Dashboard URL", defaultValue: "https://overly-mindset-259417.framer.app/proveedor" },
     userProfileUrl: { type: ControlType.String, title: "User Profile URL", defaultValue: "https://overly-mindset-259417.framer.app/perfil-base" },
-    primaryColor: { type: ControlType.Color, title: "Color Botón", defaultValue: "#7c3aed" },
+    primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#7c3aed" },
     textColor: { type: ControlType.Color, title: "Color Texto", defaultValue: "#ffffff" },
-    fontSize: { type: ControlType.Number, title: "Tamaño Fuente", defaultValue: 14, min: 10, max: 24 },
-    borderRadius: { type: ControlType.Number, title: "Radio Borde", defaultValue: 14, min: 0, max: 40 },
-    padding: { type: ControlType.Number, title: "Padding Y", defaultValue: 12, min: 4, max: 32 },
     showLogoutWhenLoggedIn: { type: ControlType.Boolean, title: "Mostrar Logout", defaultValue: true },
 })

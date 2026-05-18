@@ -125,7 +125,7 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
     }
 
     public UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId) {
-        log.info("Descubriendo perfil para usuario ID: {}", usuarioId);
+        log.info("Descubriendo perfiles para usuario ID: {}", usuarioId);
 
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> {
@@ -133,11 +133,30 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
                     return new RecursoNoEncontradoException("Usuario no encontrado");
                 });
 
-        boolean esProveedor = proveedorRepository.findByUsuarioId(usuarioId).isPresent();
-        boolean esEmpresa = empresaRepository.findByUsuarioId(usuarioId).isPresent();
+        List<com.PPS.PPS.application.dto.response.ContextoPerfilDto> contextos = new ArrayList<>();
 
-        String rol = esProveedor ? "PROVEEDOR" : (esEmpresa ? "EMPRESA" : "USUARIO");
-        log.info("Usuario {} identificado con rol: {}", usuarioId, rol);
+        // Buscar proveedor
+        proveedorRepository.findByUsuarioId(usuarioId).ifPresent(p -> {
+            contextos.add(com.PPS.PPS.application.dto.response.ContextoPerfilDto.builder()
+                    .idPerfil(p.getId())
+                    .tipo("PROVEEDOR")
+                    .nombreContexto(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                    .fotoUrl(p.getFotoPerfilUrl())
+                    .slug(p.getSlug())
+                    .build());
+        });
+
+        // Buscar empresas
+        List<com.PPS.PPS.domain.model.PerfilEmpresa> empresas = empresaRepository.findAllByUsuarioId(usuarioId);
+        empresas.forEach(e -> {
+            contextos.add(com.PPS.PPS.application.dto.response.ContextoPerfilDto.builder()
+                    .idPerfil(e.getId())
+                    .tipo("EMPRESA")
+                    .nombreContexto(e.getRazonSocial())
+                    .fotoUrl(e.getLogoUrl())
+                    .slug(e.getSlug())
+                    .build());
+        });
 
         boolean isPremium = suscripcionRepository.findByUsuarioIdAndEstado(usuarioId, "ACTIVA")
                 .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
@@ -149,7 +168,7 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
                 .nombre(usuario.getNombre())
                 .apellido(usuario.getApellido())
                 .email(usuario.getEmail())
-                .rol(rol)
+                .contextosDisponibles(contextos)
                 .telefono(usuario.getTelefono())
                 .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
                 .isPremium(isPremium)

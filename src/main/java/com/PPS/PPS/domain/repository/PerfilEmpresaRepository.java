@@ -16,6 +16,11 @@ public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UU
     @Query("SELECT e FROM PerfilEmpresa e WHERE e.usuario.id = :usuarioId")
     Optional<PerfilEmpresa> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
+    @Query("SELECT e FROM PerfilEmpresa e WHERE e.usuario.id = :usuarioId")
+    List<PerfilEmpresa> findAllByUsuarioId(@Param("usuarioId") UUID usuarioId);
+
+    Optional<PerfilEmpresa> findBySlug(String slug);
+
     /**
      * Busca IDs cercanos aplicando un ranking inicial por Suscripción Premium y Distancia.
      */

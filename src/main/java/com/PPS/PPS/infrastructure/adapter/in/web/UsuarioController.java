@@ -24,11 +24,6 @@ public class UsuarioController {
     @Operation(summary = "Obtener perfil del usuario actual", description = "Descubre el rol y datos del usuario logueado usando su UUID")
     public ResponseEntity<UsuarioPerfilDto> obtenerMiPerfil(
             @RequestHeader(value = "X-User-Id", required = false) UUID userIdHeader) {
-
-        // TODO: En producción, extraer el UUID del Token JWT de Supabase
-        // Por ahora, para Framer, permitimos pasar el ID por Header o usar uno de
-        // prueba.
-
         if (userIdHeader == null) {
             return ResponseEntity.badRequest().build();
         }

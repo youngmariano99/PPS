@@ -113,3 +113,8 @@
 * **Módulo/Tarea:** Rediseño Marketplace y Motor de Búsqueda Global (v7.0)
 * **Archivos Tocados:** `ListadoProfesionales.jsx`, `DirectorioController.java`, `DirectorioService.java`, `PerfilProveedorRepository.java`, `PerfilRespuestaDto.java`
 * **Qué y Por Qué (1 oración clara):** Se implementó un buscador global dinámico (nombre/rubro/localidad) integrado en el backend, se rediseñó la UI del listado eliminando ruidos visuales y se optimizó la paginación con saltos manuales y visualización de fotos de perfil.
+
+* **Fecha:** 2026-05-14
+* **Módulo/Tarea:** Refactorización Arquitectónica: Sistema de Multi-Identidad y Perfiles Concurrentes
+* **Archivos Tocados:** `UsuarioPerfilDto.java`, `ContextoPerfilDto.java`, `ConsultarDetallePerfilUseCaseImpl.java`, `PerfilEmpresa.java`, `PerfilController.java`, `PerfilEmpresaRepository.java`, `GestionarPerfilProfesionalUseCaseImpl.java`
+* **Qué y Por Qué (1 oración clara):** Se refactorizó la capa de aplicación y dominio para permitir que un usuario posea simultáneamente su identidad base, un único perfil de Proveedor Independiente, y múltiples perfiles de Empresa, incorporando validaciones de unicidad transaccional y generación dinámica de Slugs SEO para asegurar la navegación pública.

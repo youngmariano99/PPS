@@ -32,7 +32,8 @@ import {
     Play,
     ChevronRight,
     ChevronLeft,
-    Maximize2
+    Maximize2,
+    Plus
 } from "lucide-react"
 import Swal from "https://esm.sh/sweetalert2"
 
@@ -62,6 +63,7 @@ const getEmbedUrl = (url) => {
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
+import { useIdentityStore } from "./useIdentityStore"
 
 /**
  * PERFIL PÚBLICO PROVEEDOR CHAMBA - REDISEÑO PREMIUM
@@ -79,8 +81,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // --- HELPER MULTIMEDIA ---
 function openUploadWidget(callback, multipleOrOptions) {
-    const options = typeof multipleOrOptions === 'object' 
-        ? multipleOrOptions 
+    const options = typeof multipleOrOptions === 'object'
+        ? multipleOrOptions
         : { multiple: !!multipleOrOptions };
 
     if (window.cloudinary) {
@@ -106,6 +108,8 @@ function openUploadWidget(callback, multipleOrOptions) {
 
 export default function PerfilPublicoProveedorChamba(props) {
     const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false } = props
+
+    const { contextoActivo, setShowUpgradeModal, cuentaBase } = useIdentityStore()
 
     // --- ESTADOS LÓGICOS (1:1 con el original) ---
     const [data, setData] = useState(null)
@@ -291,7 +295,7 @@ export default function PerfilPublicoProveedorChamba(props) {
         const params = new URLSearchParams(window.location.search)
         const slug = params.get("p") || params.get("slug")
         const externalId = params.get("id")
-        
+
         const { data: { user } } = await supabase.auth.getUser()
         const { data: { session } } = await supabase.auth.getSession()
 
@@ -302,6 +306,9 @@ export default function PerfilPublicoProveedorChamba(props) {
 
             if (slug) {
                 response = await fetch(`${apiUrl}/directorio/proveedor/slug/${slug}`, { headers })
+                if (response && response.status === 404) {
+                    response = await fetch(`${apiUrl}/directorio/empresa/slug/${slug}`, { headers })
+                }
             } else {
                 const targetId = externalId || (user ? user.id : null)
                 if (!targetId) {
@@ -312,19 +319,32 @@ export default function PerfilPublicoProveedorChamba(props) {
                     }
                     throw new Error("No se especificó un perfil.")
                 }
+
+                // Cortar si el dueño está viendo su cuenta base (mostramos Upsell luego)
+                if (!externalId && contextoActivo && contextoActivo.tipo === 'USUARIO_BASE') {
+                    setData(null)
+                    setLoading(false)
+                    return
+                }
+
                 headers["X-User-Id"] = targetId
-                response = await fetch(`${apiUrl}/directorio/proveedor/${targetId}`, { headers })
+                const currentEndpointId = contextoActivo && contextoActivo.tipo === 'EMPRESA' ? contextoActivo.idPerfil : targetId;
+                const endpoint = (!externalId && contextoActivo && contextoActivo.tipo === 'EMPRESA')
+                    ? `/directorio/empresa/${currentEndpointId}`
+                    : `/directorio/proveedor/${targetId}`;
+
+                response = await fetch(`${apiUrl}${endpoint}`, { headers })
             }
 
             if (response && response.ok) {
                 const res = await response.json()
                 setIsOwner(user && user.id === res.usuarioId)
-                
+
                 const mapped = {
                     id: res.id,
                     usuarioId: res.usuarioId,
-                    name: res.nombrePublico || "Profesional",
-                    category: res.rubro || "Especialista",
+                    name: res.nombrePublico || res.razonSocial || "Profesional",
+                    category: res.rubro || (res.rubroPrincipal ? res.rubroPrincipal.nombre : res.rubroPersonalizado) || "Especialista",
                     description: res.descripcion || "Sin descripción disponible.",
                     location: res.ciudad ? `${res.ciudad}, ${res.provincia}` : "Ubicación no especificada",
                     address: res.direccion || "",
@@ -491,7 +511,14 @@ export default function PerfilPublicoProveedorChamba(props) {
                 videoLinks: (tempData.videoLinks || []).filter(l => l.trim() !== "")
             }
 
-            const response = await fetch(`${apiUrl}/perfiles/proveedor/me`, {
+            if (contextoActivo && contextoActivo.tipo === 'EMPRESA') {
+                payload.razonSocial = tempData.name
+                payload.cuit = tempData.cuit || ""
+            }
+
+            const endpoint = (contextoActivo && contextoActivo.tipo === 'EMPRESA') ? `/perfiles/empresa/${contextoActivo.idPerfil}` : `/perfiles/proveedor/me`
+
+            const response = await fetch(`${apiUrl}${endpoint}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -540,7 +567,7 @@ export default function PerfilPublicoProveedorChamba(props) {
             if (response.ok) {
                 const resData = await response.json()
                 setIntencionContactoId(resData.contactoId)
-                
+
                 // REVELAR DATOS EN LA UI TRAS EL CONTACTO EXITOSO
                 setData(prev => ({
                     ...prev,
@@ -614,6 +641,29 @@ export default function PerfilPublicoProveedorChamba(props) {
         </div>
     )
 
+    // ESTADO VACÍO / UPSELL PARA USUARIO BASE
+    if (!data && contextoActivo && contextoActivo.tipo === 'USUARIO_BASE') {
+        return (
+            <div style={{ padding: "60px 24px", maxWidth: "800px", margin: "0 auto", textAlign: "center", fontFamily: "Inter, sans-serif", minHeight: "100vh", display: "flex", alignItems: "center" }}>
+                <div style={{ background: "white", padding: "48px", borderRadius: "24px", boxShadow: "0 10px 40px rgba(0,0,0,0.05)", border: "1px solid #f1f5f9", width: "100%" }}>
+                    <div style={{ width: "80px", height: "80px", background: `${primaryColor}15`, color: primaryColor, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                        <Zap size={40} />
+                    </div>
+                    <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "16px", color: "#1e293b", letterSpacing: "-0.5px" }}>Potenciá tu alcance en Chamba</h2>
+                    <p style={{ fontSize: "16px", color: "#64748b", marginBottom: "32px", lineHeight: "1.6", maxWidth: "500px", margin: "0 auto 32px" }}>
+                        Actualmente estás navegando con tu cuenta personal. Si ofrecés servicios o tenés una empresa, creá una página profesional gratuita y empezá a recibir solicitudes de presupuesto.
+                    </p>
+                    <button
+                        onClick={() => setShowUpgradeModal(true)}
+                        style={{ background: primaryColor, color: "white", padding: "16px 32px", borderRadius: "12px", border: "none", fontSize: "16px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", boxShadow: `0 10px 25px ${primaryColor}40` }}
+                    >
+                        <Plus size={20} /> Crear Página Profesional
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
     if (error || !data) return (
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100vh", background: "#f8fafc", gap: "20px" }}>
             <div style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>{error || "No se pudo cargar el perfil"}</div>
@@ -624,6 +674,13 @@ export default function PerfilPublicoProveedorChamba(props) {
     // --- RENDERIZADO ---
     return (
         <div className="chamba-perfil">
+
+            {/* SAFETY BANNER */}
+            {isOwner && contextoActivo && contextoActivo.tipo !== 'USUARIO_BASE' && (
+                <div style={{ background: primaryColor, color: "white", padding: "8px", textAlign: "center", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    <ShieldCheck size={16} /> Estás operando y respondiendo como {contextoActivo.nombreContexto}
+                </div>
+            )}
 
             {/* HERO SECTION */}
             <div style={{ background: "linear-gradient(180deg, #F3E8FF 0%, #FFFFFF 100%)", padding: "40px 0", borderBottom: "1px solid #F1F5F9" }}>
@@ -656,9 +713,9 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     onClick={() => openUploadWidget((url) => {
                                         setTempData(prev => ({ ...prev, avatar: url }))
                                         setEditingSection("avatar")
-                                    }, { 
-                                        multiple: false, 
-                                        cropping: true, 
+                                    }, {
+                                        multiple: false,
+                                        cropping: true,
                                         showSkipCropButton: false,
                                         croppingAspectRatio: 1,
                                         croppingDefaultSelectionRatio: 1
@@ -832,17 +889,17 @@ export default function PerfilPublicoProveedorChamba(props) {
                                             <label style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8" }}>Redes Sociales (URLs)</label>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
                                                 {(tempData.redesSociales || []).map((red, idx) => (
-                                                    <input 
+                                                    <input
                                                         key={idx}
-                                                        className="chamba-input" 
-                                                        style={{ padding: "8px 12px" }} 
-                                                        value={typeof red === 'string' ? red : red.url} 
+                                                        className="chamba-input"
+                                                        style={{ padding: "8px 12px" }}
+                                                        value={typeof red === 'string' ? red : red.url}
                                                         onChange={(e) => {
                                                             const newRedes = [...(tempData.redesSociales || [])];
                                                             newRedes[idx] = e.target.value;
                                                             setTempData({ ...tempData, redesSociales: newRedes });
-                                                        }} 
-                                                        placeholder="https://instagram.com/..." 
+                                                        }}
+                                                        placeholder="https://instagram.com/..."
                                                     />
                                                 ))}
                                                 <button onClick={() => setTempData({ ...tempData, redesSociales: [...(tempData.redesSociales || []), ""] })} style={{ ...secondaryBtnStyle, fontSize: "11px", padding: "4px 8px", alignSelf: "flex-start" }}>+ Agregar red social</button>
@@ -870,7 +927,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                                                     if (red.plataforma === "YOUTUBE") { Icono = Youtube; color = "#FF0000"; }
                                                     if (red.plataforma === "GITHUB") { Icono = Github; color = "#333333"; }
                                                     if (red.plataforma === "TIKTOK") { Icono = Video; color = "#000000"; }
-                                                    
+
                                                     return (
                                                         <a key={idx} href={red.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", color: "#475569", textDecoration: "none", fontWeight: "600" }}>
                                                             <Icono size={18} color={color} /> <span>{red.plataforma !== "OTRO" ? red.plataforma.charAt(0) + red.plataforma.slice(1).toLowerCase() : "Link"}</span>
@@ -1181,11 +1238,11 @@ export default function PerfilPublicoProveedorChamba(props) {
                         <div style={{ display: "flex", gap: "24px", overflowX: "auto", paddingBottom: "24px", scrollbarWidth: "none" }}>
                             {data.reviews.length > 0 ? (
                                 data.reviews.map((rev, i) => (
-                                    <div key={i} style={{ 
-                                        minWidth: "320px", 
-                                        padding: "24px", 
-                                        background: "white", 
-                                        borderRadius: "24px", 
+                                    <div key={i} style={{
+                                        minWidth: "320px",
+                                        padding: "24px",
+                                        background: "white",
+                                        borderRadius: "24px",
                                         border: "1px solid #F1F5F9",
                                         boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
                                     }}>
@@ -1235,13 +1292,13 @@ export default function PerfilPublicoProveedorChamba(props) {
                         </div>
                         {data.reviews.length > 0 && (
                             <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
-                                <button 
-                                    className="chamba-btn-outline" 
-                                    style={{ 
-                                        width: "auto", 
-                                        padding: "12px 32px", 
-                                        borderRadius: "100px", 
-                                        fontSize: "14px", 
+                                <button
+                                    className="chamba-btn-outline"
+                                    style={{
+                                        width: "auto",
+                                        padding: "12px 32px",
+                                        borderRadius: "100px",
+                                        fontSize: "14px",
                                         fontWeight: "700",
                                         borderColor: "#E2E8F0"
                                     }}
@@ -1309,7 +1366,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                                         </div>
                                     </div>
                                     {!isOwner && !revealSensitive && (
-                                        <button 
+                                        <button
                                             onClick={handleContactClick}
                                             style={{ background: "transparent", border: "none", color: primaryColor, fontSize: "11px", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
                                         >
@@ -1416,7 +1473,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                                                 {data.codigoPostal && (isOwner || revealSensitive) ? `, CP ${data.codigoPostal}` : ""}
                                             </span>
                                             {!isOwner && !revealSensitive && (
-                                                <button 
+                                                <button
                                                     onClick={handleContactClick}
                                                     style={{ background: "transparent", border: "none", color: primaryColor, fontSize: "11px", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
                                                 >

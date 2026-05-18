@@ -61,54 +61,54 @@ Nuestro frontend se destaca por su estética premium y animaciones fluidas, logr
 ---
 
 ## 🔄 Bloque 2: La API REST y el CRUD (Ejemplos Reales)
-**El concepto:** Demostrar que tenemos una API madura que sigue los estándares de la industria. Usamos como ejemplo el **Catálogo de Rubros**, que es nuestro "Maestro" de categorías.
+**El concepto:** Demostrar que tenemos una API madura que sigue los estándares de la industria. Usamos como ejemplo el **Sistema de Reseñas**, que es un flujo CRUD completo.
 
-### 🆕 C (Create): Registro de un nuevo Rubro
-Para crear recursos, usamos `@PostMapping`. Lo importante aquí es la semántica: devolvemos un estado **201 Created**.
+*Regla de Oro: El controlador nunca toca la base de datos, siempre delega al Servicio/Caso de Uso usando DTOs.*
+
+### 🆕 C (Create): Nueva Calificación
+Usamos `@PostMapping` y recibimos un **CrearResenaDto**. El sistema retorna un **ResenaDetalleDto** para confirmar los datos guardados.
 
 ```java
 @PostMapping
-public ResponseEntity<Rubro> crear(@Valid @RequestBody Rubro rubro) {
-    // Recibimos el objeto, lo validamos y lo guardamos
-    return ResponseEntity.status(HttpStatus.CREATED).body(rubroRepository.save(rubro));
+public ResponseEntity<ResenaDetalleDto> crear(
+        @RequestHeader("X-User-Id") UUID usuarioId, // Identidad del usuario (extraída del JWT)
+        @Valid @RequestBody CrearResenaDto dto) {
+    // El controlador delega la lógica de negocio al servicio
+    return ResponseEntity.status(HttpStatus.CREATED).body(resenaService.crearResena(dto, usuarioId, ip));
 }
 ```
 
-### 🔍 R (Read): Listado para el Frontend
-Para las consultas usamos `@GetMapping`. Este endpoint alimenta los selectores (dropdowns) de nuestra aplicación:
+> 💡 **Nota Técnica sobre `X-User-Id`:** Este encabezado personalizado nos permite identificar **quién** está haciendo la petición de forma segura. El frontend extrae el ID del usuario desde el token **JWT** de Supabase y lo envía en cada petición protegida. Así, el backend sabe automáticamente quién está escribiendo la reseña sin necesidad de que el usuario lo envíe manualmente en el cuerpo del JSON (lo cual sería inseguro).
+
+### 🔍 R (Read): Listado de Feedback
+Usamos `@GetMapping` para obtener todas las reseñas de un profesional. Solo devolvemos los datos públicos necesarios.
 
 ```java
-@GetMapping
-public ResponseEntity<List<RubroDto>> listar() {
-    // Consultamos la base de datos y devolvemos la lista convertida a DTO
-    return ResponseEntity.ok(rubroService.listarActivos());
+@GetMapping("/proveedor/{id}")
+public ResponseEntity<List<ResenaDetalleDto>> listarPorProveedor(@PathVariable UUID id) {
+    return ResponseEntity.ok(resenaService.obtenerResenasPorProveedor(id));
 }
 ```
 
-### 🆙 U (Update): Edición de Categorías
-Para las actualizaciones completas usamos `@PutMapping`. El uso de este método garantiza la **idempotencia** (si la mandas 10 veces, el resultado es el mismo).
+### 🆙 U (Update): Respuesta del Profesional
+Usamos `@PutMapping` para una actualización específica: la respuesta del proveedor. Esto demuestra el manejo de permisos y derecho a réplica.
 
 ```java
-@PutMapping("/{id}")
-public ResponseEntity<Rubro> actualizar(@PathVariable Long id, @RequestBody Rubro dto) {
-    // Buscamos por ID y actualizamos los campos necesarios
-    return ResponseEntity.ok(rubroService.actualizar(id, dto));
+@PutMapping("/{id}/respuesta")
+public ResponseEntity<ResenaDetalleDto> responder(
+        @RequestHeader("X-User-Id") UUID proveedorUserId,
+        @PathVariable UUID id,
+        @Valid @RequestBody RespuestaResenaDto dto) {
+    return ResponseEntity.ok(resenaService.responderResena(id, proveedorUserId, dto.getRespuesta()));
 }
 ```
 
-### 🗑️ D (Delete): Borrado Lógico (Soft Delete)
-En un sistema profesional, **nunca borramos datos físicos**. Usamos un borrado lógico para mantener la integridad referencial y las estadísticas históricas:
+### 🗑️ D (Delete): Borrado Lógico
+Aunque el controlador expone la gestión, en la base de datos aplicamos **Soft Delete**. Marcamos la reseña como "no visible" en lugar de destruirla físicamente para mantener la auditoría del sistema.
 
-```java
-@DeleteMapping("/{id}")
-public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-    // Simplemente cambiamos un flag: activa = false
-    rubroService.desactivar(id);
-    return ResponseEntity.noContent().build(); // 204 No Content
-}
-```
+**Resumen para la defensa:** "Elegimos el sistema de reseñas porque es un ejemplo real y complejo. Maneja encabezados de seguridad (`X-User-Id`), validaciones de integridad y una separación clara entre los datos que entran (Requests) y los que salen (Responses)."
 
-**Resumen para la defensa:** "Usamos los verbos HTTP correctamente según su propósito, manejamos códigos de estado precisos (201, 200, 204) y aplicamos borrado lógico para proteger la integridad de la base de datos."
+---
 
 ---
 
@@ -300,6 +300,48 @@ sequenceDiagram
     DB-->>API: Éxito
     API-->>C: 201 Created + JWT
 ```
+
+### 🧱 El Flujo en Código (Capa por Capa)
+
+**1. Infraestructura (Web Adapter):** El controlador recibe el "Json" y lo transforma en un DTO.
+```java
+@PostMapping("/registrar")
+public ResponseEntity<AuthRespuestaDto> registrar(@Valid @RequestBody RegistroSolicitudDto dto) {
+    // El controlador NO tiene lógica, solo delega al Caso de Uso
+    return ResponseEntity.status(201).body(authUseCase.registrar(dto));
+}
+```
+
+**2. Aplicación (Service/UseCase):** Aquí está el "Director de Orquesta". Coordina Supabase, Geocoding y la DB local.
+```java
+@Transactional // Si falla Supabase o la DB, se deshace todo
+public AuthRespuestaDto registrar(RegistroSolicitudDto dto) {
+    // A. Llama al adaptador de Supabase
+    UUID supabaseId = supabaseAuthPort.registrar(dto.getEmail(), dto.getPassword());
+    
+    // B. Llama al servicio de Geocoding
+    double[] coords = geocodingService.obtenerCoordenadas(dto.getDireccion());
+    
+    // C. Crea y guarda el modelo de dominio
+    Usuario usuario = Usuario.builder().id(supabaseId).email(dto.getEmail()).build();
+    return usuarioRepository.save(usuario);
+}
+```
+
+**3. Dominio (Model & Repository):** El corazón. Definimos cómo es un Usuario y cómo se guarda.
+```java
+// domain.model.Usuario (Pura lógica de datos)
+@Entity
+public class Usuario {
+    @Id private UUID id;
+    private String email;
+}
+
+// domain.repository.UsuarioRepository (Contrato de persistencia)
+public interface UsuarioRepository extends JpaRepository<Usuario, UUID> { }
+```
+
+**Resumen para la defensa:** "Como pueden ver, cada capa tiene una responsabilidad clara. El controlador solo atiende el teléfono, el servicio toma las decisiones y el repositorio guarda en el cajón. Esto hace que el código sea testeable y muy fácil de mantener."
 
 ---
 

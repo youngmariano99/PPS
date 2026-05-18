@@ -44,6 +44,24 @@ public class PerfilController {
         gestionarPerfilProfesionalUseCase.actualizarPerfilProveedor(usuarioId, dto);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/proveedor")
+    @Operation(summary = "Crear perfil proveedor", description = "Permite a un usuario estándar crear su perfil profesional (Upgrade).")
+    public ResponseEntity<Void> crearPerfilProveedor(
+            @RequestHeader("X-User-Id") UUID usuarioId,
+            @RequestBody PerfilSolicitudDto dto) {
+        gestionarPerfilProfesionalUseCase.crearPerfilProveedor(usuarioId, dto);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/empresa")
+    @Operation(summary = "Crear perfil empresa", description = "Permite a un usuario crear una página de empresa (Upgrade).")
+    public ResponseEntity<Void> crearPerfilEmpresa(
+            @RequestHeader("X-User-Id") UUID usuarioId,
+            @RequestBody PerfilSolicitudDto dto) {
+        gestionarPerfilProfesionalUseCase.crearPerfilEmpresa(usuarioId, dto);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).build();
+    }
 }
 
 

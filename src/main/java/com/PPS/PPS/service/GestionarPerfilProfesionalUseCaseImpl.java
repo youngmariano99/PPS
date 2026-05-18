@@ -37,6 +37,10 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
 
     @Transactional
     public PerfilProveedor crearPerfilProveedor(UUID usuarioId, PerfilSolicitudDto dto) {
+        if (proveedorRepository.findByUsuarioId(usuarioId).isPresent()) {
+            throw new ValidacionNegocioException("El usuario ya posee un perfil profesional personal");
+        }
+
         Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
@@ -94,9 +98,12 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         }
 
         Point punto = obtenerPuntoDesdeDireccion(dto);
+        String slug = generarSlugUnicoEmpresa(dto.getRazonSocial(), 
+                rubro != null ? rubro.getNombre() : dto.getRubroPersonalizado());
 
         PerfilEmpresa perfil = PerfilEmpresa.builder()
                 .usuario(usuario)
+                .slug(slug)
                 .rubroPrincipal(rubro)
                 .rubroPersonalizado(dto.getRubroPersonalizado())
                 .razonSocial(dto.getRazonSocial())
@@ -205,6 +212,17 @@ public class GestionarPerfilProfesionalUseCaseImpl implements IGestionarPerfilPr
         String currentSlug = baseSlug;
         int count = 1;
         while (proveedorRepository.findBySlug(currentSlug).isPresent()) {
+            count++;
+            currentSlug = baseSlug + "-" + count;
+        }
+        return currentSlug;
+    }
+
+    private String generarSlugUnicoEmpresa(String razonSocial, String rubro) {
+        String baseSlug = SlugUtils.makeSlug(razonSocial, "", rubro);
+        String currentSlug = baseSlug;
+        int count = 1;
+        while (empresaRepository.findBySlug(currentSlug).isPresent()) {
             count++;
             currentSlug = baseSlug + "-" + count;
         }

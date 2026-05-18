@@ -1,7 +1,6 @@
 package com.PPS.PPS.infrastructure.adapter.in.web;
 
 import com.PPS.PPS.application.dto.request.CrearSuscripcionRequestDto;
-import com.PPS.PPS.domain.repository.UsuarioRepository;
 import com.PPS.PPS.service.MercadoPagoService;
 import com.PPS.PPS.service.SuscripcionService;
 import io.swagger.v3.oas.annotations.Operation;

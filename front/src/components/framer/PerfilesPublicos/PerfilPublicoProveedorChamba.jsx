@@ -320,16 +320,21 @@ export default function PerfilPublicoProveedorChamba(props) {
                     throw new Error("No se especificó un perfil.")
                 }
 
+                const storeState = useIdentityStore.getState()
+                const currentContext = storeState.contextoActivo
+                const isHydrated = storeState.isHydrated
+
                 // Cortar si el dueño está viendo su cuenta base (mostramos Upsell luego)
-                if (!externalId && contextoActivo && contextoActivo.tipo === 'USUARIO_BASE') {
+                // Si no está hidratado, asumimos temporalmente USUARIO_BASE y cortamos para evitar fetch prematuro
+                if (!externalId && (!isHydrated || (currentContext && currentContext.tipo === 'USUARIO_BASE'))) {
                     setData(null)
                     setLoading(false)
                     return
                 }
 
                 headers["X-User-Id"] = targetId
-                const currentEndpointId = contextoActivo && contextoActivo.tipo === 'EMPRESA' ? contextoActivo.idPerfil : targetId;
-                const endpoint = (!externalId && contextoActivo && contextoActivo.tipo === 'EMPRESA')
+                const currentEndpointId = currentContext && currentContext.tipo === 'EMPRESA' ? currentContext.idPerfil : targetId;
+                const endpoint = (!externalId && currentContext && currentContext.tipo === 'EMPRESA')
                     ? `/directorio/empresa/${currentEndpointId}`
                     : `/directorio/proveedor/${targetId}`;
 
@@ -421,7 +426,12 @@ export default function PerfilPublicoProveedorChamba(props) {
         setIsOwner(true)
     }
 
-    useEffect(() => { discoverAndFetch() }, [apiUrl, enableDemoMode])
+    useEffect(() => { 
+        // Solo lanzamos fetch si ya se hidrató el contexto
+        if (useIdentityStore.getState().isHydrated) {
+            discoverAndFetch() 
+        }
+    }, [apiUrl, enableDemoMode, contextoActivo?.tipo]) // Re-ejecutar si cambia el tipo de contexto
 
     // --- INTERCEPCIÓN DE LINK MÁGICO (?review=true) ---
     useEffect(() => {

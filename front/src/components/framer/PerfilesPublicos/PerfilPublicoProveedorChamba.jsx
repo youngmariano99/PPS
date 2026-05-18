@@ -426,10 +426,10 @@ export default function PerfilPublicoProveedorChamba(props) {
         setIsOwner(true)
     }
 
-    useEffect(() => { 
+    useEffect(() => {
         // Solo lanzamos fetch si ya se hidrató el contexto
         if (useIdentityStore.getState().isHydrated) {
-            discoverAndFetch() 
+            discoverAndFetch()
         }
     }, [apiUrl, enableDemoMode, contextoActivo?.tipo]) // Re-ejecutar si cambia el tipo de contexto
 

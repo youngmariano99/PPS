@@ -198,6 +198,73 @@ export default function FormularioLogin(props) {
         }
     }
 
+    const handleGoogleLogin = async () => {
+        setError(null)
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo: window.location.origin + "/login",
+                },
+            })
+            if (error) throw error
+        } catch (err) {
+            setError("No pudimos iniciar sesión con Google. Intentá de nuevo.")
+        }
+    }
+
+    useEffect(() => {
+        const checkOAuthSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+                if (session && session.user) {
+                    setLoading(true)
+                    setError(null)
+                    
+                    const base = (apiUrl || "").replace(/\/+$/, "")
+                    const res = await fetch(`${base}/auth/oauth-sync`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-User-Id": session.user.id
+                        }
+                    })
+
+                    if (res.ok) {
+                        const data = await res.json()
+                        localStorage.setItem("usuario", JSON.stringify({
+                            id: data.usuarioId,
+                            nombre: data.nombre,
+                            email: data.email,
+                        }))
+                        setSuccess(true)
+                        if (onLoginSuccess) onLoginSuccess(data)
+                        
+                        setTimeout(() => {
+                            window.location.href = "https://overly-mindset-259417.framer.app/"
+                        }, 2000)
+                    } else if (res.status === 404) {
+                        // Nuevo usuario: guardar datos de Supabase y mandar al wizard
+                        localStorage.setItem("oauth_user", JSON.stringify({
+                            id: session.user.id,
+                            email: session.user.email,
+                            nombre: session.user.user_metadata?.given_name || "",
+                            apellido: session.user.user_metadata?.family_name || ""
+                        }))
+                        window.location.href = "https://overly-mindset-259417.framer.app/registro-general?oauth=true"
+                    } else {
+                        throw new Error("SERVER_ERROR")
+                    }
+                }
+            } catch (err) {
+                console.error("Error oauth sync", err)
+                setError("Error al sincronizar tu sesión de Google con el servidor.")
+                setLoading(false)
+            }
+        }
+        checkOAuthSession()
+    }, [apiUrl, onLoginSuccess])
+
     return (
         <div style={pageContainer}>
             <div style={mainContent}>
@@ -375,7 +442,7 @@ export default function FormularioLogin(props) {
 
                                                 {/* Social Buttons */}
                                                 <div style={socialRow}>
-                                                    <div style={socialButton}>
+                                                    <div style={{ ...socialButton, cursor: "pointer" }} onClick={handleGoogleLogin}>
                                                         <IconGoogle />
                                                         <span>Continuar con Google</span>
                                                     </div>

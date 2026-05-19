@@ -23,6 +23,7 @@ export default function RegistroFormWizardChamba(props) {
     const [userId, setUserId] = useState(null)
     const [rubros, setRubros] = useState([])
     const [showCustom, setShowCustom] = useState(false)
+    const [isOAuth, setIsOAuth] = useState(false)
 
     const [formData, setFormData] = useState({
         nombre: "", apellido: "", email: "", password: "", confirmPassword: "", telefono: "", tipo: "",
@@ -61,6 +62,22 @@ export default function RegistroFormWizardChamba(props) {
         fetchRubros()
     }, [apiUrl])
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get("oauth") === "true") {
+            setIsOAuth(true)
+            const oauthUser = JSON.parse(localStorage.getItem("oauth_user") || "{}")
+            if (oauthUser && oauthUser.id) {
+                setFormData(prev => ({
+                    ...prev,
+                    nombre: oauthUser.nombre || "",
+                    apellido: oauthUser.apellido || "",
+                    email: oauthUser.email || "",
+                }))
+            }
+        }
+    }, [])
+
     // --- LOGICA DE CONTRASEÑA ---
     const passChecks = {
         min: formData.password.length >= 8,
@@ -82,8 +99,10 @@ export default function RegistroFormWizardChamba(props) {
         if (s === 2) {
             if (!formData.nombre || !formData.apellido || !formData.email || !formData.telefono) return "Completá tus datos básicos."
             if (!/^\S+@\S+\.\S+$/.test(formData.email)) return "Ingresá un email válido."
-            if (getStrength() < 3) return "La contraseña debe ser más segura."
-            if (formData.password !== formData.confirmPassword) return "Las contraseñas no coinciden."
+            if (!isOAuth) {
+                if (getStrength() < 3) return "La contraseña debe ser más segura."
+                if (formData.password !== formData.confirmPassword) return "Las contraseñas no coinciden."
+            }
         }
         if (s === 3 && formData.tipo !== "CLIENTE") {
             if (!formData.rubroId && !formData.rubroPersonalizado) return "Elegí tu rubro principal."
@@ -138,13 +157,42 @@ export default function RegistroFormWizardChamba(props) {
         setLoading(true)
         setError(null)
         try {
-            const res = await fetch(`${apiUrl.replace(/\/+$/, "")}/auth/registro-completo`, {
+            const headers = { "Content-Type": "application/json" }
+            let endpoint = `${apiUrl.replace(/\/+$/, "")}/auth/registro-completo`
+
+            if (isOAuth) {
+                const oauthUser = JSON.parse(localStorage.getItem("oauth_user") || "{}")
+                if (oauthUser && oauthUser.id) {
+                    headers["X-User-Id"] = oauthUser.id
+                    endpoint = `${apiUrl.replace(/\/+$/, "")}/auth/registro-oauth`
+                } else {
+                    throw new Error("No se encontraron credenciales de Google válidas. Volvé a ingresar.")
+                }
+            }
+
+            const res = await fetch(endpoint, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: headers,
                 body: JSON.stringify(formData)
             })
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.message || "Error al completar tu registro en el servidor.")
+            }
+
             const data = await res.json()
             setUserId(data.usuarioId)
+
+            if (isOAuth) {
+                localStorage.removeItem("oauth_user")
+                localStorage.setItem("usuario", JSON.stringify({
+                    id: data.usuarioId,
+                    nombre: data.nombre,
+                    email: data.email,
+                }))
+            }
+
             setSuccess(true)
         } catch (err) {
             setError(err.message)
@@ -188,6 +236,7 @@ export default function RegistroFormWizardChamba(props) {
                                 data={formData} 
                                 onChange={handleChange} 
                                 checks={passChecks}
+                                isOAuth={isOAuth}
                             />
                         )}
                         {step === 3 && (
@@ -287,7 +336,7 @@ const Step1 = ({ tipo, setTipo }) => (
     </div>
 )
 
-const Step2 = ({ data, onChange, checks }) => (
+const Step2 = ({ data, onChange, checks, isOAuth }) => (
     <div style={stepInner}>
         <div style={stepHeader}>
             <div style={stepCircle}>2</div>
@@ -302,26 +351,30 @@ const Step2 = ({ data, onChange, checks }) => (
                 <Input label="Apellido" name="apellido" value={data.apellido} onChange={onChange} icon={<IconUser />} placeholder="Tu apellido" />
             </div>
             <div style={rowGrid}>
-                <Input label="Email" name="email" type="email" value={data.email} onChange={onChange} icon={<IconMail />} placeholder="tu@email.com" />
+                <Input label="Email" name="email" type="email" value={data.email} onChange={onChange} icon={<IconMail />} placeholder="tu@email.com" disabled={isOAuth} style={isOAuth ? { background: "#F1F5F9", color: "#64748B", cursor: "not-allowed" } : {}} />
                 <Input label="WhatsApp" name="telefono" value={data.telefono} onChange={onChange} icon={<IconPhone />} placeholder="+54 9 11..." />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div style={{ position: "relative" }}>
-                    <Input label="Contraseña" name="password" type="password" value={data.password} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
-                </div>
-                <div style={{ position: "relative" }}>
-                    <Input label="Confirmar contraseña" name="confirmPassword" type="password" value={data.confirmPassword} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
-                </div>
-            </div>
-            <div style={passGuide}>
-                <p style={guideTitle}>Tu contraseña debe tener:</p>
-                <div style={guideGrid}>
-                    <GuideCheck met={checks.min} text="Mínimo 8 caracteres" />
-                    <GuideCheck met={checks.upper} text="Al menos 1 mayúscula" />
-                    <GuideCheck met={checks.number} text="Al menos 1 número" />
-                    <GuideCheck met={checks.special} text="Al menos 1 símbolo" />
-                </div>
-            </div>
+            {!isOAuth && (
+                <>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div style={{ position: "relative" }}>
+                            <Input label="Contraseña" name="password" type="password" value={data.password} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
+                        </div>
+                        <div style={{ position: "relative" }}>
+                            <Input label="Confirmar contraseña" name="confirmPassword" type="password" value={data.confirmPassword} onChange={onChange} icon={<IconLock />} placeholder="••••••••" />
+                        </div>
+                    </div>
+                    <div style={passGuide}>
+                        <p style={guideTitle}>Tu contraseña debe tener:</p>
+                        <div style={guideGrid}>
+                            <GuideCheck met={checks.min} text="Mínimo 8 caracteres" />
+                            <GuideCheck met={checks.upper} text="Al menos 1 mayúscula" />
+                            <GuideCheck met={checks.number} text="Al menos 1 número" />
+                            <GuideCheck met={checks.special} text="Al menos 1 símbolo" />
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     </div>
 )

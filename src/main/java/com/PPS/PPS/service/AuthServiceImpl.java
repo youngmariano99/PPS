@@ -9,6 +9,7 @@ import com.PPS.PPS.domain.model.Portafolio;
 import com.PPS.PPS.domain.model.Rubro;
 import com.PPS.PPS.domain.model.Usuario;
 import com.PPS.PPS.domain.exception.ValidacionNegocioException;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.domain.repository.PortafolioRepository;
 import com.PPS.PPS.domain.repository.RubroRepository;
 import com.PPS.PPS.domain.repository.UsuarioRepository;
@@ -213,6 +214,83 @@ public class AuthServiceImpl implements IAuthUseCase {
         log.info("Reenviando confirmación de email para: {}", email);
         // Nota: Algunas implementaciones de Supabase usan un endpoint específico /resend
         // Por ahora delegamos a la lógica de recuperar si es necesario o un signup vacío.
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuthRespuestaDto sincronizarOAuth(UUID usuarioId) {
+        log.info("Sincronizando usuario OAuth con ID: {}", usuarioId);
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario OAuth no registrado localmente."));
+        
+        return AuthRespuestaDto.builder()
+                .usuarioId(usuario.getId())
+                .email(usuario.getEmail())
+                .nombre(usuario.getNombre())
+                .apellido(usuario.getApellido())
+                .emailConfirmado(usuario.isEmailConfirmado())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public AuthRespuestaDto registrarOAuth(UUID usuarioId, RegistroCompletoSolicitudDto dto) {
+        log.info("Iniciando registro completo de OAuth para: {}", dto.getEmail());
+
+        // 1. Crear el Usuario localmente directamente con el UUID provisto por Supabase
+        Usuario nuevoUsuario = Usuario.builder()
+                .id(usuarioId)
+                .nombre(dto.getNombre())
+                .apellido(dto.getApellido())
+                .email(dto.getEmail())
+                .telefono(dto.getTelefono())
+                .emailConfirmado(true) // Los proveedores de OAuth (Google) ya confirman el email
+                .build();
+
+        usuarioRepository.save(nuevoUsuario);
+
+        // 2. Preparar Ubicación (Geocoding)
+        Point puntoUbicacion = null;
+        if (dto.getCalle() != null && !dto.getCalle().isBlank() && dto.getNumero() != null && !dto.getNumero().isBlank()) {
+            String direccionCompleta = String.format("%s %s, %s, %s",
+                    dto.getCalle(), dto.getNumero(), dto.getCiudad(), dto.getProvincia());
+
+            double[] coords = geocodingService.obtenerCoordenadas(direccionCompleta);
+            if (coords != null) {
+                puntoUbicacion = geometryFactory.createPoint(new Coordinate(coords[0], coords[1]));
+            }
+        }
+
+        // 3. Obtener Rubro
+        Rubro rubro = null;
+        if (dto.getRubroId() != null) {
+            rubro = rubroRepository.findById(dto.getRubroId()).orElse(null);
+        }
+
+        // 4. Crear Perfil según Rol
+        IPerfilFactory factory = perfilFactories.stream()
+                .filter(f -> f.getTipo().equalsIgnoreCase(dto.getTipo()))
+                .findFirst()
+                .orElse(null);
+
+        if (factory != null) {
+            factory.crearYGuardarPerfil(nuevoUsuario, rubro, puntoUbicacion, dto);
+        } else {
+            log.info("Usuario OAuth registrado como rol básico (SIN PERFIL): {}", usuarioId);
+        }
+
+        // 5. Procesar Portafolio (Imágenes y Videos)
+        procesarPortafolio(nuevoUsuario, dto);
+
+        log.info("Registro completo de OAuth exitoso para usuario: {}", usuarioId);
+
+        return AuthRespuestaDto.builder()
+                .usuarioId(usuarioId)
+                .email(dto.getEmail())
+                .nombre(dto.getNombre())
+                .apellido(dto.getApellido())
+                .emailConfirmado(true)
+                .build();
     }
 }
 

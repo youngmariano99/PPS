@@ -64,6 +64,20 @@ public class AuthController {
         authUseCase.cambiarPassword(nuevaPassword, jwt);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Sincronizar sesión de usuario OAuth (Google/Facebook)")
+    @PostMapping("/oauth-sync")
+    public ResponseEntity<AuthRespuestaDto> sincronizarOAuth(@RequestHeader("X-User-Id") java.util.UUID usuarioId) {
+        return ResponseEntity.ok(authUseCase.sincronizarOAuth(usuarioId));
+    }
+
+    @Operation(summary = "Registro completo de usuario OAuth (Google/Facebook)")
+    @PostMapping("/registro-oauth")
+    public ResponseEntity<AuthRespuestaDto> registrarOAuth(
+            @RequestHeader("X-User-Id") java.util.UUID usuarioId,
+            @Valid @RequestBody RegistroCompletoSolicitudDto solicitud) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authUseCase.registrarOAuth(usuarioId, solicitud));
+    }
 }
 
 

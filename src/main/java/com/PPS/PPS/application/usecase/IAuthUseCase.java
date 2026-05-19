@@ -12,5 +12,9 @@ public interface IAuthUseCase {
     void solicitarRecuperacion(String email);
     void cambiarPassword(String nuevaPassword, String accessToken);
     void reenviarConfirmacion(String email);
+
+    AuthRespuestaDto sincronizarOAuth(java.util.UUID usuarioId);
+
+    AuthRespuestaDto registrarOAuth(java.util.UUID usuarioId, RegistroCompletoSolicitudDto dto);
 }
 

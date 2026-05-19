@@ -1,5 +1,10 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-05-19
+* **Módulo/Tarea:** Seguridad y Autenticación: Integración Google OAuth (Sprint 5)
+* **Archivos Tocados:** `IAuthUseCase.java`, `AuthServiceImpl.java`, `AuthController.java`, `FormularioLogin.jsx`, `RegistroFormWizardChamba.jsx`, `sprint_5_oauth_google.md`
+* **Qué y Por Qué (1 oración clara):** Se implementó el flujo híbrido de autenticación con Google OAuth mediante Supabase y una estrategia de sincronización transaccional/autocorrectiva en el backend, simplificando el alta de nuevos usuarios desde Google al omitir contraseñas y precargar datos en el Wizard de registro.
+
 * **Fecha:** 2026-05-05
 * **Módulo/Tarea:** Seguridad y Comunicación: Gmail SMTP y Recuperación de Password
 * **Archivos Tocados:** `pom.xml`, `application.yml`, `AuthController.java`, `AuthServiceImpl.java`, `SupabaseAuthAdapter.java`, `FormularioLogin.jsx`

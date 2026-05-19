@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { X, ChevronRight, ChevronLeft, Building, Briefcase, MapPin, CheckCircle } from "lucide-react"
@@ -20,7 +20,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 export default function ModalUpgradeChamba(props) {
     const { apiUrl, primaryColor } = props
 
-    const { showUpgradeModal, setShowUpgradeModal, hydrateFromApi } = useIdentityStore()
+    const { showUpgradeModal, setShowUpgradeModal, contextosDisponibles, hydrateFromApi } = useIdentityStore()
 
     const [step, setStep] = useState(1)
     const [tipo, setTipo] = useState(null) // 'PROVEEDOR' o 'EMPRESA'
@@ -44,6 +44,23 @@ export default function ModalUpgradeChamba(props) {
         numero: "",
         codigoPostal: ""
     })
+
+    useEffect(() => {
+        if (showUpgradeModal) {
+            const hasProveedor = contextosDisponibles?.some(ctx => ctx.tipo === 'PROVEEDOR')
+            const hasEmpresa = contextosDisponibles?.some(ctx => ctx.tipo === 'EMPRESA')
+            
+            if (hasProveedor && !hasEmpresa) {
+                setTipo('EMPRESA')
+            } else if (!hasProveedor && hasEmpresa) {
+                setTipo('PROVEEDOR')
+            } else {
+                setTipo(null)
+            }
+            setStep(1)
+            setError(null)
+        }
+    }, [showUpgradeModal, contextosDisponibles])
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -127,42 +144,51 @@ export default function ModalUpgradeChamba(props) {
         }
     }
 
-    const renderStep1 = () => (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <h2 style={s.title}>¿Qué deseas crear?</h2>
-            <p style={s.subtitle}>Elige el tipo de página profesional que mejor se adapte a ti.</p>
-            
-            <div 
-                style={{ ...s.cardOption, borderColor: tipo === 'PROVEEDOR' ? primaryColor : '#e2e8f0', background: tipo === 'PROVEEDOR' ? `${primaryColor}08` : 'white' }}
-                onClick={() => setTipo('PROVEEDOR')}
-            >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                    <div style={{ padding: "10px", background: "#f8fafc", borderRadius: "12px", color: "#64748b" }}><Briefcase size={20} /></div>
-                    <div>
-                        <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#1e293b" }}>Proveedor Independiente</h4>
-                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Para profesionales, oficios y freelancers.</p>
-                    </div>
-                </div>
-            </div>
+    const renderStep1 = () => {
+        const hasProveedor = contextosDisponibles?.some(ctx => ctx.tipo === 'PROVEEDOR')
+        const hasEmpresa = contextosDisponibles?.some(ctx => ctx.tipo === 'EMPRESA')
 
-            <div 
-                style={{ ...s.cardOption, borderColor: tipo === 'EMPRESA' ? primaryColor : '#e2e8f0', background: tipo === 'EMPRESA' ? `${primaryColor}08` : 'white' }}
-                onClick={() => setTipo('EMPRESA')}
-            >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                    <div style={{ padding: "10px", background: "#f8fafc", borderRadius: "12px", color: "#64748b" }}><Building size={20} /></div>
-                    <div>
-                        <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#1e293b" }}>Página de Empresa</h4>
-                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Para agencias, PyMEs y corporaciones. (Puedes tener varias)</p>
+        return (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h2 style={s.title}>¿Qué deseas crear?</h2>
+                <p style={s.subtitle}>Elige el tipo de página profesional que mejor se adapte a ti.</p>
+                
+                {!hasProveedor && (
+                    <div 
+                        style={{ ...s.cardOption, borderColor: tipo === 'PROVEEDOR' ? primaryColor : '#e2e8f0', background: tipo === 'PROVEEDOR' ? `${primaryColor}08` : 'white' }}
+                        onClick={() => setTipo('PROVEEDOR')}
+                    >
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                            <div style={{ padding: "10px", background: "#f8fafc", borderRadius: "12px", color: "#64748b" }}><Briefcase size={20} /></div>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#1e293b" }}>Proveedor Independiente</h4>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Para profesionales, oficios y freelancers.</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                )}
 
-            <button style={{ ...s.btnPrimary, opacity: tipo ? 1 : 0.5, marginTop: "24px" }} onClick={() => tipo && setStep(2)}>
-                Siguiente <ChevronRight size={18} />
-            </button>
-        </motion.div>
-    )
+                {!hasEmpresa && (
+                    <div 
+                        style={{ ...s.cardOption, borderColor: tipo === 'EMPRESA' ? primaryColor : '#e2e8f0', background: tipo === 'EMPRESA' ? `${primaryColor}08` : 'white' }}
+                        onClick={() => setTipo('EMPRESA')}
+                    >
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                            <div style={{ padding: "10px", background: "#f8fafc", borderRadius: "12px", color: "#64748b" }}><Building size={20} /></div>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#1e293b" }}>Página de Empresa</h4>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Para agencias, PyMEs y corporaciones.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <button style={{ ...s.btnPrimary, opacity: tipo ? 1 : 0.5, marginTop: "24px" }} onClick={() => tipo && setStep(2)}>
+                    Siguiente <ChevronRight size={18} />
+                </button>
+            </motion.div>
+        )
+    }
 
     const renderStep2 = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>

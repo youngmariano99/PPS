@@ -5,7 +5,7 @@ import { User, LogIn, ChevronDown, LogOut, Plus, Building, Briefcase } from "luc
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import { useIdentityStore } from "./useIdentityStore"
+import { useIdentityStore } from "./UseIdentityStore.tsx"
 
 /**
  * BOTÓN DE NAVEGACIÓN MULTI-IDENTIDAD CHAMBA
@@ -20,23 +20,23 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 export default function AuthNavButton(props) {
-    const { 
+    const {
         apiUrl, loginUrl, providerProfileUrl, userProfileUrl,
         primaryColor, textColor, showLogoutWhenLoggedIn
     } = props
 
     const [isHovered, setIsHovered] = useState(false)
-    
+
     // Conexión al Cerebro Global
-    const { 
-        isHydrated, cuentaBase, contextosDisponibles, contextoActivo, 
-        setContextoActivo, hydrateFromApi, setShowUpgradeModal 
+    const {
+        isHydrated, cuentaBase, contextosDisponibles, contextoActivo,
+        setContextoActivo, hydrateFromApi, setShowUpgradeModal
     } = useIdentityStore()
 
     useEffect(() => {
         // Al montar el botón en el Navbar, hidratamos el estado global
         hydrateFromApi(apiUrl, supabase)
-        
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
                 hydrateFromApi(apiUrl, supabase)
@@ -56,10 +56,10 @@ export default function AuthNavButton(props) {
     const handleSwitchContext = (ctx) => {
         setContextoActivo(ctx)
         setIsHovered(false)
-        
-        // Redirigir al perfil adecuado
-        if (ctx.tipo === 'USUARIO_BASE') {
-            window.location.href = userProfileUrl
+
+        // Redirigir siempre a la misma página (Dashboard/Perfil), el componente inteligente hará el resto
+        if (ctx.tipo === "USUARIO_BASE") {
+            window.location.href = providerProfileUrl
         } else {
             // Asumimos que providerProfileUrl es el Dashboard para Proveedores/Empresas
             window.location.href = providerProfileUrl
@@ -72,10 +72,10 @@ export default function AuthNavButton(props) {
     // Usuario Invitado
     if (!cuentaBase) {
         return (
-            <motion.button 
+            <motion.button
                 whileHover={{ scale: 1.02 }}
                 onClick={() => window.location.href = loginUrl}
-                style={{ 
+                style={{
                     display: "flex", alignItems: "center", gap: "8px",
                     background: primaryColor, color: textColor,
                     padding: "0 22px", height: "42px", borderRadius: "10px",
@@ -88,24 +88,24 @@ export default function AuthNavButton(props) {
     }
 
     // Lógica visual del Contexto Activo
-    const currentName = contextoActivo.tipo === 'USUARIO_BASE' 
-        ? cuentaBase.nombre 
-        : contextoActivo.nombreContexto;
+    const currentName = contextoActivo.tipo === 'USUARIO_BASE'
+        ? `${cuentaBase.nombre} (Cliente)`
+        : `${contextoActivo.nombreContexto} (${contextoActivo.tipo === 'EMPRESA' ? 'Empresa' : 'Proveedor'})`;
 
-    const currentIcon = contextoActivo.tipo === 'EMPRESA' 
-        ? <Building size={16} /> 
+    const currentIcon = contextoActivo.tipo === 'EMPRESA'
+        ? <Building size={16} />
         : contextoActivo.tipo === 'PROVEEDOR' ? <Briefcase size={16} /> : <User size={16} />;
 
     return (
-        <div 
+        <div
             style={{ position: "relative", fontFamily: "Inter" }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Botón Principal (Indicador de Contexto Activo) */}
-            <motion.div 
+            <motion.div
                 whileHover={{ scale: 1.02 }}
-                style={{ 
+                style={{
                     display: "flex", alignItems: "center", gap: "12px",
                     background: "white", color: "#1e293b",
                     padding: "6px 16px 6px 6px", height: "42px", borderRadius: "21px",
@@ -145,9 +145,9 @@ export default function AuthNavButton(props) {
                     >
                         <div style={{ padding: "8px" }}>
                             <div style={{ padding: "8px 12px", fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase" }}>Cambiar de Perfil</div>
-                            
+
                             {/* Opción 1: Cuenta Base */}
-                            <div 
+                            <div
                                 onClick={() => handleSwitchContext({ tipo: 'USUARIO_BASE', idPerfil: null, nombreContexto: 'Cuenta Personal', fotoUrl: null })}
                                 style={{
                                     display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
@@ -156,12 +156,12 @@ export default function AuthNavButton(props) {
                                 }}
                             >
                                 <User size={16} style={{ color: contextoActivo.tipo === 'USUARIO_BASE' ? primaryColor : "#64748b" }} />
-                                <span style={{ fontSize: "14px", fontWeight: contextoActivo.tipo === 'USUARIO_BASE' ? "600" : "500", color: "#334155" }}>Mi Cuenta Personal</span>
+                                <span style={{ fontSize: "14px", fontWeight: contextoActivo.tipo === 'USUARIO_BASE' ? "600" : "500", color: "#334155" }}>Modo Cliente</span>
                             </div>
 
                             {/* Opciones Dinámicas: Empresas y Proveedor */}
                             {contextosDisponibles.map((ctx, i) => (
-                                <div 
+                                <div
                                     key={i}
                                     onClick={() => handleSwitchContext(ctx)}
                                     style={{
@@ -170,12 +170,12 @@ export default function AuthNavButton(props) {
                                         background: contextoActivo.idPerfil === ctx.idPerfil ? "#f8fafc" : "transparent"
                                     }}
                                 >
-                                    {ctx.tipo === 'EMPRESA' ? 
-                                        <Building size={16} style={{ color: contextoActivo.idPerfil === ctx.idPerfil ? primaryColor : "#64748b" }} /> : 
-                                        <Briefcase size={16} style={{ color: contextoActivo.idPerfil === ctx.idPerfil ? primaryColor : "#64748b" }}/>
+                                    {ctx.tipo === 'EMPRESA' ?
+                                        <Building size={16} style={{ color: contextoActivo.idPerfil === ctx.idPerfil ? primaryColor : "#64748b" }} /> :
+                                        <Briefcase size={16} style={{ color: contextoActivo.idPerfil === ctx.idPerfil ? primaryColor : "#64748b" }} />
                                     }
                                     <span style={{ fontSize: "14px", fontWeight: contextoActivo.idPerfil === ctx.idPerfil ? "600" : "500", color: "#334155", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {ctx.nombreContexto}
+                                        {ctx.nombreContexto} <span style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "500" }}>({ctx.tipo === 'EMPRESA' ? 'Empresa' : 'Proveedor'})</span>
                                     </span>
                                 </div>
                             ))}
@@ -183,18 +183,18 @@ export default function AuthNavButton(props) {
 
                         {/* Botonera Inferior */}
                         <div style={{ borderTop: "1px solid #f1f5f9", padding: "8px" }}>
-                            <div 
+                            <div
                                 onClick={() => { setIsHovered(false); setShowUpgradeModal(true); }}
                                 style={{
                                     display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
-                                    borderRadius: "10px", cursor: "pointer", color: primaryColor, fontWeight: "600"
+                                    borderRadius: "10px", cursor: "pointer", color: "#7c3aed", fontWeight: "600"
                                 }}
                             >
                                 <Plus size={16} /> <span style={{ fontSize: "14px" }}>Crear Página Nueva</span>
                             </div>
-                            
+
                             {showLogoutWhenLoggedIn && (
-                                <div 
+                                <div
                                     onClick={handleLogout}
                                     style={{
                                         display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
@@ -216,7 +216,11 @@ addPropertyControls(AuthNavButton, {
     apiUrl: { type: ControlType.String, title: "Backend URL", defaultValue: "https://pps-sk7p.onrender.com/api/v1" },
     loginUrl: { type: ControlType.String, title: "Login URL", defaultValue: "https://overly-mindset-259417.framer.app/login" },
     providerProfileUrl: { type: ControlType.String, title: "Dashboard URL", defaultValue: "https://overly-mindset-259417.framer.app/proveedor" },
-    userProfileUrl: { type: ControlType.String, title: "User Profile URL", defaultValue: "https://overly-mindset-259417.framer.app/perfil-base" },
+    userProfileUrl: {
+        type: ControlType.String,
+        title: "User Profile URL",
+        defaultValue: "https://overly-mindset-259417.framer.app/proveedor",
+    },
     primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#7c3aed" },
     textColor: { type: ControlType.Color, title: "Color Texto", defaultValue: "#ffffff" },
     showLogoutWhenLoggedIn: { type: ControlType.Boolean, title: "Mostrar Logout", defaultValue: true },

@@ -109,7 +109,7 @@ function openUploadWidget(callback, multipleOrOptions) {
 export default function PerfilPublicoProveedorChamba(props) {
     const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false } = props
 
-    const { contextoActivo, setShowUpgradeModal, cuentaBase } = useIdentityStore()
+    const { contextoActivo, contextosDisponibles, setShowUpgradeModal, cuentaBase, isHydrated } = useIdentityStore()
 
     // --- ESTADOS LÓGICOS (1:1 con el original) ---
     const [data, setData] = useState(null)
@@ -428,10 +428,10 @@ export default function PerfilPublicoProveedorChamba(props) {
 
     useEffect(() => {
         // Solo lanzamos fetch si ya se hidrató el contexto
-        if (useIdentityStore.getState().isHydrated) {
+        if (isHydrated) {
             discoverAndFetch()
         }
-    }, [apiUrl, enableDemoMode, contextoActivo?.tipo]) // Re-ejecutar si cambia el tipo de contexto
+    }, [apiUrl, enableDemoMode, contextoActivo?.tipo, isHydrated]) // Re-ejecutar si cambia el tipo de contexto o se hidrata
 
     // --- INTERCEPCIÓN DE LINK MÁGICO (?review=true) ---
     useEffect(() => {
@@ -652,23 +652,164 @@ export default function PerfilPublicoProveedorChamba(props) {
     )
 
     // ESTADO VACÍO / UPSELL PARA USUARIO BASE
+    // ESTADO VACÍO / UPSELL INTELIGENTE PARA USUARIO BASE
     if (!data && contextoActivo && contextoActivo.tipo === 'USUARIO_BASE') {
+        const hasProveedor = contextosDisponibles?.some(ctx => ctx.tipo === 'PROVEEDOR')
+        const hasEmpresa = contextosDisponibles?.some(ctx => ctx.tipo === 'EMPRESA')
+
         return (
-            <div style={{ padding: "60px 24px", maxWidth: "800px", margin: "0 auto", textAlign: "center", fontFamily: "Inter, sans-serif", minHeight: "100vh", display: "flex", alignItems: "center" }}>
-                <div style={{ background: "white", padding: "48px", borderRadius: "24px", boxShadow: "0 10px 40px rgba(0,0,0,0.05)", border: "1px solid #f1f5f9", width: "100%" }}>
-                    <div style={{ width: "80px", height: "80px", background: `${primaryColor}15`, color: primaryColor, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-                        <Zap size={40} />
+            <div style={{ padding: "40px 24px", maxWidth: "1000px", margin: "0 auto", fontFamily: "Inter, sans-serif", minHeight: "100vh" }}>
+                {/* Cabecera del Dashboard */}
+                <div style={{ marginBottom: "32px", textAlign: "left" }}>
+                    <h1 style={{ fontSize: "28px", fontWeight: "800", color: "#1e293b", margin: "0 0 8px 0" }}>Mi Cuenta</h1>
+                    <p style={{ fontSize: "15px", color: "#64748b", margin: 0 }}>Gestioná tus datos personales y páginas profesionales.</p>
+                </div>
+
+                {/* Contenedor de Tarjetas */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
+                    
+                    {/* Tarjeta 1: Información de Usuario */}
+                    <div style={{ background: "white", padding: "32px", borderRadius: "24px", boxShadow: "0 10px 40px rgba(0,0,0,0.05)", border: "1px solid #f1f5f9", flex: "1 1 400px", textAlign: "left" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+                            <div style={{
+                                width: "60px", height: "60px", borderRadius: "50%",
+                                background: `${primaryColor}15`, color: primaryColor,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: "20px", fontWeight: "700"
+                            }}>
+                                {cuentaBase?.nombre?.[0]?.toUpperCase() || 'U'}{cuentaBase?.apellido?.[0]?.toUpperCase() || ''}
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}>
+                                    {cuentaBase?.nombre} {cuentaBase?.apellido}
+                                </h2>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#10b981", fontSize: "13px", fontWeight: "600" }}>
+                                    <ShieldCheck size={14} /> Cuenta Activa
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px", borderTop: "1px solid #f1f5f9", paddingTop: "20px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Mail size={18} style={{ color: "#94a3b8" }} />
+                                <div>
+                                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Email</div>
+                                    <div style={{ fontSize: "14px", color: "#334155", fontWeight: "500" }}>{cuentaBase?.email}</div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Phone size={18} style={{ color: "#94a3b8" }} />
+                                <div>
+                                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Teléfono</div>
+                                    <div style={{ fontSize: "14px", color: "#334155", fontWeight: "500" }}>{cuentaBase?.telefono || "No especificado"}</div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <User size={18} style={{ color: "#94a3b8" }} />
+                                <div>
+                                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tipo de Perfil</div>
+                                    <div style={{ fontSize: "14px", color: "#334155", fontWeight: "500" }}>
+                                        {cuentaBase?.isPremium ? "Cliente Premium" : "Cliente Estándar"}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "16px", color: "#1e293b", letterSpacing: "-0.5px" }}>Potenciá tu alcance en Chamba</h2>
-                    <p style={{ fontSize: "16px", color: "#64748b", marginBottom: "32px", lineHeight: "1.6", maxWidth: "500px", margin: "0 auto 32px" }}>
-                        Actualmente estás navegando con tu cuenta personal. Si ofrecés servicios o tenés una empresa, creá una página profesional gratuita y empezá a recibir solicitudes de presupuesto.
-                    </p>
-                    <button
-                        onClick={() => setShowUpgradeModal(true)}
-                        style={{ background: primaryColor, color: "white", padding: "16px 32px", borderRadius: "12px", border: "none", fontSize: "16px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", boxShadow: `0 10px 25px ${primaryColor}40` }}
-                    >
-                        <Plus size={20} /> Crear Página Profesional
-                    </button>
+
+                    {/* Tarjeta 2: Upsell Inteligente */}
+                    <div style={{ background: "white", padding: "32px", borderRadius: "24px", boxShadow: "0 10px 40px rgba(0,0,0,0.05)", border: "1px solid #f1f5f9", flex: "1 1 400px", display: "flex", flexDirection: "column", justifyContent: "space-between", textAlign: "left" }}>
+                        
+                        {/* Escenario 1: Tiene Ambos */}
+                        {hasProveedor && hasEmpresa && (
+                            <div>
+                                <div style={{ width: "48px", height: "48px", background: `${primaryColor}15`, color: primaryColor, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                    <ShieldCheck size={24} />
+                                </div>
+                                <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#1e293b", marginBottom: "12px" }}>
+                                    ¡Perfil Profesional Completo!
+                                </h3>
+                                <p style={{ fontSize: "14px", color: "#64748b", lineHeight: "1.6", margin: 0 }}>
+                                    Ya tenés configurados tus perfiles de <strong>Proveedor Independiente</strong> y de <strong>Empresa o Comercio</strong> en Chamba.<br/><br/>
+                                    Podés cambiar de cuenta e ingresar a cualquiera de tus perfiles en cualquier momento haciendo clic en tu foto en la esquina superior derecha del menú.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Escenario 2: Solo tiene Proveedor */}
+                        {hasProveedor && !hasEmpresa && (
+                            <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ width: "48px", height: "48px", background: `${primaryColor}15`, color: primaryColor, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                        <Zap size={24} />
+                                    </div>
+                                    <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#1e293b", marginBottom: "12px" }}>
+                                        Llevá tu negocio al siguiente nivel
+                                    </h3>
+                                    <p style={{ fontSize: "14px", color: "#64748b", lineHeight: "1.6", marginBottom: "20px" }}>
+                                        Ya tenés un perfil de Proveedor Independiente activo. Si también tenés una empresa o comercio físico, podés:<br/><br/>
+                                        <strong>🏢 Registrar tu Empresa:</strong> Posicioná tu marca corporativa en el directorio, presentá tus servicios a gran escala y (próximamente) publicá búsquedas laborales.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowUpgradeModal(true)}
+                                    style={{ background: primaryColor, color: "white", padding: "12px 24px", borderRadius: "10px", border: "none", fontSize: "14px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", boxShadow: `0 8px 20px ${primaryColor}30`, alignSelf: "flex-start" }}
+                                >
+                                    <Plus size={16} /> Registrar Empresa
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Escenario 3: Solo tiene Empresa */}
+                        {!hasProveedor && hasEmpresa && (
+                            <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ width: "48px", height: "48px", background: `${primaryColor}15`, color: primaryColor, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                        <Zap size={24} />
+                                    </div>
+                                    <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#1e293b", marginBottom: "12px" }}>
+                                        Ofrecé tus servicios particulares
+                                    </h3>
+                                    <p style={{ fontSize: "14px", color: "#64748b", lineHeight: "1.6", marginBottom: "20px" }}>
+                                        Ya tenés registrada tu página de Empresa. Si también querés ofrecer oficios individuales de manera independiente, podés:<br/><br/>
+                                        <strong>🛠️ Crear perfil de Proveedor:</strong> Aparecé en el mapa interactivo de tu zona, mostrá tu portafolio personal y recibí contactos directos vía WhatsApp.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowUpgradeModal(true)}
+                                    style={{ background: primaryColor, color: "white", padding: "12px 24px", borderRadius: "10px", border: "none", fontSize: "14px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", boxShadow: `0 8px 20px ${primaryColor}30`, alignSelf: "flex-start" }}
+                                >
+                                    <Plus size={16} /> Crear Perfil Proveedor
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Escenario 4: No tiene ninguno */}
+                        {!hasProveedor && !hasEmpresa && (
+                            <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ width: "48px", height: "48px", background: `${primaryColor}15`, color: primaryColor, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                        <Zap size={24} />
+                                    </div>
+                                    <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#1e293b", marginBottom: "12px" }}>
+                                        Potenciá tu alcance en Chamba
+                                    </h3>
+                                    <p style={{ fontSize: "14px", color: "#64748b", lineHeight: "1.6", marginBottom: "20px" }}>
+                                        Creá una página profesional gratuita para potenciar tu presencia:<br/><br/>
+                                        <strong>🛠️ Proveedor:</strong> Aparecé en el mapa, mostrá tu portafolio y recibí clientes vía WhatsApp.<br/>
+                                        <strong>🏢 Empresa:</strong> Presentá tus servicios y publicá ofertas de empleo.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowUpgradeModal(true)}
+                                    style={{ background: primaryColor, color: "white", padding: "12px 24px", borderRadius: "10px", border: "none", fontSize: "14px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", boxShadow: `0 8px 20px ${primaryColor}30`, alignSelf: "flex-start" }}
+                                >
+                                    <Plus size={16} /> Crear Página Profesional
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         )

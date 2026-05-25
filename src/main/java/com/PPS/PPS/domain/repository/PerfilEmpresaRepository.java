@@ -39,4 +39,6 @@ public interface PerfilEmpresaRepository extends JpaRepository<PerfilEmpresa, UU
      */
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"usuario", "rubroPrincipal"})
     List<PerfilEmpresa> findByIdIn(List<UUID> ids);
+
+    boolean existsByCuit(String cuit);
 }

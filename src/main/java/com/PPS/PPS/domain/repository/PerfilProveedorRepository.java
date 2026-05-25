@@ -50,4 +50,6 @@ public interface PerfilProveedorRepository extends JpaRepository<PerfilProveedor
      */
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"usuario", "rubroPrincipal"})
     List<PerfilProveedor> findByIdIn(List<UUID> ids);
+
+    boolean existsByDni(String dni);
 }

@@ -19,5 +19,6 @@ public class ErrorRespuestaDto {
     private Integer estado;
     private String mensaje;
     private String detalles;
+    private String codigoRastreo;
 }
 

@@ -13,6 +13,8 @@ import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import com.PPS.PPS.domain.repository.PortafolioRepository;
 import com.PPS.PPS.domain.repository.RubroRepository;
 import com.PPS.PPS.domain.repository.UsuarioRepository;
+import com.PPS.PPS.domain.repository.PerfilEmpresaRepository;
+import com.PPS.PPS.domain.repository.PerfilProveedorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
@@ -39,6 +41,8 @@ public class AuthServiceImpl implements IAuthUseCase {
     private final UsuarioRepository usuarioRepository;
     private final RubroRepository rubroRepository;
     private final PortafolioRepository portafolioRepository;
+    private final PerfilEmpresaRepository perfilEmpresaRepository;
+    private final PerfilProveedorRepository perfilProveedorRepository;
     private final GeocodingService geocodingService;
     private final GeometryFactory geometryFactory;
     private final ISupabaseAuthPort supabaseAuthPort;
@@ -50,6 +54,10 @@ public class AuthServiceImpl implements IAuthUseCase {
     @Transactional
     public AuthRespuestaDto registrar(RegistroSolicitudDto dto) {
         log.info("Iniciando registro de usuario: {}", dto.getEmail());
+
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new ValidacionNegocioException("El correo electrónico " + dto.getEmail() + " ya se encuentra registrado.");
+        }
 
         // 1. Llamada a Supabase para Signup
         UUID supabaseId = supabaseAuthPort.registrar(dto.getEmail(), dto.getPassword());
@@ -82,6 +90,13 @@ public class AuthServiceImpl implements IAuthUseCase {
     @Transactional
     public AuthRespuestaDto registrarCompleto(RegistroCompletoSolicitudDto dto) {
         log.info("Iniciando registro completo para: {}", dto.getEmail());
+
+        if ("EMPRESA".equalsIgnoreCase(dto.getTipo()) && perfilEmpresaRepository.existsByCuit(dto.getDniCuit())) {
+            throw new ValidacionNegocioException("El CUIT " + dto.getDniCuit() + " ya está registrado para otra empresa.");
+        }
+        if ("PROVEEDOR".equalsIgnoreCase(dto.getTipo()) && perfilProveedorRepository.existsByDni(dto.getDniCuit())) {
+            throw new ValidacionNegocioException("El DNI " + dto.getDniCuit() + " ya está registrado para otro profesional.");
+        }
 
         // 1. Registro en Supabase (Si falla, lanza excepción y hace rollback de lo
         // local)
@@ -236,6 +251,16 @@ public class AuthServiceImpl implements IAuthUseCase {
     @Transactional
     public AuthRespuestaDto registrarOAuth(UUID usuarioId, RegistroCompletoSolicitudDto dto) {
         log.info("Iniciando registro completo de OAuth para: {}", dto.getEmail());
+
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new ValidacionNegocioException("El correo electrónico " + dto.getEmail() + " ya se encuentra registrado.");
+        }
+        if ("EMPRESA".equalsIgnoreCase(dto.getTipo()) && perfilEmpresaRepository.existsByCuit(dto.getDniCuit())) {
+            throw new ValidacionNegocioException("El CUIT " + dto.getDniCuit() + " ya está registrado para otra empresa.");
+        }
+        if ("PROVEEDOR".equalsIgnoreCase(dto.getTipo()) && perfilProveedorRepository.existsByDni(dto.getDniCuit())) {
+            throw new ValidacionNegocioException("El DNI " + dto.getDniCuit() + " ya está registrado para otro profesional.");
+        }
 
         // 1. Crear el Usuario localmente directamente con el UUID provisto por Supabase
         Usuario nuevoUsuario = Usuario.builder()

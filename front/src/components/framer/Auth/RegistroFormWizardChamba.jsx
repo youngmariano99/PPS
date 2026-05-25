@@ -178,7 +178,9 @@ export default function RegistroFormWizardChamba(props) {
 
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
-                throw new Error(errData.message || "Error al completar tu registro en el servidor.")
+                console.error("❌ Error en registro:", errData)
+                const traceText = errData.codigoRastreo ? ` (Código: ${errData.codigoRastreo})` : ""
+                throw new Error((errData.mensaje || errData.message || "Error al completar tu registro en el servidor.") + traceText)
             }
 
             const data = await res.json()

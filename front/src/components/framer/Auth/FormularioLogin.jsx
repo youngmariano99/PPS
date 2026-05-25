@@ -266,7 +266,10 @@ export default function FormularioLogin(props) {
                             }))
                             window.location.href = "https://overly-mindset-259417.framer.app/registro-general?oauth=true"
                         } else {
-                            throw new Error("SERVER_ERROR")
+                            const errData = await res.json().catch(() => ({}))
+                            console.error("❌ Error en oauth-sync:", errData)
+                            const traceText = errData.codigoRastreo ? ` (Código: ${errData.codigoRastreo})` : ""
+                            throw new Error((errData.mensaje || errData.message || "SERVER_ERROR") + traceText)
                         }
                     } catch (fetchErr) {
                         clearTimeout(timeoutId)
@@ -284,7 +287,7 @@ export default function FormularioLogin(props) {
                 }
             } catch (err) {
                 console.error("Error oauth sync", err)
-                setError("Error al sincronizar tu sesión de Google con el servidor.")
+                setError(err.message || "Error al sincronizar tu sesión de Google con el servidor.")
                 setLoading(false)
             }
         }

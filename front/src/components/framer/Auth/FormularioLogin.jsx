@@ -218,42 +218,68 @@ export default function FormularioLogin(props) {
             try {
                 const { data: { session } } = await supabase.auth.getSession()
                 if (session && session.user) {
-                    setLoading(true)
+                    const esOAuthRedireccion = window.location.hash.includes("access_token=")
+                    
+                    // Solo bloqueamos la UI con spinner si el usuario inició activamente un login de Google
+                    if (esOAuthRedireccion) {
+                        setLoading(true)
+                    }
                     setError(null)
                     
                     const base = (apiUrl || "").replace(/\/+$/, "")
-                    const res = await fetch(`${base}/auth/oauth-sync`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-User-Id": session.user.id
-                        }
-                    })
+                    const controller = new AbortController()
+                    const timeoutId = setTimeout(() => controller.abort(), 8000) // Timeout de 8s para evitar bloqueos por Render sleep
 
-                    if (res.ok) {
-                        const data = await res.json()
-                        localStorage.setItem("usuario", JSON.stringify({
-                            id: data.usuarioId,
-                            nombre: data.nombre,
-                            email: data.email,
-                        }))
-                        setSuccess(true)
-                        if (onLoginSuccess) onLoginSuccess(data)
-                        
-                        setTimeout(() => {
-                            window.location.href = "https://overly-mindset-259417.framer.app/"
-                        }, 2000)
-                    } else if (res.status === 404) {
-                        // Nuevo usuario: guardar datos de Supabase y mandar al wizard
-                        localStorage.setItem("oauth_user", JSON.stringify({
-                            id: session.user.id,
-                            email: session.user.email,
-                            nombre: session.user.user_metadata?.given_name || "",
-                            apellido: session.user.user_metadata?.family_name || ""
-                        }))
-                        window.location.href = "https://overly-mindset-259417.framer.app/registro-general?oauth=true"
-                    } else {
-                        throw new Error("SERVER_ERROR")
+                    try {
+                        const res = await fetch(`${base}/auth/oauth-sync`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-User-Id": session.user.id
+                            },
+                            signal: controller.signal
+                        })
+                        clearTimeout(timeoutId)
+
+                        if (res.ok) {
+                            const data = await res.json()
+                            localStorage.setItem("usuario", JSON.stringify({
+                                id: data.usuarioId,
+                                nombre: data.nombre,
+                                email: data.email,
+                            }))
+                            setSuccess(true)
+                            if (onLoginSuccess) onLoginSuccess(data)
+                            
+                            setTimeout(() => {
+                                window.location.href = "https://overly-mindset-259417.framer.app/"
+                            }, 2000)
+                        } else if (res.status === 404) {
+                            // Si el usuario no existe localmente, guardamos sus datos de Supabase
+                            // y lo mandamos siempre al wizard de registro. Esto corrige el caso donde
+                            // Framer limpia el hash de la URL antes de ejecutar este hook.
+                            localStorage.setItem("oauth_user", JSON.stringify({
+                                id: session.user.id,
+                                email: session.user.email,
+                                nombre: session.user.user_metadata?.given_name || "",
+                                apellido: session.user.user_metadata?.family_name || ""
+                            }))
+                            window.location.href = "https://overly-mindset-259417.framer.app/registro-general?oauth=true"
+                        } else {
+                            throw new Error("SERVER_ERROR")
+                        }
+                    } catch (fetchErr) {
+                        clearTimeout(timeoutId)
+                        setLoading(false)
+                        if (fetchErr.name === "AbortError") {
+                            // No bloqueamos la UI, dejamos que intente login manual
+                            console.warn("OAuth sync timeout: el servidor demoró en responder.")
+                            if (esOAuthRedireccion) {
+                                setError("El servidor está demorando en responder (puede estar despertando). Reintentá ingresar en unos segundos.")
+                            }
+                        } else {
+                            throw fetchErr
+                        }
                     }
                 }
             } catch (err) {

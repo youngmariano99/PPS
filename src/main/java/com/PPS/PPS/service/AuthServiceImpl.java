@@ -247,7 +247,7 @@ public class AuthServiceImpl implements IAuthUseCase {
                 .emailConfirmado(true) // Los proveedores de OAuth (Google) ya confirman el email
                 .build();
 
-        usuarioRepository.save(nuevoUsuario);
+        Usuario usuarioPersistido = usuarioRepository.save(nuevoUsuario);
 
         // 2. Preparar Ubicación (Geocoding)
         Point puntoUbicacion = null;
@@ -274,13 +274,13 @@ public class AuthServiceImpl implements IAuthUseCase {
                 .orElse(null);
 
         if (factory != null) {
-            factory.crearYGuardarPerfil(nuevoUsuario, rubro, puntoUbicacion, dto);
+            factory.crearYGuardarPerfil(usuarioPersistido, rubro, puntoUbicacion, dto);
         } else {
             log.info("Usuario OAuth registrado como rol básico (SIN PERFIL): {}", usuarioId);
         }
 
         // 5. Procesar Portafolio (Imágenes y Videos)
-        procesarPortafolio(nuevoUsuario, dto);
+        procesarPortafolio(usuarioPersistido, dto);
 
         log.info("Registro completo de OAuth exitoso para usuario: {}", usuarioId);
 

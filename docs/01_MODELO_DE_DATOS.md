@@ -138,6 +138,7 @@ CREATE TABLE public.postulaciones (
     mensaje_presentacion TEXT, cv_url_adjunto TEXT, 
     estado TEXT NOT NULL DEFAULT 'ENVIADO' CHECK (estado IN ('ENVIADO', 'VISTO', 'EN_REVISION', 'CONTACTADO', 'DESCARTADO')),
     motivo_rechazo_codigo TEXT, feedback_adicional TEXT,
+    es_excluido BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uk_postulacion_unica UNIQUE (oferta_id, usuario_candidato_id)
 );
@@ -269,7 +270,76 @@ ALTER TABLE public.resenas DROP CONSTRAINT IF EXISTS chk_resena_origen;
 -- [2026-05-05] Seguridad y Autenticación
 -- Propósito: Rastrear si el usuario ha verificado su email para habilitar funciones críticas.
 ALTER TABLE public.usuarios ADD COLUMN email_confirmado BOOLEAN NOT NULL DEFAULT FALSE;
-```
+
+-- [2026-05-25] Bolsa de Empleo y Preguntas de Filtro (Fase 1)
+-- Propósito: Crear las tablas para ofertas de empleo y preguntas excluyentes, con soporte para borrado lógico (activa BOOLEAN) y restricción de pertenencia exclusiva.
+CREATE TABLE IF NOT EXISTS public.ofertas_empleo (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    proveedor_id UUID REFERENCES public.perfiles_proveedor(id) ON DELETE CASCADE,
+    empresa_id UUID REFERENCES public.perfiles_empresa(id) ON DELETE CASCADE,
+    titulo TEXT NOT NULL,
+    descripcion TEXT NOT NULL,
+    modalidad TEXT NOT NULL CHECK (modalidad IN ('REMOTO', 'PRESENCIAL', 'HIBRIDO')),
+    salario_min NUMERIC,
+    salario_max NUMERIC,
+    habilidades_clave TEXT[], 
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_oferta_propietario CHECK ((proveedor_id IS NOT NULL AND empresa_id IS NULL) OR (proveedor_id IS NULL AND empresa_id IS NOT NULL))
+);
+
+CREATE TABLE IF NOT EXISTS public.preguntas_filtro_oferta (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    oferta_id UUID NOT NULL REFERENCES public.ofertas_empleo(id) ON DELETE CASCADE,
+    pregunta TEXT NOT NULL,
+    tipo_pregunta TEXT NOT NULL CHECK (tipo_pregunta IN ('SI_NO', 'TEXTO_CORTO')), 
+    respuesta_esperada_excluyente TEXT, 
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- [2026-05-25] Bolsa de Empleo y Postulaciones (Fase 2)
+-- Propósito: Crear las tablas para currículums nativos (JSONB), postulaciones y respuestas de los candidatos.
+CREATE TABLE IF NOT EXISTS public.curriculums_nativos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL UNIQUE REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    titular_profesional TEXT,
+    sobre_mi TEXT,
+    experiencia_laboral JSONB DEFAULT '[]'::jsonb,
+    educacion JSONB DEFAULT '[]'::jsonb,
+    habilidades JSONB DEFAULT '[]'::jsonb,
+    cv_url_pdf TEXT, 
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.postulaciones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    oferta_id UUID NOT NULL REFERENCES public.ofertas_empleo(id) ON DELETE CASCADE,
+    usuario_candidato_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE, 
+    mensaje_presentacion TEXT,
+    cv_url_adjunto TEXT, 
+    estado TEXT NOT NULL DEFAULT 'ENVIADO' CHECK (estado IN ('ENVIADO', 'VISTO', 'EN_REVISION', 'CONTACTADO', 'DESCARTADO')),
+    motivo_rechazo_codigo TEXT,
+    feedback_adicional TEXT,
+    es_excluido BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_postulacion_unica UNIQUE (oferta_id, usuario_candidato_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.respuestas_candidato (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    postulacion_id UUID NOT NULL REFERENCES public.postulaciones(id) ON DELETE CASCADE,
+    pregunta_id UUID NOT NULL REFERENCES public.preguntas_filtro_oferta(id) ON DELETE CASCADE,
+    respuesta_dada TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_respuesta_unica UNIQUE (postulacion_id, pregunta_id)
+);
+
+-- [2026-05-25] Sistema de Notificaciones Internas (Fase 3)
+-- Propósito: Utilizar la tabla notificaciones mapeada en JPA para registrar las alertas de transiciones de postulaciones laborales.
+
 
 ### 12. Extensión Multimedia (Consolidada + Degradación Suave)
 La gestión de multimedia se ha unificado en la tabla existente `portafolios` para evitar redundancias. Implementa "Graceful Downgrade": los recursos se preservan siempre, pero su visibilidad pública se filtra mediante la columna `visible` basándose en el plan activo.

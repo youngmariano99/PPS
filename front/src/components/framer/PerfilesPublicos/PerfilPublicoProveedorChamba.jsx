@@ -901,11 +901,35 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                         {/* Info Header */}
                         <div style={{ flex: 1, minWidth: "300px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", justifyContent: "space-between" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", justifyContent: "space-between", flexWrap: "wrap" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                     <h1 className="chamba-title" style={{ fontSize: "32px", fontWeight: "700", margin: 0 }}>{data.name}</h1>
                                     {data.isPro && <span className="chamba-badge-pro">PRO</span>}
                                 </div>
+                                {isOwner && contextoActivo && contextoActivo.tipo === 'EMPRESA' && (
+                                    <button 
+                                        onClick={() => {
+                                            window.location.href = props.gestionarPostulacionesUrl || "/gestionar-postulaciones"
+                                        }}
+                                        style={{
+                                            background: primaryColor,
+                                            color: "white",
+                                            padding: "10px 20px",
+                                            borderRadius: "10px",
+                                            border: "none",
+                                            fontSize: "13px",
+                                            fontWeight: "700",
+                                            cursor: "pointer",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                            boxShadow: `0 4px 15px ${primaryColor}30`,
+                                            transition: "0.2s"
+                                        }}
+                                    >
+                                        💼 Gestionar Postulaciones
+                                    </button>
+                                )}
                             </div>
 
                             <p style={{ fontSize: "18px", fontWeight: "600", color: primaryColor, marginBottom: "12px" }}>{data.category}</p>
@@ -1852,4 +1876,5 @@ addPropertyControls(PerfilPublicoProveedorChamba, {
     enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo", defaultValue: false },
     isProDemo: { type: ControlType.Boolean, title: "PRO en Demo", defaultValue: true },
     primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#A01EED" },
+    gestionarPostulacionesUrl: { type: ControlType.String, title: "URL Gestión Postulaciones", defaultValue: "/gestionar-postulaciones" }
 })

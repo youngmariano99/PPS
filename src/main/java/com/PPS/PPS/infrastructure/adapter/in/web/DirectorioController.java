@@ -67,6 +67,22 @@ public class DirectorioController {
         return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerDetalleProveedorPorSlug(slug, requesterId));
     }
 
+    @GetMapping("/empresa/{id}")
+    @Operation(summary = "Obtener detalle de perfil de empresa", description = "Retorna el perfil completo de empresa incluyendo portfolio y esPremium")
+    public ResponseEntity<PerfilDetalleDto> obtenerDetalleEmpresa(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) UUID requesterId) {
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerDetalleEmpresa(id, requesterId));
+    }
+
+    @GetMapping("/empresa/slug/{slug}")
+    @Operation(summary = "Obtener detalle de perfil de empresa por SLUG", description = "Busca el perfil de empresa usando el slug amigable para SEO.")
+    public ResponseEntity<PerfilDetalleDto> obtenerDetalleEmpresaPorSlug(
+            @PathVariable String slug,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) UUID requesterId) {
+        return ResponseEntity.ok(consultarDetallePerfilUseCase.obtenerDetalleEmpresaPorSlug(slug, requesterId));
+    }
+
     @GetMapping("/geocodificar")
     @Operation(summary = "Validar y geocodificar una dirección", description = "Retorna longitud y latitud si la dirección existe.")
     public ResponseEntity<double[]> geocodificar(@RequestParam String direccion) {

@@ -19,6 +19,8 @@ public class RegistroCompletoSolicitudDto {
     @NotBlank(message = "El apellido es obligatorio")
     private String apellido;
 
+    private String razonSocial;
+
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "Formato de email inválido")
     private String email;

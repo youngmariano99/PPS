@@ -8,6 +8,8 @@ import java.util.UUID;
 public interface IConsultarDetallePerfilUseCase {
     PerfilDetalleDto obtenerDetalleProveedor(UUID id, UUID requesterId);
     PerfilDetalleDto obtenerDetalleProveedorPorSlug(String slug, UUID requesterId);
+    PerfilDetalleDto obtenerDetalleEmpresa(UUID id, UUID requesterId);
+    PerfilDetalleDto obtenerDetalleEmpresaPorSlug(String slug, UUID requesterId);
     UsuarioPerfilDto obtenerPerfilUsuario(UUID usuarioId);
 }
 

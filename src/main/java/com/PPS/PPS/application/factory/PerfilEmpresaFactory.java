@@ -22,7 +22,7 @@ public class PerfilEmpresaFactory implements IPerfilFactory {
                 .rubroPrincipal(rubro)
                 .rubroPersonalizado(dto.getRubroPersonalizado())
                 .descripcionEmpresa(dto.getDescripcion())
-                .razonSocial(dto.getNombre())
+                .razonSocial(dto.getRazonSocial() != null && !dto.getRazonSocial().isBlank() ? dto.getRazonSocial() : dto.getNombre())
                 .cuit(dto.getDniCuit())
                 .logoUrl(dto.getFotoPerfilUrl())
                 .pais(dto.getPais())

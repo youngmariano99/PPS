@@ -26,7 +26,7 @@ export default function RegistroFormWizardChamba(props) {
     const [isOAuth, setIsOAuth] = useState(false)
 
     const [formData, setFormData] = useState({
-        nombre: "", apellido: "", email: "", password: "", confirmPassword: "", telefono: "", tipo: "",
+        nombre: "", apellido: "", email: "", razonSocial: "", password: "", confirmPassword: "", telefono: "", tipo: "",
         rubroId: "", rubroPersonalizado: "", descripcion: "", dniCuit: "",
         matricula: "", fotoPerfilUrl: "", calle: "", numero: "", ciudad: "",
         provincia: "", pais: "Argentina", codigoPostal: "",
@@ -97,6 +97,9 @@ export default function RegistroFormWizardChamba(props) {
     const validateStep = (s) => {
         if (s === 1 && !formData.tipo) return "Por favor, elegí tu perfil para continuar."
         if (s === 2) {
+            if (formData.tipo === "EMPRESA" && (!formData.razonSocial || !formData.razonSocial.trim())) {
+                return "Ingresá la Razón Social / Nombre Comercial."
+            }
             if (!formData.nombre || !formData.apellido || !formData.email || !formData.telefono) return "Completá tus datos básicos."
             if (!/^\S+@\S+\.\S+$/.test(formData.email)) return "Ingresá un email válido."
             if (!isOAuth) {
@@ -348,6 +351,9 @@ const Step2 = ({ data, onChange, checks, isOAuth }) => (
             </div>
         </div>
         <div style={formGrid}>
+            {data.tipo === "EMPRESA" && (
+                <Input label="Razón Social / Nombre Comercial" name="razonSocial" value={data.razonSocial || ""} onChange={onChange} icon={<IconEmp />} placeholder="Ej: Appy Studio S.A." />
+            )}
             <div style={rowGrid}>
                 <Input label="Nombre" name="nombre" value={data.nombre} onChange={onChange} icon={<IconUser />} placeholder="Tu nombre" />
                 <Input label="Apellido" name="apellido" value={data.apellido} onChange={onChange} icon={<IconUser />} placeholder="Tu apellido" />
@@ -409,7 +415,14 @@ const Step3 = ({ data, rubros, onChange, showCustom, setShowCustom }) => (
                         placeholder="Buscá tu rubro..."
                     />
                 </div>
-                <Input label="DNI" name="dniCuit" value={data.dniCuit} onChange={onChange} icon={<IconId />} placeholder="12.345.678" />
+                <Input 
+                    label={data.tipo === "EMPRESA" ? "CUIT" : "DNI"} 
+                    name="dniCuit" 
+                    value={data.dniCuit} 
+                    onChange={onChange} 
+                    icon={<IconId />} 
+                    placeholder={data.tipo === "EMPRESA" ? "30-12345678-9" : "12.345.678"} 
+                />
             </div>
             {showCustom && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>

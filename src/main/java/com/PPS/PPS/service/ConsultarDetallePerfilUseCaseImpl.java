@@ -4,6 +4,7 @@ import com.PPS.PPS.application.usecase.IConsultarDetallePerfilUseCase;
 import com.PPS.PPS.application.dto.response.PerfilDetalleDto;
 import com.PPS.PPS.application.dto.response.ResenaDetalleDto;
 import com.PPS.PPS.application.dto.response.UsuarioPerfilDto;
+import com.PPS.PPS.domain.model.PerfilEmpresa;
 import com.PPS.PPS.domain.model.PerfilProveedor;
 import com.PPS.PPS.domain.model.Portafolio;
 import com.PPS.PPS.domain.model.Resena;
@@ -172,6 +173,100 @@ public class ConsultarDetallePerfilUseCaseImpl implements IConsultarDetallePerfi
                 .telefono(usuario.getTelefono())
                 .fechaRegistro(usuario.getFechaCreacion() != null ? usuario.getFechaCreacion().toString() : "Reciente")
                 .isPremium(isPremium)
+                .build();
+    }
+
+    @Override
+    public PerfilDetalleDto obtenerDetalleEmpresa(UUID id, UUID requesterId) {
+        log.info("Obteniendo detalle de empresa para ID: {}", id);
+
+        PerfilEmpresa e = empresaRepository.findByUsuarioId(id)
+                .orElseGet(() -> empresaRepository.findById(id)
+                        .orElseThrow(() -> {
+                            log.error("Empresa no encontrada para ID: {}", id);
+                            return new RecursoNoEncontradoException("Empresa no encontrada");
+                        }));
+
+        return mapearEmpresaADetalleDto(e, requesterId);
+    }
+
+    @Override
+    public PerfilDetalleDto obtenerDetalleEmpresaPorSlug(String slug, UUID requesterId) {
+        log.info("Obteniendo detalle de empresa para Slug: {}", slug);
+        PerfilEmpresa e = empresaRepository.findBySlug(slug)
+                .orElseThrow(() -> {
+                    log.error("Empresa no encontrada para Slug: {}", slug);
+                    return new RecursoNoEncontradoException("Empresa no encontrada");
+                });
+        return mapearEmpresaADetalleDto(e, requesterId);
+    }
+
+    private PerfilDetalleDto mapearEmpresaADetalleDto(PerfilEmpresa e, UUID requesterId) {
+        boolean esPremium = suscripcionRepository.findByUsuarioIdAndEstado(e.getUsuario().getId(), "ACTIVA")
+                .map(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                          s.getPlan().getNombre().equalsIgnoreCase("PRO"))
+                .orElse(false);
+
+        List<Portafolio> multimedia;
+        if (esPremium) {
+            multimedia = portafolioRepository.findAllByEmpresaIdOrderByFechaCreacionDesc(e.getId());
+        } else {
+            multimedia = portafolioRepository.findVisibleByEmpresaId(e.getId(),
+                    org.springframework.data.domain.PageRequest.of(0, 5));
+        }
+
+        // Carga de reseñas por el ID del perfil de la empresa
+        List<Resena> resenasEntity = resenaRepository.findByPropietarioId(e.getId());
+        List<ResenaDetalleDto> resenasMapped = resenasEntity.stream()
+                .map(r -> ResenaDetalleDto.builder()
+                        .id(r.getId())
+                        .nombreCliente(r.getUsuario().getNombre() + " " + r.getUsuario().getApellido())
+                        .estrellas(r.getEstrellas().doubleValue())
+                        .comentario(r.getComentario())
+                        .fecha(r.getFechaCreacion())
+                        .trabajoVerificado(r.isTrabajoVerificado())
+                        .respuestaProveedor(r.getRespuestaProveedor())
+                        .build())
+                .collect(Collectors.toList());
+
+        Double promedio = resenasMapped.isEmpty() ? 0.0 : 
+                resenasMapped.stream().mapToDouble(ResenaDetalleDto::getEstrellas).average().orElse(0.0);
+
+        boolean isOwner = requesterId != null && requesterId.equals(e.getUsuario().getId());
+
+        return PerfilDetalleDto.builder()
+                .id(e.getId())
+                .usuarioId(e.getUsuario().getId())
+                .nombrePublico(e.getRazonSocial())
+                .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre() : e.getRubroPersonalizado())
+                .descripcion(e.getDescripcionEmpresa())
+                .fotoPerfilUrl(e.getLogoUrl())
+                .matricula(null)
+                .telefono(isOwner ? e.getUsuario().getTelefono() : "•••• •••• •••")
+                .email(e.getUsuario().getEmail())
+                .pais(e.getPais())
+                .provincia(e.getProvincia())
+                .ciudad(e.getCiudad())
+                .direccion(isOwner ? (e.getCalle() + " " + e.getNumero()) : "Dirección Oculta")
+                .calle(isOwner ? e.getCalle() : "Oculto")
+                .numero(isOwner ? e.getNumero() : 0)
+                .codigoPostal(isOwner ? e.getCodigoPostal() : 0)
+                .redesSociales(new ArrayList<>())
+                .sitioWebUrl(null)
+                .esPremium(esPremium)
+                .especialidades(new ArrayList<>())
+                .condicionesServicio(new ArrayList<>())
+                .resenas(resenasMapped)
+                .promedioEstrellas(promedio)
+                .totalResenas(resenasMapped.size())
+                .fotosPortafolio(multimedia.stream()
+                        .filter(m -> m.getTipoRecurso().equals("IMAGEN"))
+                        .map(Portafolio::getUrlRecurso)
+                        .collect(Collectors.toList()))
+                .videoLinks(multimedia.stream()
+                        .filter(m -> m.getTipoRecurso().equals("ENLACE"))
+                        .map(Portafolio::getUrlRecurso)
+                        .collect(Collectors.toList()))
                 .build();
     }
 }

@@ -21,6 +21,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 export default function PostulacionGestionEmpresa(props) {
     const { apiUrl, defaultOfertaId, enableDemoMode, primaryColor } = props
 
+    const activeOfertaId = useMemo(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search)
+            const queryId = params.get("ofertaId")
+            if (queryId) return queryId
+        }
+        return defaultOfertaId
+    }, [defaultOfertaId])
+
     // Función base para realizar peticiones autenticadas al backend Spring Boot.
     const fetchConAuth = async (endpoint, options = {}) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -72,11 +81,21 @@ export default function PostulacionGestionEmpresa(props) {
     const [enviandoDescarte, setEnviandoDescarte] = useState(false)
     
     // Oferta info mock/dinámica
-    const [ofertaInfo, setOfertaInfo] = useState({
-        titulo: "Plomero Gasista Matriculado",
-        ubicacion: "San Telmo, CABA",
-        modalidad: "Presencial",
-        salario: "$350k - $450k"
+    const [ofertaInfo, setOfertaInfo] = useState(() => {
+        if (enableDemoMode) {
+            return {
+                titulo: "Plomero Gasista Matriculado",
+                ubicacion: "San Telmo, CABA",
+                modalidad: "Presencial",
+                salario: "$350k - $450k"
+            }
+        }
+        return {
+            titulo: "Cargando oferta...",
+            ubicacion: "",
+            modalidad: "",
+            salario: ""
+        }
     })
 
     // --- MOCK DATA FALLBACK (1:1 con Mockup de la IA) ---
@@ -201,16 +220,34 @@ export default function PostulacionGestionEmpresa(props) {
 
     // --- ACCESO A DATOS (FETCH/DEMO) ---
     const cargarPostulaciones = async () => {
-        if (enableDemoMode || !defaultOfertaId || defaultOfertaId === "00000000-0000-0000-0000-000000000000") {
+        if (enableDemoMode) {
             setCandidatos(mockCandidatos)
             setCandidatoSeleccionado(mockCandidatos[0])
+            setOfertaInfo({
+                titulo: "Plomero Gasista Matriculado",
+                ubicacion: "San Telmo, CABA",
+                modalidad: "Presencial",
+                salario: "$350k - $450k"
+            })
+            return
+        }
+
+        if (!activeOfertaId || activeOfertaId === "00000000-0000-0000-0000-000000000000") {
+            setCandidatos([])
+            setCandidatoSeleccionado(null)
+            setOfertaInfo({
+                titulo: "Sin oferta seleccionada",
+                ubicacion: "",
+                modalidad: "",
+                salario: ""
+            })
             return
         }
 
         setCargando(true)
         try {
             // 1. Obtener postulantes de la oferta
-            const data = await fetchConAuth(`/postulaciones/oferta/${defaultOfertaId}`)
+            const data = await fetchConAuth(`/postulaciones/oferta/${activeOfertaId}`)
             if (data && data.length > 0) {
                 // Mapeo dinámico para inflar currículum nativo y detalles que vienen del candidato
                 const candidatosInflatos = await Promise.all(data.map(async (post) => {
@@ -239,7 +276,7 @@ export default function PostulacionGestionEmpresa(props) {
             }
 
             // 2. Obtener metadatos de la oferta para el encabezado
-            const oferta = await fetchConAuth(`/ofertas/${defaultOfertaId}`).catch(() => null)
+            const oferta = await fetchConAuth(`/ofertas/${activeOfertaId}`).catch(() => null)
             if (oferta) {
                 setOfertaInfo({
                     titulo: oferta.titulo,
@@ -247,11 +284,24 @@ export default function PostulacionGestionEmpresa(props) {
                     modalidad: oferta.modalidad,
                     salario: oferta.salarioMin ? `$${(oferta.salarioMin / 1000).toFixed(0)}k - $${(oferta.salarioMax / 1000).toFixed(0)}k` : "A convenir"
                 })
+            } else {
+                setOfertaInfo({
+                    titulo: "Oferta no encontrada",
+                    ubicacion: "",
+                    modalidad: "",
+                    salario: ""
+                })
             }
         } catch (err) {
             console.error("Error al cargar postulaciones del servidor:", err)
-            setCandidatos(mockCandidatos)
-            setCandidatoSeleccionado(mockCandidatos[0])
+            setCandidatos([])
+            setCandidatoSeleccionado(null)
+            setOfertaInfo({
+                titulo: "Error al cargar datos",
+                ubicacion: "No se pudo conectar con el servidor",
+                modalidad: "",
+                salario: ""
+            })
         } finally {
             setCargando(false)
         }
@@ -259,7 +309,7 @@ export default function PostulacionGestionEmpresa(props) {
 
     useEffect(() => {
         cargarPostulaciones()
-    }, [defaultOfertaId, enableDemoMode])
+    }, [activeOfertaId, enableDemoMode])
 
     // --- TRANSICIONES DE ESTADO ---
     
@@ -271,7 +321,7 @@ export default function PostulacionGestionEmpresa(props) {
             // Actualización local para UX inmediata
             actualizarEstadoLocal(candidato.id, "VISTO")
 
-            if (!enableDemoMode && defaultOfertaId !== "00000000-0000-0000-0000-000000000000") {
+            if (!enableDemoMode && activeOfertaId !== "00000000-0000-0000-0000-000000000000") {
                 try {
                     // El GET de detalle ejecuta la transición implícita a VISTO en el backend
                     await fetchConAuth(`/postulaciones/${candidato.id}`)
@@ -306,7 +356,7 @@ export default function PostulacionGestionEmpresa(props) {
 
         actualizarEstadoLocal(candidatoSeleccionado.id, "EN_REVISION")
 
-        if (!enableDemoMode && defaultOfertaId !== "00000000-0000-0000-0000-000000000000") {
+        if (!enableDemoMode && activeOfertaId !== "00000000-0000-0000-0000-000000000000") {
             try {
                 await fetchConAuth(`/postulaciones/${candidatoSeleccionado.id}/estado?nuevoEstado=EN_REVISION`, {
                     method: "PUT"
@@ -328,7 +378,7 @@ export default function PostulacionGestionEmpresa(props) {
         const cleanPhone = candidatoSeleccionado.telefono.replace(/\D/g, "")
         window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank")
 
-        if (!enableDemoMode && defaultOfertaId !== "00000000-0000-0000-0000-000000000000") {
+        if (!enableDemoMode && activeOfertaId !== "00000000-0000-0000-0000-000000000000") {
             try {
                 await fetchConAuth(`/postulaciones/${candidatoSeleccionado.id}/estado?nuevoEstado=CONTACTADO`, {
                     method: "PUT"
@@ -349,7 +399,7 @@ export default function PostulacionGestionEmpresa(props) {
             actualizarEstadoLocal(candidatoSeleccionado.id, "DESCARTADO", motivoRechazo, feedbackAdicional)
             setMostrarModalDescarte(false)
 
-            if (!enableDemoMode && defaultOfertaId !== "00000000-0000-0000-0000-000000000000") {
+            if (!enableDemoMode && activeOfertaId !== "00000000-0000-0000-0000-000000000000") {
                 await fetchConAuth(`/postulaciones/${candidatoSeleccionado.id}/descartar`, {
                     method: "POST",
                     body: JSON.stringify({

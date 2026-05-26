@@ -1,5 +1,10 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-05-26
+* **Módulo/Tarea:** Bolsa de Empleo: Módulo Integral de Ofertas y Postulaciones (Etapas A, B y C - Finalización)
+* **Archivos Tocados:** `DirectorioOfertasTrabajo.jsx`, `MisPostulacionesProveedor.jsx`, `BuscadorHeroTrabajo.jsx`, `ModalPostularse.jsx`, `CrearOfertaEmpresa.jsx`, `PostulacionGestionEmpresa.jsx`, `CampanaNotificaciones.jsx`, `PostulacionController.java`, `PostularseOfertaUseCaseImpl.java`, `GestionarPostulacionesEmpresaUseCaseImpl.java`, `OfertaController.java`, `DirectorioController.java`
+* **Qué y Por Qué (1 oración clara):** Se diseñó e implementó el módulo completo de Bolsa de Empleo, posibilitando que las empresas (y proveedores) publiquen ofertas laborales con preguntas filtro excluyentes y gestionen a sus postulantes (con opción de descarte motivado), y que los candidatos busquen empleos mediante filtros avanzados/paginación y realicen el seguimiento visual de su estado de postulación con feedback detallado de rechazo en tiempo real.
+
 * **Fecha:** 2026-05-19
 * **Módulo/Tarea:** Seguridad y Autenticación: Integración Google OAuth (Sprint 5)
 * **Archivos Tocados:** `IAuthUseCase.java`, `AuthServiceImpl.java`, `AuthController.java`, `FormularioLogin.jsx`, `RegistroFormWizardChamba.jsx`, `sprint_5_oauth_google.md`

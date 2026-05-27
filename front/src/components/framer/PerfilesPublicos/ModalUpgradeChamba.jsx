@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { X, ChevronRight, ChevronLeft, Building, Briefcase, MapPin, CheckCircle } from "lucide-react"
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import { useIdentityStore } from "./useIdentityStore"
+import { useIdentityStore } from "./LOGICA/UseIdentityStore.tsx"
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
@@ -34,6 +34,7 @@ export default function ModalUpgradeChamba(props) {
         razonSocial: "",
         cuit: "",
         // Rubro y Bio
+        rubroId: "",
         rubroPersonalizado: "",
         descripcion: "",
         // Ubicación
@@ -44,6 +45,20 @@ export default function ModalUpgradeChamba(props) {
         numero: "",
         codigoPostal: ""
     })
+
+    const [rubros, setRubros] = useState([])
+    const [showCustom, setShowCustom] = useState(false)
+
+    useEffect(() => {
+        const fetchRubros = async () => {
+            if (!apiUrl) return
+            try {
+                const res = await fetch(`${apiUrl.replace(/\/+$/, "")}/rubros`)
+                if (res.ok) setRubros(await res.json())
+            } catch (e) { console.error("Error rubros", e) }
+        }
+        fetchRubros()
+    }, [apiUrl])
 
     useEffect(() => {
         if (showUpgradeModal) {
@@ -59,6 +74,22 @@ export default function ModalUpgradeChamba(props) {
             }
             setStep(1)
             setError(null)
+            setShowCustom(false)
+            setFormData(prev => ({
+                ...prev,
+                dni: "",
+                matricula: "",
+                razonSocial: "",
+                cuit: "",
+                rubroId: "",
+                rubroPersonalizado: "",
+                descripcion: "",
+                provincia: "",
+                ciudad: "",
+                calle: "",
+                numero: "",
+                codigoPostal: ""
+            }))
         }
     }, [showUpgradeModal, contextosDisponibles])
 
@@ -79,6 +110,7 @@ export default function ModalUpgradeChamba(props) {
                 ...formData,
                 numero: parseInt(formData.numero) || 0,
                 codigoPostal: parseInt(formData.codigoPostal) || 0,
+                rubroId: formData.rubroId || null,
                 rubroPersonalizado: formData.rubroPersonalizado || "General"
             }
 
@@ -210,10 +242,69 @@ export default function ModalUpgradeChamba(props) {
                 </>
             )}
 
-            <input style={s.input} placeholder="Rubro principal (Ej: Electricidad) *" name="rubroPersonalizado" value={formData.rubroPersonalizado} onChange={handleInputChange} />
+            <div style={{ marginBottom: "16px", textAlign: "left" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Rubro principal *</label>
+                <SearchableSelect 
+                    options={rubros} 
+                    value={formData.rubroId}
+                    onChange={(val) => {
+                        if (val === "OTRO") {
+                            setShowCustom(true)
+                            setFormData(prev => ({ ...prev, rubroId: "", rubroPersonalizado: "" }))
+                        } else {
+                            setShowCustom(false)
+                            const rubroNombre = rubros.find(r => r.id === val)?.nombre || ""
+                            setFormData(prev => ({ ...prev, rubroId: val, rubroPersonalizado: rubroNombre }))
+                        }
+                        setError(null)
+                    }}
+                    placeholder="Buscá tu rubro..."
+                    primaryColor={primaryColor}
+                />
+            </div>
+
+            {showCustom && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} style={{ overflow: "hidden" }}>
+                    <input 
+                        style={s.input} 
+                        placeholder="Escribe tu rubro personalizado *" 
+                        name="rubroPersonalizado" 
+                        value={formData.rubroPersonalizado} 
+                        onChange={handleInputChange} 
+                    />
+                </motion.div>
+            )}
+
             <textarea style={{ ...s.input, minHeight: "80px", resize: "none" }} placeholder="Breve descripción de los servicios *" name="descripcion" value={formData.descripcion} onChange={handleInputChange} />
 
-            <button style={s.btnPrimary} onClick={() => setStep(3)}>
+            {error && <div style={{ color: "#ef4444", fontSize: "13px", marginBottom: "16px", padding: "12px", background: "#fef2f2", borderRadius: "8px", textAlign: "left" }}>{error}</div>}
+
+            <button 
+                style={s.btnPrimary} 
+                onClick={() => {
+                    if (tipo === 'EMPRESA') {
+                        if (!formData.razonSocial?.trim() || !formData.cuit?.trim()) {
+                            setError("Completa la Razón Social y el CUIT.")
+                            return
+                        }
+                    } else {
+                        if (!formData.dni?.trim()) {
+                            setError("El DNI es obligatorio.")
+                            return
+                        }
+                    }
+                    if (!formData.rubroId && !formData.rubroPersonalizado?.trim()) {
+                        setError("Selecciona tu rubro principal.")
+                        return
+                    }
+                    if (!formData.descripcion?.trim()) {
+                        setError("La descripción es obligatoria.")
+                        return
+                    }
+                    setError(null)
+                    setStep(3)
+                }}
+            >
                 Siguiente <ChevronRight size={18} />
             </button>
         </motion.div>
@@ -263,6 +354,182 @@ export default function ModalUpgradeChamba(props) {
                     {step === 3 && renderStep3()}
                 </AnimatePresence>
             </motion.div>
+        </div>
+    )
+}
+
+// --- Searchable Select Component for Modal ---
+function SearchableSelect({ options, value, onChange, placeholder, primaryColor }) {
+    const [isOpen, setIsOpen] = useState(false)
+    const [search, setSearch] = useState("")
+    const containerRef = useRef(null)
+
+    const selectedOption = options.find(o => o.id === value)
+    const filtered = options.filter(o => 
+        o.nombre.toLowerCase().includes(search.toLowerCase())
+    )
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
+
+    const selectTriggerStyle = {
+        width: "100%", 
+        padding: "12px 16px", 
+        borderRadius: "12px",
+        border: "1px solid #e2e8f0", 
+        fontSize: "14px", 
+        outline: "none",
+        cursor: "pointer",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        background: "#FFFFFF",
+        boxSizing: "border-box",
+        marginBottom: "16px"
+    }
+
+    const dropdownListStyle = {
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        width: "100%",
+        background: "#FFFFFF",
+        borderRadius: "12px",
+        boxShadow: "0px 10px 30px rgba(0,0,0,0.12)",
+        zIndex: 100,
+        overflow: "hidden",
+        border: "1px solid #F1F5F9",
+        marginTop: "4px"
+    }
+
+    const searchWrapStyle = {
+        padding: "10px",
+        borderBottom: "1px solid #F1F5F9",
+        background: "#F8FAFC",
+    }
+
+    const searchInputStyle = {
+        width: "100%",
+        padding: "8px 12px",
+        borderRadius: "8px",
+        border: "1px solid #E2E8F0",
+        fontSize: "13px",
+        outline: "none",
+        fontFamily: "'Inter', sans-serif",
+        boxSizing: "border-box"
+    }
+
+    const optionsScrollStyle = {
+        maxHeight: "180px",
+        overflowY: "auto",
+    }
+
+    const optionItemStyle = {
+        padding: "10px 16px",
+        fontSize: "13px",
+        color: "#1E293B",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "background 0.2s, color 0.2s",
+    }
+
+    const noResultsStyle = {
+        padding: "12px 16px",
+        fontSize: "12.5px",
+        color: "#94A3B8",
+        textAlign: "center",
+    }
+
+    return (
+        <div ref={containerRef} style={{ position: "relative" }}>
+            <div 
+                style={selectTriggerStyle} 
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <span style={{ color: selectedOption ? "#0F172A" : "#94A3B8", fontWeight: selectedOption ? "500" : "400" }}>
+                    {selectedOption ? selectedOption.nombre : placeholder}
+                </span>
+                <div style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "0.2s", color: "#64748B" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        style={dropdownListStyle}
+                    >
+                        <div style={searchWrapStyle}>
+                            <input 
+                                autoFocus
+                                style={searchInputStyle}
+                                placeholder="Escribe para filtrar..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <div style={optionsScrollStyle}>
+                            {filtered.length > 0 ? (
+                                filtered.map(opt => (
+                                    <OptionItem 
+                                        key={opt.id}
+                                        option={opt}
+                                        onClick={() => {
+                                            onChange(opt.id)
+                                            setIsOpen(false)
+                                            setSearch("")
+                                        }}
+                                        primaryColor={primaryColor}
+                                        optionItemStyle={optionItemStyle}
+                                    />
+                                ))
+                            ) : (
+                                <div style={noResultsStyle}>No se encontraron rubros</div>
+                            )}
+                            <OptionItem 
+                                option={{ id: "OTRO", nombre: "+ Agregar otro rubro" }}
+                                onClick={() => {
+                                    onChange("OTRO")
+                                    setIsOpen(false)
+                                    setSearch("")
+                                }}
+                                primaryColor={primaryColor}
+                                optionItemStyle={{ ...optionItemStyle, color: primaryColor, fontWeight: "700", borderTop: "1px solid #F1F5F9" }}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
+}
+
+function OptionItem({ option, onClick, primaryColor, optionItemStyle }) {
+    const [hover, setHover] = useState(false)
+    return (
+        <div 
+            style={{
+                ...optionItemStyle,
+                background: hover ? "#F5F3FF" : "transparent",
+                color: hover && option.id !== "OTRO" ? primaryColor : (optionItemStyle.color || "#1E293B")
+            }}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            onClick={onClick}
+        >
+            {option.nombre}
         </div>
     )
 }

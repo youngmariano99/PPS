@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import { useIdentityStore } from "../../../store/useIdentityStore.js"
-
+import { useIdentityStore } from "../PERFILES/LOGICA/UseIdentityStore.tsx"
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
@@ -12,7 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 export default function CrearOfertaEmpresa(props) {
     const { apiUrl = "http://localhost:8080/api/v1", primaryColor = "#A01EED" } = props
 
-    const { contextoActivo, cuentaBase } = useIdentityStore()
+    const { contextoActivo, cuentaBase, isHydrated, hydrateFromApi } = useIdentityStore()
 
     // Form fields
     const [titulo, setTitulo] = useState("")
@@ -44,6 +43,13 @@ export default function CrearOfertaEmpresa(props) {
     const [error, setError] = useState(null)
     const [success, setSuccess] = useState(false)
     const [activeMenuId, setActiveMenuId] = useState(null)
+
+    // Auto-hydration if store is not hydrated yet
+    useEffect(() => {
+        if (!isHydrated) {
+            hydrateFromApi(apiUrl, supabase)
+        }
+    }, [isHydrated, apiUrl, hydrateFromApi])
 
     // Load Fonts & Inject Dynamic Stylesheet
     useEffect(() => {
@@ -94,6 +100,45 @@ export default function CrearOfertaEmpresa(props) {
             setSalarioMax("")
         }
     }, [aConvenir])
+
+    // Hydration loading fallback (placed after all hook calls to comply with Rules of Hooks)
+    if (!isHydrated) {
+        return (
+            <div style={{ ...dashboardWrapper, background: "transparent", minHeight: "auto" }}>
+                <main style={{ ...mainFormArea, padding: "20px 0" }}>
+                    <div style={{ 
+                        ...cardContainer, 
+                        maxWidth: "100%", 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        padding: "60px 40px",
+                        minHeight: "300px" 
+                    }}>
+                        <div style={{
+                            width: "40px",
+                            height: "40px",
+                            border: `3px solid ${primaryColor}20`,
+                            borderTop: `3px solid ${primaryColor}`,
+                            borderRadius: "50%",
+                            animation: "chamba-spin 1s linear infinite",
+                            marginBottom: "16px"
+                        }} />
+                        <style>{`
+                            @keyframes chamba-spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `}</style>
+                        <p style={{ fontFamily: "Inter, sans-serif", fontSize: "14.5px", color: "#64748B", fontWeight: "600", margin: 0 }}>
+                            Cargando perfil y sesión...
+                        </p>
+                    </div>
+                </main>
+            </div>
+        )
+    }
 
     const handleAddHabilidad = (e) => {
         if (e.key === "Enter" || e.type === "click") {
@@ -241,55 +286,10 @@ export default function CrearOfertaEmpresa(props) {
     }
 
     return (
-        <div style={dashboardWrapper}>
-            {/* TOP HEADER */}
-            <header style={navbarStyle}>
-                <div style={navLeft}>
-                    <LogoChamba />
-                    <span style={navTagline}>
-                        CONECTA. <span style={{ color: primaryColor }}>TRABAJO.</span> GENERA <span style={{ color: primaryColor }}>OPORTUNIDADES.</span>
-                    </span>
-                </div>
-                <div style={navRight}>
-                    <span style={navLink}>Explorar</span>
-                    <span style={navLink}>Mis ofertas</span>
-                    <span style={navLink}>Postulaciones</span>
-                    <span style={navLink}>Mensajes</span>
-                    <div style={navIconWrapper}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                        <span style={badgeCount}>3</span>
-                    </div>
-                    <div style={avatarStyle(primaryColor)}>
-                        {cuentaBase ? (cuentaBase.nombre[0] + cuentaBase.apellido[0]).toUpperCase() : "RC"}
-                    </div>
-                </div>
-            </header>
-
-            {/* MAIN CONTENT AREA */}
-            <div style={contentLayout}>
-                {/* SIDEBAR */}
-                <aside style={sidebarStyle}>
-                    <div style={sidebarHeader}>
-                        <IconBriefcase color={primaryColor} />
-                        <span style={{ fontWeight: "700", color: "#0F172A", fontSize: "14px" }}>Panel Reclutador</span>
-                    </div>
-                    <div style={sidebarMenu}>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconList /> Mis ofertas</div>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconUsers /> Postulaciones</div>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconMail /> Mensajes</div>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconHeart /> Favoritos</div>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconBuilding /> Empresa</div>
-                        <div className="chamba-sidebar-item" style={{ ...sidebarItem, ...sidebarItemActive }}><IconPlusSquare /> Publicar oferta</div>
-                    </div>
-                    <div style={sidebarFooter}>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconGear /> Configuración</div>
-                        <div className="chamba-sidebar-item" style={sidebarItem}><IconLogOut /> Cerrar sesión</div>
-                    </div>
-                </aside>
-
-                {/* FORM PAGE CONTAINER */}
-                <main style={mainFormArea}>
-                    <div style={cardContainer}>
+        <div style={{ ...dashboardWrapper, background: "transparent", minHeight: "auto" }}>
+            {/* FORM PAGE CONTAINER */}
+            <main style={{ ...mainFormArea, padding: "20px 0" }}>
+                <div style={{ ...cardContainer, maxWidth: "100%" }}>
                         {/* Title block */}
                         <div style={formHeader}>
                             <div style={iconBox}>
@@ -540,7 +540,6 @@ export default function CrearOfertaEmpresa(props) {
                         </form>
                     </div>
                 </main>
-            </div>
         </div>
     )
 }

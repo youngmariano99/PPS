@@ -33,7 +33,8 @@ import {
     ChevronRight,
     ChevronLeft,
     Maximize2,
-    Plus
+    Plus,
+    Briefcase
 } from "lucide-react"
 import Swal from "https://esm.sh/sweetalert2"
 
@@ -63,7 +64,7 @@ const getEmbedUrl = (url) => {
 
 // Importación para Framer
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import { useIdentityStore } from "./useIdentityStore"
+import { useIdentityStore } from "./LOGICA/UseIdentityStore.tsx"
 
 /**
  * PERFIL PÚBLICO PROVEEDOR CHAMBA - REDISEÑO PREMIUM
@@ -107,7 +108,7 @@ function openUploadWidget(callback, multipleOrOptions) {
 }
 
 export default function PerfilPublicoProveedorChamba(props) {
-    const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false } = props
+    const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false, gestionarPostulacionesUrl, publicarOfertaUrl } = props
 
     const { contextoActivo, contextosDisponibles, setShowUpgradeModal, cuentaBase, isHydrated } = useIdentityStore()
 
@@ -906,30 +907,7 @@ export default function PerfilPublicoProveedorChamba(props) {
                                     <h1 className="chamba-title" style={{ fontSize: "32px", fontWeight: "700", margin: 0 }}>{data.name}</h1>
                                     {data.isPro && <span className="chamba-badge-pro">PRO</span>}
                                 </div>
-                                {isOwner && contextoActivo && contextoActivo.tipo === 'EMPRESA' && (
-                                    <button 
-                                        onClick={() => {
-                                            window.location.href = props.gestionarPostulacionesUrl || "/gestionar-postulaciones"
-                                        }}
-                                        style={{
-                                            background: primaryColor,
-                                            color: "white",
-                                            padding: "10px 20px",
-                                            borderRadius: "10px",
-                                            border: "none",
-                                            fontSize: "13px",
-                                            fontWeight: "700",
-                                            cursor: "pointer",
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            boxShadow: `0 4px 15px ${primaryColor}30`,
-                                            transition: "0.2s"
-                                        }}
-                                    >
-                                        💼 Gestionar Postulaciones
-                                    </button>
-                                )}
+                                 {/* Buttons moved to right-hand column */}
                             </div>
 
                             <p style={{ fontSize: "18px", fontWeight: "600", color: primaryColor, marginBottom: "12px" }}>{data.category}</p>
@@ -1007,6 +985,85 @@ export default function PerfilPublicoProveedorChamba(props) {
                             flexDirection: "column",
                             gap: "20px"
                         }}>
+                            {/* Acciones de Propietario (Publicar Empleo y/o Gestionar Postulaciones) */}
+                            {isOwner && contextoActivo && (contextoActivo.tipo === 'EMPRESA' || contextoActivo.tipo === 'PROVEEDOR') && (
+                                <div
+                                    onClick={() => {
+                                        window.location.href = publicarOfertaUrl || "/publicar-oferta"
+                                    }}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                        background: "white",
+                                        padding: "12px 24px",
+                                        borderRadius: "16px",
+                                        border: `2px solid ${primaryColor}15`,
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        width: "fit-content"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-2px)"
+                                        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.08)"
+                                        e.currentTarget.style.borderColor = primaryColor + "30"
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)"
+                                        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.04)"
+                                        e.currentTarget.style.borderColor = primaryColor + "15"
+                                    }}
+                                >
+                                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: primaryColor + "10", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <Plus size={18} color={primaryColor} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+                                        <span style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>Publicar Empleo</span>
+                                        <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "600" }}>Crear nueva oferta</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {isOwner && contextoActivo && contextoActivo.tipo !== 'EMPRESA' && (
+                                <div
+                                    onClick={() => {
+                                        window.location.href = gestionarPostulacionesUrl || "/gestionar-postulaciones"
+                                    }}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                        background: "white",
+                                        padding: "12px 24px",
+                                        borderRadius: "16px",
+                                        border: `2px solid ${primaryColor}15`,
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        width: "fit-content"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-2px)"
+                                        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.08)"
+                                        e.currentTarget.style.borderColor = primaryColor + "30"
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)"
+                                        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.04)"
+                                        e.currentTarget.style.borderColor = primaryColor + "15"
+                                    }}
+                                >
+                                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: primaryColor + "10", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <Briefcase size={18} color={primaryColor} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+                                        <span style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>Mis Postulaciones</span>
+                                        <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "600" }}>Ver postulaciones enviadas</span>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Compartir Perfil */}
                             <div
                                 onClick={() => {
@@ -1876,5 +1933,6 @@ addPropertyControls(PerfilPublicoProveedorChamba, {
     enableDemoMode: { type: ControlType.Boolean, title: "Modo Demo", defaultValue: false },
     isProDemo: { type: ControlType.Boolean, title: "PRO en Demo", defaultValue: true },
     primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#A01EED" },
-    gestionarPostulacionesUrl: { type: ControlType.String, title: "URL Gestión Postulaciones", defaultValue: "/gestionar-postulaciones" }
+    gestionarPostulacionesUrl: { type: ControlType.String, title: "URL Gestión Postulaciones", defaultValue: "/gestionar-postulaciones" },
+    publicarOfertaUrl: { type: ControlType.String, title: "URL Publicar Oferta", defaultValue: "/publicar-oferta" }
 })

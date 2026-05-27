@@ -80,11 +80,7 @@ export default function BuscadorHeroTrabajo(props) {
     }
 
     return (
-        <div style={heroOuterWrapper}>
-            {/* Soft Blurred Background Decorators */}
-            <div style={backgroundDecoratorLeft} />
-            <div style={backgroundDecoratorRight} />
-
+        <div style={{ ...heroOuterWrapper, background: "transparent" }}>
             <div style={glassCardStyle}>
                 {/* Logo Chamba */}
                 <div style={logoWrapper}>
@@ -211,30 +207,6 @@ const heroOuterWrapper = {
     boxSizing: "border-box",
     fontFamily: "'Inter', sans-serif",
     overflow: "hidden"
-}
-
-const backgroundDecoratorLeft = {
-    position: "absolute",
-    width: "350px",
-    height: "350px",
-    borderRadius: "50%",
-    background: "rgba(160, 30, 237, 0.12)",
-    filter: "blur(80px)",
-    left: "-80px",
-    top: "-30px",
-    zIndex: 1
-}
-
-const backgroundDecoratorRight = {
-    position: "absolute",
-    width: "300px",
-    height: "300px",
-    borderRadius: "50%",
-    background: "rgba(219, 39, 119, 0.08)",
-    filter: "blur(70px)",
-    right: "-60px",
-    bottom: "20px",
-    zIndex: 1
 }
 
 const glassCardStyle = {

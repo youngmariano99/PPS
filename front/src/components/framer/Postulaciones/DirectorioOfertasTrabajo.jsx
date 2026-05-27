@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import ModalPostularse from "./ModalPostularse.jsx"
+import ModalPostularse from "./ModalPostularse.tsx"
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY =
@@ -88,6 +88,67 @@ export default function DirectorioOfertasTrabajo(props) {
             .chamba-pag-btn:hover {
                 background: #F8FAFC !important;
                 color: #0F172A !important;
+            }
+
+            /* Responsive rules */
+            @media (max-width: 992px) {
+                .chamba-search-header-area {
+                    padding: 16px 20px !important;
+                }
+                .chamba-main-content-layout {
+                    flex-direction: column !important;
+                    padding: 20px !important;
+                    gap: 24px !important;
+                }
+                .chamba-sidebar-layout {
+                    width: 100% !important;
+                }
+            }
+
+            @media (max-width: 640px) {
+                .chamba-search-bar-form {
+                    padding: 4px 4px 4px 12px !important;
+                    gap: 8px !important;
+                }
+                .chamba-search-btn {
+                    padding: 8px 16px !important;
+                    font-size: 13.5px !important;
+                }
+                .chamba-results-header-row {
+                    flex-direction: column !important;
+                    align-items: flex-start !important;
+                    gap: 12px !important;
+                }
+                .chamba-job-card {
+                    flex-direction: column !important;
+                    gap: 16px !important;
+                    padding: 20px !important;
+                }
+                .chamba-right-action-col {
+                    width: 100% !important;
+                    border-top: 1px solid #F1F5F9 !important;
+                    padding-top: 16px !important;
+                    margin-top: 4px !important;
+                    flex-direction: column !important;
+                    gap: 16px !important;
+                    align-items: stretch !important;
+                }
+                .chamba-meta-vertical-col {
+                    flex-direction: row !important;
+                    flex-wrap: wrap !important;
+                    gap: 12px !important;
+                    margin: 4px 0 !important;
+                }
+                .chamba-salario-fields-row {
+                    flex-direction: column !important;
+                    gap: 8px !important;
+                }
+                .chamba-quick-sal-buttons-row {
+                    flex-wrap: wrap !important;
+                }
+                .chamba-modalidad-group {
+                    flex-wrap: wrap !important;
+                }
             }
         `
         document.head.appendChild(style)
@@ -255,31 +316,10 @@ export default function DirectorioOfertasTrabajo(props) {
     }
 
     return (
-        <div style={containerStyle}>
-            {/* Top Navbar */}
-            <header style={navbarStyle}>
-                <div style={navLeft}>
-                    <LogoChamba />
-                    <span style={navTagline}>
-                        CONECTA. <span style={{ color: primaryColor }}>TRABAJÁ.</span> CRECÉ.
-                    </span>
-                </div>
-                <div style={navRight}>
-                    <span style={{ ...navLink, color: primaryColor, borderBottom: `2px solid ${primaryColor}` }}>Explorar ofertas</span>
-                    <span style={navLink}>Mis postulaciones</span>
-                    <span style={navLink}>Favoritos</span>
-                    <span style={navLink}>Mensajes</span>
-                    <div style={bellIconStyle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                        <span style={badgeCount}>3</span>
-                    </div>
-                    <div style={avatarStyle(primaryColor)}>RC</div>
-                </div>
-            </header>
-
+        <div style={{ ...containerStyle, background: "transparent", minHeight: "auto" }}>
             {/* Sub-header search area */}
-            <div style={searchHeaderArea}>
-                <form onSubmit={handleSearchSubmit} style={searchBarForm}>
+            <div className="chamba-search-header-area" style={searchHeaderArea}>
+                <form onSubmit={handleSearchSubmit} className="chamba-search-bar-form" style={searchBarForm}>
                     <IconSearchBig />
                     <input
                         type="text"
@@ -289,16 +329,16 @@ export default function DirectorioOfertasTrabajo(props) {
                         onChange={(e) => setBusqueda(e.target.value)}
                         style={searchFieldRaw}
                     />
-                    <button type="submit" style={{ ...searchBtnStyle, background: primaryColor }}>
+                    <button type="submit" className="chamba-search-btn" style={{ ...searchBtnStyle, background: primaryColor }}>
                         Buscar
                     </button>
                 </form>
             </div>
 
             {/* Split panel main layout */}
-            <div style={mainContentLayout}>
+            <div className="chamba-main-content-layout" style={mainContentLayout}>
                 {/* FILTERS PANEL (LEFT) */}
-                <aside style={sidebarStyle}>
+                <aside className="chamba-sidebar-layout" style={sidebarStyle}>
                     <div style={sidebarHeader}>
                         <span style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A" }}>Filtros</span>
                         <div onClick={clearFilters} style={clearBtnWrapper(primaryColor)}>
@@ -374,7 +414,7 @@ export default function DirectorioOfertasTrabajo(props) {
                             <span>Modalidad</span>
                             <span>v</span>
                         </div>
-                        <div style={modalidadGroup}>
+                        <div className="chamba-modalidad-group" style={modalidadGroup}>
                             <button
                                 type="button"
                                 onClick={() => setModalidadSeleccionada(modalidadSeleccionada === "PRESENCIAL" ? "" : "PRESENCIAL")}
@@ -405,7 +445,7 @@ export default function DirectorioOfertasTrabajo(props) {
                             <span>Salario mensual (ARS)</span>
                             <span>v</span>
                         </div>
-                        <div style={salarioFieldsRow}>
+                        <div className="chamba-salario-fields-row" style={salarioFieldsRow}>
                             <div style={salarioInputWrapper}>
                                 <span style={salLabel}>Mínimo</span>
                                 <input 
@@ -426,6 +466,7 @@ export default function DirectorioOfertasTrabajo(props) {
                                     onChange={(e) => setSalarioMax(e.target.value)}
                                     className="chamba-filter-input"
                                     style={salInputField} 
+                                
                                 />
                             </div>
                         </div>
@@ -436,7 +477,7 @@ export default function DirectorioOfertasTrabajo(props) {
                             <div style={{ ...sliderThumb, left: "100%", background: primaryColor }} />
                         </div>
                         {/* Quick filter buttons */}
-                        <div style={quickSalButtonsRow}>
+                        <div className="chamba-quick-sal-buttons-row" style={quickSalButtonsRow}>
                             <button type="button" onClick={() => setSalarioMin("500000")} style={quickSalBtn}>+ $500k</button>
                             <button type="button" onClick={() => setSalarioMin("1000000")} style={quickSalBtn}>+ $1M</button>
                             <button type="button" onClick={() => setSalarioMin("2000000")} style={quickSalBtn}>+ $2M</button>
@@ -495,9 +536,9 @@ export default function DirectorioOfertasTrabajo(props) {
                 </aside>
 
                 {/* JOB LIST AREA (RIGHT) */}
-                <main style={rightMainContainer}>
+                <main className="chamba-right-main-container" style={rightMainContainer}>
                     {/* Header bar */}
-                    <div style={resultsHeaderRow}>
+                    <div className="chamba-results-header-row" style={resultsHeaderRow}>
                         <span style={resultsCountText}>{totalOfertas} ofertas encontradas</span>
                         <div style={sortContainer}>
                             <span style={sortLabelText}>Ordenar por:</span>
@@ -528,7 +569,7 @@ export default function DirectorioOfertasTrabajo(props) {
                                     </div>
 
                                     {/* Middle: Data */}
-                                    <div style={middleJobData}>
+                                    <div className="chamba-middle-job-data" style={middleJobData}>
                                         <div style={tagRow}>
                                             <span style={priorityBadge(o.prioridad || "Nuevo")}>
                                                 {o.prioridad || "Nuevo"}
@@ -550,11 +591,11 @@ export default function DirectorioOfertasTrabajo(props) {
                                     </div>
 
                                     {/* Right: Meta & Actions */}
-                                    <div style={rightActionCol}>
+                                    <div className="chamba-right-action-col" style={rightActionCol}>
                                         <div style={{ alignSelf: "flex-end", cursor: "pointer" }}>
                                             <IconBookmark />
                                         </div>
-                                        <div style={metaVerticalCol}>
+                                        <div className="chamba-meta-vertical-col" style={metaVerticalCol}>
                                             <div style={metaVerticalItem}><IconPinMini /> {o.ubicacionText || "Buenos Aires, Arg"}</div>
                                             <div style={metaVerticalItem}><IconMonitorMini /> {o.modalidad}</div>
                                             <div style={metaVerticalItem}><IconClockMini /> {formatTimeAgo(o.fechaCreacion)}</div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import { useIdentityStore } from "../../../store/useIdentityStore.js"
+import { useIdentityStore } from "../PERFILES/LOGICA/UseIdentityStore.tsx"
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY =
@@ -17,7 +17,7 @@ export default function MisPostulacionesProveedor(props) {
     } = props
 
     // Active Identity Context
-    const { contextoActivo, cuentaBase } = useIdentityStore()
+    const { contextoActivo, cuentaBase, isHydrated, hydrateFromApi } = useIdentityStore()
 
     // Core States
     const [postulaciones, setPostulaciones] = useState([])
@@ -146,7 +146,7 @@ export default function MisPostulacionesProveedor(props) {
             if (response.ok) {
                 const data = await response.json()
                 // Sort by date descending
-                const sorted = (data || []).sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion))
+                const sorted = (data || []).sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
                 setPostulaciones(sorted)
             } else {
                 throw new Error(`Error API: ${response.status}`)
@@ -217,6 +217,61 @@ export default function MisPostulacionesProveedor(props) {
     useEffect(() => {
         cargarPostulaciones()
     }, [apiUrl, enableDemoMode])
+
+    // Auto-hydration if store is not hydrated yet
+    useEffect(() => {
+        if (!isHydrated) {
+            hydrateFromApi(apiUrl, supabase)
+        }
+    }, [isHydrated, apiUrl, hydrateFromApi])
+
+    // Hydration loading fallback
+    if (!isHydrated) {
+        return (
+            <div style={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                minHeight: "450px", 
+                padding: "40px 24px",
+                fontFamily: "Inter, sans-serif"
+            }}>
+                <div style={{
+                    background: "white",
+                    borderRadius: "24px",
+                    border: "1px solid #E2E8F0",
+                    padding: "40px",
+                    maxWidth: "500px",
+                    width: "100%",
+                    textAlign: "center",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.05)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}>
+                    <div style={{
+                        width: "40px",
+                        height: "40px",
+                        border: `3px solid ${primaryColor}20`,
+                        borderTop: `3px solid ${primaryColor}`,
+                        borderRadius: "50%",
+                        animation: "chamba-spin 1s linear infinite",
+                        marginBottom: "16px"
+                    }} />
+                    <style>{`
+                        @keyframes chamba-spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `}</style>
+                    <p style={{ fontSize: "14.5px", color: "#64748B", fontWeight: "600", margin: 0 }}>
+                        Cargando postulaciones y perfil...
+                    </p>
+                </div>
+            </div>
+        )
+    }
 
     // Toggle row expansion
     const toggleExpand = (id) => {
@@ -308,83 +363,105 @@ export default function MisPostulacionesProveedor(props) {
         if (contextoActivo?.nombreContexto) {
             return contextoActivo.nombreContexto
         }
-        return "Mariano López" // Mock fallback matching the premium standard
+        return "Mariano López"
+    }
+
+    // Calculate profile completion progress dynamically
+    const calcularProgresoPerfil = () => {
+        if (!cuentaBase) return 30 // fallback
+        let score = 0
+        if (cuentaBase.nombre) score += 20
+        if (cuentaBase.apellido) score += 20
+        if (cuentaBase.email) score += 20
+        if (cuentaBase.telefono) score += 20
+        if (cuentaBase.isPremium) score += 10
+        if (contextoActivo?.fotoUrl) score += 10
+        return Math.min(100, Math.max(30, score))
+    }
+
+    const perfilProgreso = calcularProgresoPerfil()
+
+    if (contextoActivo?.tipo === 'EMPRESA') {
+        return (
+            <div style={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                minHeight: "450px", 
+                padding: "40px 24px",
+                fontFamily: "Inter, sans-serif"
+            }}>
+                <div style={{
+                    background: "white",
+                    borderRadius: "24px",
+                    border: "1px solid #E2E8F0",
+                    padding: "40px",
+                    maxWidth: "500px",
+                    textAlign: "center",
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.05)"
+                }}>
+                    <div style={{ 
+                        width: "64px", 
+                        height: "64px", 
+                        borderRadius: "50%", 
+                        background: `${primaryColor}15`, 
+                        color: primaryColor, 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        margin: "0 auto 24px auto" 
+                    }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                        </svg>
+                    </div>
+                    <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", marginBottom: "12px" }}>
+                        Módulo de Candidato
+                    </h3>
+                    <p style={{ fontSize: "14.5px", color: "#64748B", lineHeight: "1.6", marginBottom: "24px" }}>
+                        Estás operando con tu perfil de <strong>Empresa</strong>. Las postulaciones de empleo son exclusivas para perfiles de <strong>Proveedor</strong> o <strong>Candidato</strong>.
+                    </p>
+                    <p style={{ fontSize: "13px", color: "#94A3B8", lineHeight: "1.5", margin: 0 }}>
+                        Para postularte a búsquedas laborales o ver tu historial de postulaciones, por favor cambia tu rol desde el selector en el menú superior.
+                    </p>
+                </div>
+            </div>
+        )
     }
 
     return (
-        <div style={containerStyle}>
-            {/* Top Navbar */}
-            <header style={navbarStyle}>
-                <div style={navLeft}>
-                    <LogoChamba />
-                    <span style={navTagline}>
-                        CONECTA. <span style={{ color: primaryColor }}>TRABAJÁ.</span> CRECÉ.
-                    </span>
-                </div>
-                <div style={navRight}>
-                    <span style={navLink}>Explorar ofertas</span>
-                    <span style={{ ...navLink, color: primaryColor, borderBottom: `2px solid ${primaryColor}` }}>Mis postulaciones</span>
-                    <span style={navLink}>Favoritos</span>
-                    <span style={navLink}>Mensajes</span>
-                    <div style={bellIconStyle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                        <span style={badgeCount}>3</span>
-                    </div>
-                    <div style={avatarStyle(primaryColor)}>
-                        {getCandidatoNombre().slice(0, 2).toUpperCase()}
-                    </div>
-                </div>
-            </header>
-
+        <div style={{ ...containerStyle, background: "transparent", minHeight: "auto" }}>
             {/* Split layout */}
-            <div style={mainContentLayout}>
-                {/* SIDEBAR NAVIGATION PANEL (LEFT) */}
-                <aside style={sidebarStyle}>
-                    <div style={menuContainer}>
-                        <button type="button" className="chamba-nav-item">
-                            <IconExplore />
-                            <span>Explorar ofertas</span>
-                        </button>
-                        <button type="button" className="chamba-nav-item active">
-                            <IconBriefcaseSmall color={primaryColor} />
-                            <span>Mis postulaciones</span>
-                        </button>
-                        <button type="button" className="chamba-nav-item">
-                            <IconBookmark />
-                            <span>Favoritos</span>
-                        </button>
-                        <button type="button" className="chamba-nav-item">
-                            <IconMessage />
-                            <span>Mensajes</span>
-                        </button>
-                    </div>
-
-                    {/* Profile Progress Card */}
-                    <div style={progressCardStyle}>
-                        <div style={progressCardHeader}>
-                            <IconTrendingUp color={primaryColor} />
-                            <span style={progressCardTitle}>Mejorá tus oportunidades</span>
-                        </div>
-                        <p style={progressCardDescription}>
-                            Completa tu perfil para aumentar tus probabilidades de contratación.
-                        </p>
-                        
-                        {/* Progress Bar Container */}
-                        <div style={progressWrapper}>
-                            <div style={progressBarTrack}>
-                                <div style={{ ...progressBarFill, background: primaryColor, width: "85%" }} />
+            <div style={{ ...mainContentLayout, padding: "20px 0" }}>
+                {/* APPLICATIONS HISTORIC TABLE (RIGHT) */}
+                <main style={rightMainContainer}>
+                    {/* Dynamic Profile Progress Card as a Top Banner */}
+                    <div style={progressBannerStyle}>
+                        <div style={{ flex: "1 1 300px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                                <IconTrendingUp color={primaryColor} />
+                                <span style={{ fontSize: "14.5px", fontWeight: "700", color: "#0F172A" }}>Mejorá tus oportunidades</span>
                             </div>
-                            <span style={{ ...progressPercentLabel, color: primaryColor }}>85%</span>
+                            <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0, lineHeight: "1.4" }}>
+                                Completa tu perfil para aumentar tus probabilidades de contratación.
+                            </p>
                         </div>
-                        
-                        <button type="button" style={{ ...editProfileBtn, borderColor: primaryColor, color: primaryColor }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 200px" }}>
+                            <div style={{ flex: 1, height: "8px", borderRadius: "4px", background: "#F1F5F9", overflow: "hidden" }}>
+                                <div style={{ height: "100%", borderRadius: "4px", background: primaryColor, width: `${perfilProgreso}%`, transition: "width 0.4s ease-out" }} />
+                            </div>
+                            <span style={{ fontSize: "13px", fontWeight: "700", color: primaryColor }}>{perfilProgreso}%</span>
+                        </div>
+                        <button 
+                            type="button" 
+                            onClick={() => window.location.href = "/perfil"}
+                            style={editProfileBtnHorizontal(primaryColor)}
+                        >
                             Completar perfil →
                         </button>
                     </div>
-                </aside>
 
-                {/* APPLICATIONS HISTORIC TABLE (RIGHT) */}
-                <main style={rightMainContainer}>
                     <div style={tableHeaderArea}>
                         <div style={titleBox}>
                             <IconFileText />
@@ -1082,6 +1159,34 @@ const emptyState = {
     fontWeight: "500",
     textAlign: "center"
 }
+
+const progressBannerStyle = {
+    background: "#FFFFFF",
+    borderRadius: "24px",
+    padding: "20px 28px",
+    border: "1px solid #E2E8F0",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "24px",
+    marginBottom: "32px",
+    flexWrap: "wrap",
+    textAlign: "left",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.02)"
+}
+
+const editProfileBtnHorizontal = (color) => ({
+    background: "transparent",
+    border: `1px solid ${color}`,
+    color: color,
+    borderRadius: "10px",
+    padding: "10px 18px",
+    fontSize: "12.5px",
+    fontWeight: "700",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+    whiteSpace: "nowrap"
+})
 
 addPropertyControls(MisPostulacionesProveedor, {
     apiUrl: {

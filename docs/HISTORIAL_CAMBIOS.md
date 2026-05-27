@@ -1,9 +1,29 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-05-27
+* **Módulo/Tarea:** Bolsa de Empleo: Corrección de Violación de Reglas de Hooks (React Error #310) en Crear Oferta
+* **Archivos Tocados:** `CrearOfertaEmpresa.jsx`
+* **Qué y Por Qué (1 oración clara):** Se reubicó el retorno condicional de carga (`if (!isHydrated)`) para que se ejecute después de todas las declaraciones de `useEffect`, cumpliendo con las reglas de Hooks de React y corrigiendo el crash en entornos compilados de Framer.
+
+* **Fecha:** 2026-05-27
+* **Módulo/Tarea:** Bolsa de Empleo: Diseño Adaptable (Responsividad) en Directorio de Ofertas
+* **Archivos Tocados:** `DirectorioOfertasTrabajo.jsx`
+* **Qué y Por Qué (1 oración clara):** Se agregaron clases CSS y reglas de media queries `@media` para adaptar el panel de filtros y el listado de ofertas a dispositivos móviles y tabletas sin alterar la visual original en pantallas de escritorio.
+
+* **Fecha:** 2026-05-27
+* **Módulo/Tarea:** Bolsa de Empleo: Corrección de Hidratación de Contexto en Crear Oferta y Postulaciones
+* **Archivos Tocados:** `CrearOfertaEmpresa.jsx`, `MisPostulacionesProveedor.jsx`
+* **Qué y Por Qué (1 oración clara):** Se implementó auto-hidratación y pantallas de carga premium en los componentes de creación de ofertas y postulaciones para resolver fallos de sesión no iniciada tras navegaciones que causan recargas de página.
+
+* **Fecha:** 2026-05-27
+* **Módulo/Tarea:** Multi-Identidad: Refinamiento de Carga de Rubros en Upgrade de Perfil
+* **Archivos Tocados:** `ModalUpgradeChamba.jsx`
+* **Qué y Por Qué (1 oración clara):** Se integró el selector con buscador y la carga dinámica de rubros precargados de la API en el paso 2 del Modal de Upgrade, igualándolo al comportamiento y validaciones del wizard de registro para asegurar la coherencia de datos y consistencia visual en la plataforma.
+
 * **Fecha:** 2026-05-26
 * **Módulo/Tarea:** Bolsa de Empleo: Módulo Integral de Ofertas y Postulaciones (Etapas A, B y C - Finalización)
-* **Archivos Tocados:** `DirectorioOfertasTrabajo.jsx`, `MisPostulacionesProveedor.jsx`, `BuscadorHeroTrabajo.jsx`, `ModalPostularse.jsx`, `CrearOfertaEmpresa.jsx`, `PostulacionGestionEmpresa.jsx`, `CampanaNotificaciones.jsx`, `PostulacionController.java`, `PostularseOfertaUseCaseImpl.java`, `GestionarPostulacionesEmpresaUseCaseImpl.java`, `OfertaController.java`, `DirectorioController.java`
-* **Qué y Por Qué (1 oración clara):** Se diseñó e implementó el módulo completo de Bolsa de Empleo, posibilitando que las empresas (y proveedores) publiquen ofertas laborales con preguntas filtro excluyentes y gestionen a sus postulantes (con opción de descarte motivado), y que los candidatos busquen empleos mediante filtros avanzados/paginación y realicen el seguimiento visual de su estado de postulación con feedback detallado de rechazo en tiempo real.
+* **Archivos Tocados:** `DirectorioOfertasTrabajo.jsx`, `MisPostulacionesProveedor.jsx`, `BuscadorHeroTrabajo.jsx`, `ModalPostularse.jsx`, `CrearOfertaEmpresa.jsx`, `PostulacionGestionEmpresa.jsx`, `CampanaNotificaciones.jsx`, `PostulacionController.java`, `PostularseOfertaUseCaseImpl.java`, `GestionarPostulacionesEmpresaUseCaseImpl.java`, `OfertaController.java`, `DirectorioController.java`, `PerfilPublicoProveedorChamba.jsx`
+* **Qué y Por Qué (1 oración clara):** Se diseñó e implementó el módulo completo de Bolsa de Empleo, posibilitando que las empresas (y proveedores) publiquen ofertas laborales con preguntas filtro excluyentes y gestionen a sus postulantes (con opción de descarte motivado), y que los candidatos busquen empleos mediante filtros avanzados/paginación y realicen el seguimiento visual de su estado de postulación con feedback detallado de rechazo en tiempo real, añadiendo botones de acceso en el perfil público adaptados por rol y un panel preventivo para empresas.
 
 * **Fecha:** 2026-05-19
 * **Módulo/Tarea:** Seguridad y Autenticación: Integración Google OAuth (Sprint 5)

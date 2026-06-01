@@ -1,5 +1,13 @@
 # HISTORIAL DE CAMBIOS
 
+* **Fecha:** 2026-06-01
+* **Módulo/Tarea:** Bolsa de Empleo: Módulo "Mis Ofertas" en Modal para Reclutadores, Endpoint de Oferta Única e Información de Candidatos
+* **Archivos Tocados:** `MisOfertasEmpresa.jsx`, `PerfilPublicoProveedorChamba.jsx`, `PostulacionGestionEmpresa.jsx`, `OfertaController.java`, `IListarOfertasUseCase.java`, `ListarOfertasUseCaseImpl.java`
+* **Qué y Por Qué (1 oración clara):** Se creó el panel de reclutamiento de ofertas con un modal overlay fluido, se creó el endpoint `GET /ofertas/{id}` en el backend para poder consultar los detalles de una oferta de forma individual, y se optimizó el modal de candidatos pasando la oferta cargada como prop para mostrar los detalles del puesto instantáneamente sin latencia.
+
+
+
+
 * **Fecha:** 2026-05-27
 * **Módulo/Tarea:** Bolsa de Empleo: Corrección de Violación de Reglas de Hooks (React Error #310) en Crear Oferta
 * **Archivos Tocados:** `CrearOfertaEmpresa.jsx`

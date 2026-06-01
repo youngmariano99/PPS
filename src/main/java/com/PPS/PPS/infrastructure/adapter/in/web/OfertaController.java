@@ -68,4 +68,12 @@ public class OfertaController {
         publicarOfertaUseCase.eliminarLogico(usuarioId, id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Obtener detalles de una oferta", description = "Retorna el detalle completo de una oferta de empleo por su ID.")
+    public ResponseEntity<OfertaRespuestaDto> obtenerPorId(@PathVariable UUID id) {
+        log.info("REST: Petición de obtener detalle de ofertaId: {}", id);
+        OfertaRespuestaDto respuesta = listarOfertasUseCase.obtenerPorId(id);
+        return ResponseEntity.ok(respuesta);
+    }
 }

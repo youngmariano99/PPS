@@ -21,4 +21,9 @@ public interface IListarOfertasUseCase {
      * Lista todas las ofertas de empleo publicadas por el usuario actual.
      */
     List<OfertaRespuestaDto> listarPropias(UUID usuarioId);
+
+    /**
+     * Obtiene los detalles de una oferta de empleo por su ID.
+     */
+    OfertaRespuestaDto obtenerPorId(UUID id);
 }

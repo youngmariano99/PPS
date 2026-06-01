@@ -34,7 +34,8 @@ import {
     ChevronLeft,
     Maximize2,
     Plus,
-    Briefcase
+    Briefcase,
+    ClipboardList
 } from "lucide-react"
 import Swal from "https://esm.sh/sweetalert2"
 
@@ -108,7 +109,7 @@ function openUploadWidget(callback, multipleOrOptions) {
 }
 
 export default function PerfilPublicoProveedorChamba(props) {
-    const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false, gestionarPostulacionesUrl, publicarOfertaUrl } = props
+    const { apiUrl, enableDemoMode, primaryColor = "#A01EED", isProDemo = false, gestionarPostulacionesUrl, publicarOfertaUrl, misOfertasUrl } = props
 
     const { contextoActivo, contextosDisponibles, setShowUpgradeModal, cuentaBase, isHydrated } = useIdentityStore()
 
@@ -1025,6 +1026,45 @@ export default function PerfilPublicoProveedorChamba(props) {
                                 </div>
                             )}
 
+                            {isOwner && contextoActivo && (contextoActivo.tipo === 'EMPRESA' || contextoActivo.tipo === 'PROVEEDOR') && (
+                                <div
+                                    onClick={() => {
+                                        window.location.href = misOfertasUrl || "/mis-ofertas"
+                                    }}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                        background: "white",
+                                        padding: "12px 24px",
+                                        borderRadius: "16px",
+                                        border: `2px solid ${primaryColor}15`,
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        width: "fit-content"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-2px)"
+                                        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.08)"
+                                        e.currentTarget.style.borderColor = primaryColor + "30"
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)"
+                                        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.04)"
+                                        e.currentTarget.style.borderColor = primaryColor + "15"
+                                    }}
+                                >
+                                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: primaryColor + "10", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <ClipboardList size={18} color={primaryColor} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+                                        <span style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>Mis Ofertas</span>
+                                        <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "600" }}>Gestionar convocatorias</span>
+                                    </div>
+                                </div>
+                            )}
+
                             {isOwner && contextoActivo && contextoActivo.tipo !== 'EMPRESA' && (
                                 <div
                                     onClick={() => {
@@ -1934,5 +1974,6 @@ addPropertyControls(PerfilPublicoProveedorChamba, {
     isProDemo: { type: ControlType.Boolean, title: "PRO en Demo", defaultValue: true },
     primaryColor: { type: ControlType.Color, title: "Color Principal", defaultValue: "#A01EED" },
     gestionarPostulacionesUrl: { type: ControlType.String, title: "URL Gestión Postulaciones", defaultValue: "/gestionar-postulaciones" },
-    publicarOfertaUrl: { type: ControlType.String, title: "URL Publicar Oferta", defaultValue: "/publicar-oferta" }
+    publicarOfertaUrl: { type: ControlType.String, title: "URL Publicar Oferta", defaultValue: "/publicar-oferta" },
+    misOfertasUrl: { type: ControlType.String, title: "URL Mis Ofertas", defaultValue: "/mis-ofertas" }
 })

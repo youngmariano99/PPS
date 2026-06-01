@@ -46,6 +46,16 @@ public class ListarOfertasUseCaseImpl implements IListarOfertasUseCase {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public OfertaRespuestaDto obtenerPorId(UUID id) {
+        log.info("Obteniendo detalles de la ofertaId: {}", id);
+        OfertaEmpleo o = ofertaRepository.findById(id)
+                .orElseThrow(() -> new com.PPS.PPS.domain.exception.RecursoNoEncontradoException("Oferta de empleo no encontrada."));
+        return mapearADto(o);
+    }
+
+
     private OfertaRespuestaDto mapearADto(OfertaEmpleo o) {
         List<PreguntaFiltroRespuestaDto> preguntas = o.getPreguntasFiltro().stream()
                 .map(p -> PreguntaFiltroRespuestaDto.builder()

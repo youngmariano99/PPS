@@ -19,16 +19,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
  */
 
 export default function PostulacionGestionEmpresa(props) {
-    const { apiUrl, defaultOfertaId, enableDemoMode, primaryColor } = props
+    const { apiUrl, defaultOfertaId, enableDemoMode, primaryColor, ofertaId } = props
 
     const activeOfertaId = useMemo(() => {
+        if (ofertaId) return ofertaId
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search)
             const queryId = params.get("ofertaId")
             if (queryId) return queryId
         }
         return defaultOfertaId
-    }, [defaultOfertaId])
+    }, [ofertaId, defaultOfertaId])
 
     // Función base para realizar peticiones autenticadas al backend Spring Boot.
     const fetchConAuth = async (endpoint, options = {}) => {
@@ -246,7 +247,31 @@ export default function PostulacionGestionEmpresa(props) {
 
         setCargando(true)
         try {
-            // 1. Obtener postulantes de la oferta
+            // 1. Obtener metadatos de la oferta para el encabezado y preguntas de filtro
+            const oferta = await fetchConAuth(`/ofertas/${activeOfertaId}`).catch(() => null)
+            const preguntasFiltroMap = {}
+            if (oferta) {
+                setOfertaInfo({
+                    titulo: oferta.titulo,
+                    ubicacion: oferta.ciudad ? `${oferta.ciudad}, ${oferta.provincia || "Argentina"}` : "Ubicación no especificada",
+                    modalidad: oferta.modalidad,
+                    salario: oferta.salarioMin ? `$${(oferta.salarioMin / 1000).toFixed(0)}k - $${(oferta.salarioMax / 1000).toFixed(0)}k` : "A convenir"
+                })
+                if (oferta.preguntasFiltro) {
+                    oferta.preguntasFiltro.forEach(q => {
+                        preguntasFiltroMap[q.id] = q.respuestaEsperadaExcluyente
+                    })
+                }
+            } else {
+                setOfertaInfo({
+                    titulo: "Oferta no encontrada",
+                    ubicacion: "",
+                    modalidad: "",
+                    salario: ""
+                })
+            }
+
+            // 2. Obtener postulantes de la oferta
             const data = await fetchConAuth(`/postulaciones/oferta/${activeOfertaId}`)
             if (data && data.length > 0) {
                 // Mapeo dinámico para inflar currículum nativo y detalles que vienen del candidato
@@ -254,14 +279,24 @@ export default function PostulacionGestionEmpresa(props) {
                     try {
                         // Cargar currículum nativo del candidato
                         const cvData = await fetchConAuth(`/curriculums/candidato/${post.candidatoId}`).catch(() => null)
+                        
+                        // Enriquecer respuestas del candidato con la respuesta esperada
+                        const respuestasEnriquecidas = (post.respuestas || []).map(resp => {
+                            return {
+                                ...resp,
+                                respuestaEsperada: preguntasFiltroMap[resp.preguntaId] || null
+                            }
+                        })
+
                         return {
                             ...post,
+                            respuestas: respuestasEnriquecidas,
                             titularProfesional: cvData?.titularProfesional || "Postulante",
                             sobreMi: cvData?.sobreMi || "Sin descripción provista.",
                             experienciaLaboral: cvData?.experienciaLaboral || [],
                             habilidades: cvData?.habilidades || [],
                             educacion: cvData?.educacion || [],
-                            telefono: "+54 9 11 1234-5678" // Default telefónico si no está expuesto
+                            telefono: "+54 9 11 1234-5678" // Default de teléfono
                         }
                     } catch (e) {
                         return post
@@ -273,24 +308,6 @@ export default function PostulacionGestionEmpresa(props) {
             } else {
                 setCandidatos([])
                 setCandidatoSeleccionado(null)
-            }
-
-            // 2. Obtener metadatos de la oferta para el encabezado
-            const oferta = await fetchConAuth(`/ofertas/${activeOfertaId}`).catch(() => null)
-            if (oferta) {
-                setOfertaInfo({
-                    titulo: oferta.titulo,
-                    ubicacion: oferta.ciudad ? `${oferta.ciudad}, ${oferta.provincia || "Argentina"}` : "Ubicación no especificada",
-                    modalidad: oferta.modalidad,
-                    salario: oferta.salarioMin ? `$${(oferta.salarioMin / 1000).toFixed(0)}k - $${(oferta.salarioMax / 1000).toFixed(0)}k` : "A convenir"
-                })
-            } else {
-                setOfertaInfo({
-                    titulo: "Oferta no encontrada",
-                    ubicacion: "",
-                    modalidad: "",
-                    salario: ""
-                })
             }
         } catch (err) {
             console.error("Error al cargar postulaciones del servidor:", err)
@@ -588,7 +605,12 @@ export default function PostulacionGestionEmpresa(props) {
                                                         <IconCheckSmall /> Apto para el puesto
                                                     </span>
                                                 )}
-                                                <span style={cardTimeStyle}>Hace 2 horas</span>
+                                                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                                    <span style={{ fontSize: "10px", fontWeight: "700", color: cand.cvUrlAdjunto ? "#EF4444" : primaryColor, background: cand.cvUrlAdjunto ? "#FEE2E2" : primaryColor + "12", padding: "2px 6px", borderRadius: "4px" }}>
+                                                        {cand.cvUrlAdjunto ? "PDF" : "CHAMBA"}
+                                                    </span>
+                                                    <span style={cardTimeStyle}>Hace 2 horas</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -614,6 +636,37 @@ export default function PostulacionGestionEmpresa(props) {
                                     <div style={{ flex: 1, textAlign: "left" }}>
                                         <h2 style={profileNameStyle}>{candidatoSeleccionado.candidatoNombreCompleto}</h2>
                                         <p style={profileTitularStyle}>{candidatoSeleccionado.titularProfesional}</p>
+                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "8px 0 12px 0" }}>
+                                            {candidatoSeleccionado.cvUrlAdjunto ? (
+                                                <span style={{
+                                                    background: "#FEE2E2",
+                                                    color: "#EF4444",
+                                                    padding: "4px 10px",
+                                                    borderRadius: "8px",
+                                                    fontSize: "12px",
+                                                    fontWeight: "700",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px"
+                                                }}>
+                                                    <IconPdf /> Currículum en PDF
+                                                </span>
+                                            ) : (
+                                                <span style={{
+                                                     background: primaryColor + "15",
+                                                     color: primaryColor,
+                                                     padding: "4px 10px",
+                                                     borderRadius: "8px",
+                                                     fontSize: "12px",
+                                                     fontWeight: "700",
+                                                     display: "inline-flex",
+                                                     alignItems: "center",
+                                                     gap: "6px"
+                                                }}>
+                                                    💼 Currículum de Chamba
+                                                </span>
+                                            )}
+                                        </div>
                                         <div style={actionButtonsRow}>
                                             <button 
                                                 style={{ ...btnPrimaryStyle, background: "#25D366" }}
@@ -643,7 +696,7 @@ export default function PostulacionGestionEmpresa(props) {
                                         {candidatoSeleccionado.respuestas && candidatoSeleccionado.respuestas.map((resp, index) => {
                                             // Averiguar si esta respuesta en particular falló el knockout
                                             // En mock data viene mapeado directo. En data real comparamos
-                                            const incorrecta = candidatoSeleccionado.esExcluido && resp.respuestaDada !== "SI"
+                                            const incorrecta = resp.respuestaEsperada ? (resp.respuestaDada.trim().toUpperCase() !== resp.respuestaEsperada.trim().toUpperCase()) : (candidatoSeleccionado.esExcluido && resp.respuestaDada !== "SI")
                                             
                                             return (
                                                 <div 

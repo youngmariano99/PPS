@@ -7,6 +7,7 @@ import com.PPS.PPS.domain.model.OfertaEmpleo;
 import com.PPS.PPS.domain.repository.OfertaEmpleoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,15 @@ public class ListarOfertasUseCaseImpl implements IListarOfertasUseCase {
                                 .collect(Collectors.toList());
         }
 
+        @Override
+        @Transactional(readOnly = true)
+        public OfertaRespuestaDto obtenerPorId(UUID id) {
+                log.info("Obteniendo oferta de empleo por id: {}", id);
+                OfertaEmpleo oferta = ofertaRepository.findById(id)
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Oferta de empleo no encontrada."));
+                return mapearADto(oferta);
+        }
+
         private OfertaRespuestaDto mapearADto(OfertaEmpleo o) {
                 List<PreguntaFiltroRespuestaDto> preguntas = o.getPreguntasFiltro().stream()
                                 .map(p -> PreguntaFiltroRespuestaDto.builder()
@@ -76,7 +86,7 @@ public class ListarOfertasUseCaseImpl implements IListarOfertasUseCase {
                                                                 : null)
                                 .empresaId(o.getEmpresa() != null ? o.getEmpresa().getId() : null)
                                 .empresaRazonSocial(o.getEmpresa() != null ? o.getEmpresa().getRazonSocial() : null)
-                                .logoEmpresa(o.getEmpresa() != null ? o.getEmpresa().getFotoPerfil() : null)
+                                .logoEmpresa(o.getEmpresa() != null ? o.getEmpresa().getLogoUrl() : null)
                                 .fechaCreacion(o.getFechaCreacion())
                                 .build();
         }

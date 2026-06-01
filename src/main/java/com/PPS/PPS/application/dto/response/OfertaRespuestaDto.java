@@ -26,6 +26,8 @@ public class OfertaRespuestaDto {
 
     private String descripcion;
 
+    private String logoEmpresa;
+
     private String modalidad;
 
     private BigDecimal salarioMin;

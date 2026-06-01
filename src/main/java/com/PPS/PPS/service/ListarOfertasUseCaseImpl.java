@@ -24,64 +24,60 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ListarOfertasUseCaseImpl implements IListarOfertasUseCase {
 
-    private final OfertaEmpleoRepository ofertaRepository;
+        private final OfertaEmpleoRepository ofertaRepository;
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<OfertaRespuestaDto> listarActivas(Pageable pageable) {
-        log.info("Listando ofertas de empleo activas con paginación: {}", pageable);
-        // Gracias a @SQLRestriction("activa = true") en OfertaEmpleo,
-        // findAll automáticamente filtra las ofertas inactivas.
-        Page<OfertaEmpleo> ofertas = ofertaRepository.findAll(pageable);
-        return ofertas.map(this::mapearADto);
-    }
+        @Override
+        @Transactional(readOnly = true)
+        public Page<OfertaRespuestaDto> listarActivas(Pageable pageable) {
+                log.info("Listando ofertas de empleo activas con paginación: {}", pageable);
+                // Gracias a @SQLRestriction("activa = true") en OfertaEmpleo,
+                // findAll automáticamente filtra las ofertas inactivas.
+                Page<OfertaEmpleo> ofertas = ofertaRepository.findAll(pageable);
+                return ofertas.map(this::mapearADto);
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<OfertaRespuestaDto> listarPropias(UUID usuarioId) {
-        log.info("Buscando ofertas de empleo creadas por usuarioId: {}", usuarioId);
-        List<OfertaEmpleo> propias = ofertaRepository.findByProveedorUsuarioIdOrEmpresaUsuarioId(usuarioId, usuarioId);
-        return propias.stream()
-                .map(this::mapearADto)
-                .collect(Collectors.toList());
-    }
+        @Override
+        @Transactional(readOnly = true)
+        public List<OfertaRespuestaDto> listarPropias(UUID usuarioId) {
+                log.info("Buscando ofertas de empleo creadas por usuarioId: {}", usuarioId);
+                List<OfertaEmpleo> propias = ofertaRepository.findByProveedorUsuarioIdOrEmpresaUsuarioId(usuarioId,
+                                usuarioId);
+                return propias.stream()
+                                .map(this::mapearADto)
+                                .collect(Collectors.toList());
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public OfertaRespuestaDto obtenerPorId(UUID id) {
-        log.info("Obteniendo detalles de la ofertaId: {}", id);
-        OfertaEmpleo o = ofertaRepository.findById(id)
-                .orElseThrow(() -> new com.PPS.PPS.domain.exception.RecursoNoEncontradoException("Oferta de empleo no encontrada."));
-        return mapearADto(o);
-    }
+        private OfertaRespuestaDto mapearADto(OfertaEmpleo o) {
+                List<PreguntaFiltroRespuestaDto> preguntas = o.getPreguntasFiltro().stream()
+                                .map(p -> PreguntaFiltroRespuestaDto.builder()
+                                                .id(p.getId())
+                                                .pregunta(p.getPregunta())
+                                                .tipoPregunta(p.getTipoPregunta())
+                                                .respuestaEsperadaExcluyente(p.getRespuestaEsperadaExcluyente())
+                                                .build())
+                                .collect(Collectors.toList());
 
-
-    private OfertaRespuestaDto mapearADto(OfertaEmpleo o) {
-        List<PreguntaFiltroRespuestaDto> preguntas = o.getPreguntasFiltro().stream()
-                .map(p -> PreguntaFiltroRespuestaDto.builder()
-                        .id(p.getId())
-                        .pregunta(p.getPregunta())
-                        .tipoPregunta(p.getTipoPregunta())
-                        .respuestaEsperadaExcluyente(p.getRespuestaEsperadaExcluyente())
-                        .build())
-                .collect(Collectors.toList());
-
-        return OfertaRespuestaDto.builder()
-                .id(o.getId())
-                .titulo(o.getTitulo())
-                .descripcion(o.getDescripcion())
-                .modalidad(o.getModalidad())
-                .salarioMin(o.getSalarioMin())
-                .salarioMax(o.getSalarioMax())
-                .habilidadesClave(o.getHabilidadesClave())
-                .preguntasFiltro(preguntas)
-                .activa(o.isActiva())
-                .proveedorId(o.getProveedor() != null ? o.getProveedor().getId() : null)
-                .proveedorNombre(o.getProveedor() != null ? 
-                        o.getProveedor().getUsuario().getNombre() + " " + o.getProveedor().getUsuario().getApellido() : null)
-                .empresaId(o.getEmpresa() != null ? o.getEmpresa().getId() : null)
-                .empresaRazonSocial(o.getEmpresa() != null ? o.getEmpresa().getRazonSocial() : null)
-                .fechaCreacion(o.getFechaCreacion())
-                .build();
-    }
+                return OfertaRespuestaDto.builder()
+                                .id(o.getId())
+                                .titulo(o.getTitulo())
+                                .descripcion(o.getDescripcion())
+                                .modalidad(o.getModalidad())
+                                .salarioMin(o.getSalarioMin())
+                                .salarioMax(o.getSalarioMax())
+                                .habilidadesClave(o.getHabilidadesClave())
+                                .preguntasFiltro(preguntas)
+                                .activa(o.isActiva())
+                                .proveedorId(o.getProveedor() != null ? o.getProveedor().getId() : null)
+                                .proveedorNombre(
+                                                o.getProveedor() != null
+                                                                ? o.getProveedor().getUsuario().getNombre() + " "
+                                                                                + o.getProveedor().getUsuario()
+                                                                                                .getApellido()
+                                                                : null)
+                                .empresaId(o.getEmpresa() != null ? o.getEmpresa().getId() : null)
+                                .empresaRazonSocial(o.getEmpresa() != null ? o.getEmpresa().getRazonSocial() : null)
+                                .logoEmpresa(o.getEmpresa() != null ? o.getEmpresa().getFotoPerfil() : null)
+                                .fechaCreacion(o.getFechaCreacion())
+                                .build();
+        }
 }

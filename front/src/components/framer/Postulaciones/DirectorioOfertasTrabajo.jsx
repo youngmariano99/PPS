@@ -12,7 +12,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 export default function DirectorioOfertasTrabajo(props) {
     const { 
         apiUrl = "http://localhost:8080/api/v1", 
-        primaryColor = "#A01EED" 
+        primaryColor = "#A01EED",
+        perfilEmpresaUrl = "https://overly-mindset-259417.framer.app/proveedor"
     } = props
 
     // Initialize search query from URL params if present
@@ -608,6 +609,17 @@ export default function DirectorioOfertasTrabajo(props) {
                                             <div style={metaVerticalItem}><IconMonitorMini /> {o.modalidad}</div>
                                             <div style={metaVerticalItem}><IconClockMini /> {formatTimeAgo(o.fechaCreacion)}</div>
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (o.empresaId) {
+                                                    window.location.href = `${perfilEmpresaUrl}?id=${o.empresaId}`
+                                                }
+                                            }}
+                                            style={verPerfilBtnStyle}
+                                        >
+                                            Ver perfil
+                                        </button>
                                         <button 
                                             type="button" 
                                             onClick={() => setOfertaParaPostular(o)}
@@ -1219,6 +1231,21 @@ const metaVerticalItem = {
     fontWeight: "500"
 }
 
+const verPerfilBtnStyle = {
+    color: "#A01EED",
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: "13.5px",
+    fontWeight: "700",
+    border: "1.5px solid #A01EED",
+    borderRadius: "10px",
+    padding: "10px 0",
+    width: "100%",
+    cursor: "pointer",
+    background: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: "8px"
+}
+
 const detailBtnStyle = {
     color: "#FFFFFF",
     fontFamily: "'Poppins', sans-serif",
@@ -1291,5 +1318,10 @@ addPropertyControls(DirectorioOfertasTrabajo, {
         type: ControlType.Color,
         title: "Color Principal",
         defaultValue: "#A01EED",
+    },
+    perfilEmpresaUrl: {
+        type: ControlType.String,
+        title: "URL Perfil Empresa",
+        defaultValue: "https://overly-mindset-259417.framer.app/proveedor",
     }
 })

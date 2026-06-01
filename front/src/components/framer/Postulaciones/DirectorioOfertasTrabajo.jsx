@@ -563,10 +563,18 @@ export default function DirectorioOfertasTrabajo(props) {
                         ) : (
                             ofertas.map((o) => (
                                 <div key={o.id} className="chamba-job-card" style={jobCardStyle}>
-                                    {/* Left: Initials Circle */}
-                                    <div style={initialsCircleBox(primaryColor)}>
-                                        {o.empresaRazonSocial ? o.empresaRazonSocial.slice(0, 2).toUpperCase() : "EM"}
-                                    </div>
+                                    {/* Left: Logo or Initials */}
+                                    {o.logoEmpresa ? (
+                                        <img 
+                                            src={o.logoEmpresa} 
+                                            style={{ width: "48px", height: "48px", borderRadius: "14px", objectFit: "cover", flexShrink: 0 }} 
+                                            alt={o.empresaRazonSocial || "Empresa"} 
+                                        />
+                                    ) : (
+                                        <div style={initialsCircleBox(primaryColor)}>
+                                            {o.empresaRazonSocial ? o.empresaRazonSocial.slice(0, 2).toUpperCase() : (o.proveedorNombre ? o.proveedorNombre.slice(0, 2).toUpperCase() : "EM")}
+                                        </div>
+                                    )}
 
                                     {/* Middle: Data */}
                                     <div className="chamba-middle-job-data" style={middleJobData}>

@@ -87,7 +87,7 @@ public class ListarOfertasUseCaseImpl implements IListarOfertasUseCase {
                                                                 : null)
                                 .empresaId(o.getEmpresa() != null ? o.getEmpresa().getId() : null)
                                 .empresaRazonSocial(o.getEmpresa() != null ? o.getEmpresa().getRazonSocial() : null)
-                                .logoEmpresa(o.getEmpresa() != null ? o.getEmpresa().getLogoUrl() : null)
+                                .logoEmpresa(o.getEmpresa() != null ? o.getEmpresa().getLogoUrl() : (o.getProveedor() != null ? o.getProveedor().getFotoPerfilUrl() : null))
                                 .fechaCreacion(o.getFechaCreacion())
                                 .build();
         }

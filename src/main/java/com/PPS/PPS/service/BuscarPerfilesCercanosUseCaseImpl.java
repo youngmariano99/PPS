@@ -45,54 +45,39 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
         Point puntoUsuario = geometryFactory.createPoint(new Coordinate(lon, lat));
 
         String rubroFiltro = (rubro == null || rubro.equalsIgnoreCase("todos")) ? null : rubro;
-        List<UUID> idsOrdenados = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, rubroFiltro, q);
+        List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, rubroFiltro, q);
+        List<UUID> empresaIds = empresaRepository.buscarIdsCercanosOrdenadosConFiltro(lat, lon, radioMetros, rubroFiltro, q);
 
-        if (idsOrdenados.isEmpty()) {
+        if (proveedorIds.isEmpty() && empresaIds.isEmpty()) {
             return new org.springframework.data.domain.PageImpl<>(new ArrayList<>(),
                     org.springframework.data.domain.PageRequest.of(page, size), 0);
         }
 
-        int totalElementos = idsOrdenados.size();
-        int start = Math.min(page * size, totalElementos);
-        int end = Math.min((page + 1) * size, totalElementos);
+        List<PerfilProveedor> proveedoresCrudos = proveedorIds.isEmpty() ? new ArrayList<>()
+                : proveedorRepository.findByIdIn(proveedorIds);
+        List<PerfilEmpresa> empresasCrudas = empresaIds.isEmpty() ? new ArrayList<>()
+                : empresaRepository.findByIdIn(empresaIds);
 
-        if (start >= totalElementos) {
-            return new org.springframework.data.domain.PageImpl<>(new ArrayList<>(),
-                    org.springframework.data.domain.PageRequest.of(page, size), totalElementos);
-        }
+        List<UUID> todosUsuarioIds = new ArrayList<>();
+        proveedoresCrudos.forEach(p -> todosUsuarioIds.add(p.getUsuario().getId()));
+        empresasCrudas.forEach(e -> todosUsuarioIds.add(e.getUsuario().getId()));
 
-        List<UUID> idsPaginaActual = idsOrdenados.subList(start, end);
-
-        List<PerfilProveedor> proveedoresPagina = proveedorRepository.findByIdIn(idsPaginaActual);
-
-        java.util.Map<UUID, PerfilProveedor> mapaProveedores = proveedoresPagina.stream()
-                .collect(Collectors.toMap(PerfilProveedor::getId, java.util.function.Function.identity()));
-
-        List<PerfilProveedor> proveedoresOrdenados = idsPaginaActual.stream()
-                .map(mapaProveedores::get)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toList());
-
-        List<UUID> usuarioIds = proveedoresOrdenados.stream()
-                .map(p -> p.getUsuario().getId())
-                .collect(Collectors.toList());
-
-        List<UUID> perfilIds = proveedoresOrdenados.stream()
-                .map(PerfilProveedor::getId)
-                .collect(Collectors.toList());
-
-        java.util.Set<UUID> usuariosPremiumIds = suscripcionRepository
-                .findByUsuarioIdInAndEstado(usuarioIds, "ACTIVA").stream()
+        java.util.Set<UUID> usuariosPremiumIds = todosUsuarioIds.isEmpty() ? new java.util.HashSet<>() :
+                suscripcionRepository.findByUsuarioIdInAndEstado(todosUsuarioIds, "ACTIVA").stream()
                 .filter(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
                              s.getPlan().getNombre().equalsIgnoreCase("PRO"))
                 .map(s -> s.getUsuario().getId())
                 .collect(Collectors.toSet());
 
+        List<UUID> proveedorPerfilIds = proveedoresCrudos.stream()
+                .map(PerfilProveedor::getId)
+                .collect(Collectors.toList());
+
         java.util.Map<UUID, Double> promedios = new java.util.HashMap<>();
         java.util.Map<UUID, Integer> conteos = new java.util.HashMap<>();
         
-        if (!perfilIds.isEmpty()) {
-            List<Object[]> stats = resenaRepository.findAveragesAndCountsByPropietarioIds(perfilIds);
+        if (!proveedorPerfilIds.isEmpty()) {
+            List<Object[]> stats = resenaRepository.findAveragesAndCountsByPropietarioIds(proveedorPerfilIds);
             for (Object[] row : stats) {
                 UUID pid = (UUID) row[0];
                 Double avg = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
@@ -102,37 +87,66 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
             }
         }
 
-        List<PerfilRespuestaDto> dtoList = proveedoresOrdenados.stream()
-                .map(p -> {
-                    boolean esPremiumReal = usuariosPremiumIds.contains(p.getUsuario().getId());
-                    Double promedioReal = promedios.getOrDefault(p.getId(), 0.0);
-                    Integer cantidadReal = conteos.getOrDefault(p.getId(), 0);
+        List<PerfilRespuestaDto> resultadosCompletos = new ArrayList<>();
 
-                    double distGrados = p.getUbicacion().distance(puntoUsuario);
-                    double distancia = distGrados * 111319.9;
+        proveedoresCrudos.forEach(p -> {
+            boolean esPremiumReal = usuariosPremiumIds.contains(p.getUsuario().getId());
+            Double promedioReal = promedios.getOrDefault(p.getId(), 0.0);
+            Integer cantidadReal = conteos.getOrDefault(p.getId(), 0);
 
-                    return PerfilRespuestaDto.builder()
-                            .id(p.getId())
-                            .slug(p.getSlug())
-                            .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
-                            .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
-                                    : p.getRubroPersonalizado())
-                            .descripcion(p.getDescripcionProfesional())
-                            .ciudad(p.getCiudad())
-                            .latitud(p.getUbicacion().getY())
-                            .longitud(p.getUbicacion().getX())
-                            .tipo("PROVEEDOR")
-                            .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                            .promedioEstrellas(promedioReal)
-                            .cantidadResenas(cantidadReal)
-                            .distanciaMetros((int) distancia)
-                            .destacado(esPremiumReal)
-                            .fotoPerfilUrl(p.getFotoPerfilUrl())
-                            .telefono(p.getUsuario().getTelefono())
-                            .especialidades(p.getEspecialidades())
-                            .condicionesServicio(p.getCondicionesServicio())
-                            .build();
-                })
+            double distGrados = p.getUbicacion().distance(puntoUsuario);
+            double distancia = distGrados * 111319.9;
+
+            resultadosCompletos.add(PerfilRespuestaDto.builder()
+                    .id(p.getId())
+                    .slug(p.getSlug())
+                    .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                    .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
+                            : p.getRubroPersonalizado())
+                    .descripcion(p.getDescripcionProfesional())
+                    .ciudad(p.getCiudad())
+                    .latitud(p.getUbicacion().getY())
+                    .longitud(p.getUbicacion().getX())
+                    .tipo("PROVEEDOR")
+                    .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
+                    .promedioEstrellas(promedioReal)
+                    .cantidadResenas(cantidadReal)
+                    .distanciaMetros((int) distancia)
+                    .destacado(esPremiumReal)
+                    .fotoPerfilUrl(p.getFotoPerfilUrl())
+                    .telefono(p.getUsuario().getTelefono())
+                    .especialidades(p.getEspecialidades())
+                    .condicionesServicio(p.getCondicionesServicio())
+                    .build());
+        });
+
+        empresasCrudas.forEach(e -> {
+            boolean esPremiumReal = usuariosPremiumIds.contains(e.getUsuario().getId());
+            double distGrados = e.getUbicacion().distance(puntoUsuario);
+            double distancia = distGrados * 111319.9;
+
+            resultadosCompletos.add(PerfilRespuestaDto.builder()
+                    .id(e.getId())
+                    .slug(e.getSlug())
+                    .nombrePublico(e.getRazonSocial())
+                    .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre()
+                            : e.getRubroPersonalizado())
+                    .descripcion(e.getDescripcionEmpresa())
+                    .ciudad(e.getCiudad())
+                    .latitud(e.getUbicacion().getY())
+                    .longitud(e.getUbicacion().getX())
+                    .tipo("EMPRESA")
+                    .perfilCompleto(e.getLogoUrl() != null && !e.getLogoUrl().isEmpty())
+                    .promedioEstrellas(0.0)
+                    .cantidadResenas(0)
+                    .distanciaMetros((int) distancia)
+                    .destacado(esPremiumReal)
+                    .fotoPerfilUrl(e.getLogoUrl())
+                    .telefono(e.getUsuario().getTelefono())
+                    .build());
+        });
+
+        List<PerfilRespuestaDto> dtoList = resultadosCompletos.stream()
                 .sorted((a, b) -> {
                     if (a.isDestacado() != b.isDestacado()) {
                         return a.isDestacado() ? -1 : 1;
@@ -143,8 +157,15 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
                 })
                 .collect(Collectors.toList());
 
+        int totalElementos = dtoList.size();
+        int start = Math.min(page * size, totalElementos);
+        int end = Math.min((page + 1) * size, totalElementos);
+
+        List<PerfilRespuestaDto> paginaContenido = (start >= totalElementos) ? new ArrayList<>() 
+                : dtoList.subList(start, end);
+
         return new org.springframework.data.domain.PageImpl<>(
-                dtoList,
+                paginaContenido,
                 org.springframework.data.domain.PageRequest.of(page, size),
                 totalElementos);
     }
@@ -155,6 +176,7 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
         if (radioMetros > MAX_RADIO_METROS) {
             radioMetros = MAX_RADIO_METROS;
         }
+        Point puntoUsuario = geometryFactory.createPoint(new Coordinate(lon, lat));
         List<PerfilRespuestaDto> resultados = new ArrayList<>();
 
         List<UUID> proveedorIds = proveedorRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros, null, q);
@@ -183,48 +205,68 @@ public class BuscarPerfilesCercanosUseCaseImpl implements IBuscarPerfilesCercano
         }
 
         resultados.addAll(proveedoresCrudos.stream()
-                .map(p -> PerfilRespuestaDto.builder()
-                        .id(p.getId())
-                        .slug(p.getSlug())
-                        .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
-                        .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
-                                : p.getRubroPersonalizado())
-                        .descripcion(p.getDescripcionProfesional())
-                        .ciudad(p.getCiudad())
-                        .latitud(p.getUbicacion().getY())
-                        .longitud(p.getUbicacion().getX())
-                        .tipo("PROVEEDOR")
-                        .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
-                        .promedioEstrellas(promedios.getOrDefault(p.getId(), 0.0))
-                        .cantidadResenas(conteos.getOrDefault(p.getId(), 0))
-                        .destacado(usuariosPremiumIds.contains(p.getUsuario().getId()))
-                        .fotoPerfilUrl(p.getFotoPerfilUrl())
-                        .especialidades(p.getEspecialidades())
-                        .condicionesServicio(p.getCondicionesServicio())
-                        .build())
+                .map(p -> {
+                    double distGrados = p.getUbicacion().distance(puntoUsuario);
+                    double distancia = distGrados * 111319.9;
+                    return PerfilRespuestaDto.builder()
+                            .id(p.getId())
+                            .slug(p.getSlug())
+                            .nombrePublico(p.getUsuario().getNombre() + " " + p.getUsuario().getApellido())
+                            .rubro(p.getRubroPrincipal() != null ? p.getRubroPrincipal().getNombre()
+                                    : p.getRubroPersonalizado())
+                            .descripcion(p.getDescripcionProfesional())
+                            .ciudad(p.getCiudad())
+                            .latitud(p.getUbicacion().getY())
+                            .longitud(p.getUbicacion().getX())
+                            .tipo("PROVEEDOR")
+                            .perfilCompleto(p.getFotoPerfilUrl() != null && !p.getFotoPerfilUrl().isEmpty())
+                            .promedioEstrellas(promedios.getOrDefault(p.getId(), 0.0))
+                            .cantidadResenas(conteos.getOrDefault(p.getId(), 0))
+                            .distanciaMetros((int) distancia)
+                            .destacado(usuariosPremiumIds.contains(p.getUsuario().getId()))
+                            .fotoPerfilUrl(p.getFotoPerfilUrl())
+                            .especialidades(p.getEspecialidades())
+                            .condicionesServicio(p.getCondicionesServicio())
+                            .build();
+                })
                 .collect(Collectors.toList()));
 
-        List<UUID> empresaIds = empresaRepository.buscarIdsCercanosOrdenados(lat, lon, radioMetros);
+        List<UUID> empresaIds = empresaRepository.buscarIdsCercanosOrdenadosConFiltro(lat, lon, radioMetros, null, q);
         List<PerfilEmpresa> empresasCrudas = empresaIds.isEmpty() ? new ArrayList<>()
                 : empresaRepository.findByIdIn(empresaIds);
 
+        List<UUID> todosEmpresaUsuarioIds = empresasCrudas.stream().map(e -> e.getUsuario().getId()).collect(Collectors.toList());
+        java.util.Set<UUID> empresasPremiumIds = todosEmpresaUsuarioIds.isEmpty() ? new java.util.HashSet<>() :
+                suscripcionRepository.findByUsuarioIdInAndEstado(todosEmpresaUsuarioIds, "ACTIVA").stream()
+                .filter(s -> s.getPlan().getNombre().equalsIgnoreCase("Premium") || 
+                             s.getPlan().getNombre().equalsIgnoreCase("PRO"))
+                .map(s -> s.getUsuario().getId())
+                .collect(Collectors.toSet());
+
         resultados.addAll(empresasCrudas.stream()
-                .map(e -> PerfilRespuestaDto.builder()
-                        .id(e.getId())
-                        .nombrePublico(e.getRazonSocial())
-                        .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre()
-                                : e.getRubroPersonalizado())
-                        .descripcion(e.getDescripcionEmpresa())
-                        .ciudad(e.getCiudad())
-                        .latitud(e.getUbicacion().getY())
-                        .longitud(e.getUbicacion().getX())
-                        .tipo("EMPRESA")
-                        .perfilCompleto(e.getLogoUrl() != null && !e.getLogoUrl().isEmpty())
-                        .promedioEstrellas(0.0) 
-                        .cantidadResenas(0)
-                        .destacado(false)
-                        .fotoPerfilUrl(e.getLogoUrl())
-                        .build())
+                .map(e -> {
+                    double distGrados = e.getUbicacion().distance(puntoUsuario);
+                    double distancia = distGrados * 111319.9;
+                    return PerfilRespuestaDto.builder()
+                            .id(e.getId())
+                            .slug(e.getSlug())
+                            .nombrePublico(e.getRazonSocial())
+                            .rubro(e.getRubroPrincipal() != null ? e.getRubroPrincipal().getNombre()
+                                    : e.getRubroPersonalizado())
+                            .descripcion(e.getDescripcionEmpresa())
+                            .ciudad(e.getCiudad())
+                            .latitud(e.getUbicacion().getY())
+                            .longitud(e.getUbicacion().getX())
+                            .tipo("EMPRESA")
+                            .perfilCompleto(e.getLogoUrl() != null && !e.getLogoUrl().isEmpty())
+                            .promedioEstrellas(0.0) 
+                            .cantidadResenas(0)
+                            .distanciaMetros((int) distancia)
+                            .destacado(empresasPremiumIds.contains(e.getUsuario().getId()))
+                            .fotoPerfilUrl(e.getLogoUrl())
+                            .telefono(e.getUsuario().getTelefono())
+                            .build();
+                })
                 .collect(Collectors.toList()));
 
         return resultados;

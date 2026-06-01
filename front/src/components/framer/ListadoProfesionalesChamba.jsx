@@ -256,11 +256,24 @@ const ProfessionalCard = ({ prof, onView }) => {
                     {prof.fotoPerfilUrl ? (
                         <img src={prof.fotoPerfilUrl} style={avatarImg} alt={prof.nombrePublico} />
                     ) : (
-                        <div style={avatarInitial}>{prof.nombrePublico ? prof.nombrePublico[0] : "P"}</div>
+                        <div style={{
+                            ...avatarInitial,
+                            background: prof.tipo === "EMPRESA" ? "#EFF6FF" : "#F5F3FF",
+                            color: prof.tipo === "EMPRESA" ? "#2563EB" : "#A01EED"
+                        }}>
+                            {prof.nombrePublico ? prof.nombrePublico[0].toUpperCase() : (prof.tipo === "EMPRESA" ? "E" : "P")}
+                        </div>
                     )}
                 </div>
                 <div style={infoBox}>
-                    <h3 style={profName}>{prof.nombrePublico}</h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                        <h3 style={profName}>{prof.nombrePublico}</h3>
+                        {prof.tipo === "EMPRESA" ? (
+                            <span style={badgeEmpresa}>🏢 Empresa</span>
+                        ) : (
+                            <span style={badgeProfesional}>👤 Profesional</span>
+                        )}
+                    </div>
                     <span style={profRubro}>{prof.rubro}</span>
                     <p style={profBio}>{prof.descripcion || "Profesional calificado y verificado"}</p>
                 </div>
@@ -360,6 +373,34 @@ const infoBox = { flex: 1 }
 const profName = { fontSize: "16px", fontWeight: "700", color: "#000000", margin: "0" }
 const profRubro = { fontSize: "12px", color: "#A01EED", fontWeight: "600" }
 const profBio = { fontSize: "11px", color: "#94A3B8", marginTop: "6px", lineHeight: "1.4" }
+
+const badgeEmpresa = {
+    background: "#EFF6FF",
+    color: "#2563EB",
+    border: "1px solid #DBEAFE",
+    fontSize: "10px",
+    fontWeight: "700",
+    padding: "2px 8px",
+    borderRadius: "6px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    whiteSpace: "nowrap"
+}
+
+const badgeProfesional = {
+    background: "#F5F3FF",
+    color: "#7C3AED",
+    border: "1px solid #EDE9FE",
+    fontSize: "10px",
+    fontWeight: "700",
+    padding: "2px 8px",
+    borderRadius: "6px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    whiteSpace: "nowrap"
+}
 
 const servicesSection = { marginBottom: "20px" }
 const sectionLabel = { fontSize: "10px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px", display: "block" }

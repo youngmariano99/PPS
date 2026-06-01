@@ -1,6 +1,11 @@
 # HISTORIAL DE CAMBIOS
 
 * **Fecha:** 2026-06-01
+* **Módulo/Tarea:** Bolsa de Empleo: Integración y Diferenciación de Empresas en el Directorio
+* **Archivos Tocados:** `PerfilEmpresaRepository.java`, `BuscarPerfilesCercanosUseCaseImpl.java`, `ListadoProfesionalesChamba.jsx`, `PerfilPublicoProveedorChamba.jsx`
+* **Qué y Por Qué (1 oración clara):** Se unificó la búsqueda del directorio para listar conjuntamente perfiles de Empresas y Proveedores ordenados por prioridad premium y distancia, de igual forma que en la visualización de mapa, e incorporando tags visuales premium de distinción de rol y un mecanismo de fallback automático al buscar perfiles de empresa sin slug.
+
+* **Fecha:** 2026-06-01
 * **Módulo/Tarea:** Bolsa de Empleo: Módulo "Mis Ofertas" en Modal para Reclutadores, Endpoint de Oferta Única e Información de Candidatos
 * **Archivos Tocados:** `MisOfertasEmpresa.jsx`, `PerfilPublicoProveedorChamba.jsx`, `PostulacionGestionEmpresa.jsx`, `OfertaController.java`, `IListarOfertasUseCase.java`, `ListarOfertasUseCaseImpl.java`
 * **Qué y Por Qué (1 oración clara):** Se creó el panel de reclutamiento de ofertas con un modal overlay fluido, se creó el endpoint `GET /ofertas/{id}` en el backend para poder consultar los detalles de una oferta de forma individual, y se optimizó el modal de candidatos pasando la oferta cargada como prop para mostrar los detalles del puesto instantáneamente sin latencia.

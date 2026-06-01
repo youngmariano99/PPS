@@ -336,11 +336,15 @@ export default function PerfilPublicoProveedorChamba(props) {
 
                 headers["X-User-Id"] = targetId
                 const currentEndpointId = currentContext && currentContext.tipo === 'EMPRESA' ? currentContext.idPerfil : targetId;
-                const endpoint = (!externalId && currentContext && currentContext.tipo === 'EMPRESA')
+                let endpoint = (!externalId && currentContext && currentContext.tipo === 'EMPRESA')
                     ? `/directorio/empresa/${currentEndpointId}`
                     : `/directorio/proveedor/${targetId}`;
 
                 response = await fetch(`${apiUrl}${endpoint}`, { headers })
+                if (response && response.status === 404 && externalId) {
+                    endpoint = `/directorio/empresa/${targetId}`;
+                    response = await fetch(`${apiUrl}${endpoint}`, { headers })
+                }
             }
 
             if (response && response.ok) {

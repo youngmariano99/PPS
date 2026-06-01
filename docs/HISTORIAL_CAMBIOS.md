@@ -1,6 +1,11 @@
 # HISTORIAL DE CAMBIOS
 
 * **Fecha:** 2026-06-01
+* **Módulo/Tarea:** Bolsa de Empleo: Corrección de Compilación en Listado de Ofertas (Reclutador)
+* **Archivos Tocados:** `ListarOfertasUseCaseImpl.java`
+* **Qué y Por Qué (1 oración clara):** Se implementó el método `obtenerPorId` de la interfaz `IListarOfertasUseCase` y se corrigió el acceso de `getFotoPerfil` a `getLogoUrl` sobre el perfil de la empresa para resolver fallos de compilación del backend.
+
+* **Fecha:** 2026-06-01
 * **Módulo/Tarea:** Bolsa de Empleo: Integración y Diferenciación de Empresas en el Directorio
 * **Archivos Tocados:** `PerfilEmpresaRepository.java`, `BuscarPerfilesCercanosUseCaseImpl.java`, `ListadoProfesionalesChamba.jsx`, `PerfilPublicoProveedorChamba.jsx`
 * **Qué y Por Qué (1 oración clara):** Se unificó la búsqueda del directorio para listar conjuntamente perfiles de Empresas y Proveedores ordenados por prioridad premium y distancia, de igual forma que en la visualización de mapa, e incorporando tags visuales premium de distinción de rol y un mecanismo de fallback automático al buscar perfiles de empresa sin slug.

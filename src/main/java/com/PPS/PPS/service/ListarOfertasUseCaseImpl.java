@@ -5,6 +5,7 @@ import com.PPS.PPS.application.dto.response.OfertaRespuestaDto;
 import com.PPS.PPS.application.dto.response.PreguntaFiltroRespuestaDto;
 import com.PPS.PPS.domain.model.OfertaEmpleo;
 import com.PPS.PPS.domain.repository.OfertaEmpleoRepository;
+import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.PPS.PPS.domain.exception.RecursoNoEncontradoException;
@@ -51,7 +52,7 @@ public class ListarOfertasUseCaseImpl implements IListarOfertasUseCase {
         @Override
         @Transactional(readOnly = true)
         public OfertaRespuestaDto obtenerPorId(UUID id) {
-                log.info("Obteniendo oferta de empleo por id: {}", id);
+                log.info("Obteniendo detalles de la oferta de empleo por id: {}", id);
                 OfertaEmpleo oferta = ofertaRepository.findById(id)
                                 .orElseThrow(() -> new RecursoNoEncontradoException("Oferta de empleo no encontrada."));
                 return mapearADto(oferta);

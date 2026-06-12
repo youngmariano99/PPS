@@ -20,7 +20,7 @@ const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-export default function ModalPostularse(props: Props) {
+function ModalPostularse(props: Props) {
     const {
         oferta,
         onClose = () => {},
@@ -568,3 +568,4 @@ addPropertyControls(ModalPostularse, {
     apiUrl: { type: ControlType.String, title: "API URL", defaultValue: "http://localhost:8080/api/v1" },
     primaryColor: { type: ControlType.Color, title: "Color primario", defaultValue: "#A01EED" }
 })
+export default ModalPostularse;

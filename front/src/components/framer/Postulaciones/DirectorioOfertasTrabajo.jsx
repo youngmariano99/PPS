@@ -208,6 +208,7 @@ export default function DirectorioOfertasTrabajo(props) {
                 id: "1",
                 titulo: "Desarrollador Frontend React",
                 empresaRazonSocial: "TechNova Solutions",
+                empresaId: "e1111111-1111-1111-1111-111111111111",
                 modalidad: "REMOTO",
                 salarioMin: 900000,
                 salarioMax: 1400000,
@@ -221,6 +222,7 @@ export default function DirectorioOfertasTrabajo(props) {
                 id: "2",
                 titulo: "Diseñador/a UX UI",
                 empresaRazonSocial: "DesignGroup",
+                empresaId: "e2222222-2222-2222-2222-222222222222",
                 modalidad: "HIBRIDO",
                 salarioMin: 800000,
                 salarioMax: 1200000,
@@ -234,6 +236,7 @@ export default function DirectorioOfertasTrabajo(props) {
                 id: "3",
                 titulo: "Analista de Datos",
                 empresaRazonSocial: "Data Insights",
+                empresaId: "e3333333-3333-3333-3333-333333333333",
                 modalidad: "REMOTO",
                 salarioMin: 1200000,
                 salarioMax: 1800000,
@@ -246,7 +249,8 @@ export default function DirectorioOfertasTrabajo(props) {
             {
                 id: "4",
                 titulo: "Especialista en Marketing Digital",
-                empresaRazonSocial: "Brandify",
+                proveedorNombre: "Carlos Brandify",
+                proveedorId: "p4444444-4444-4444-4444-444444444444",
                 modalidad: "PRESENCIAL",
                 salarioMin: 700000,
                 salarioMax: 1000000,
@@ -261,7 +265,11 @@ export default function DirectorioOfertasTrabajo(props) {
         // Apply filters in memory for demo robustness
         let filtered = [...mockList]
         if (busqueda) {
-            filtered = filtered.filter(o => o.titulo.toLowerCase().includes(busqueda.toLowerCase()) || o.empresaRazonSocial.toLowerCase().includes(busqueda.toLowerCase()))
+            filtered = filtered.filter(o => 
+                o.titulo.toLowerCase().includes(busqueda.toLowerCase()) || 
+                (o.empresaRazonSocial && o.empresaRazonSocial.toLowerCase().includes(busqueda.toLowerCase())) ||
+                (o.proveedorNombre && o.proveedorNombre.toLowerCase().includes(busqueda.toLowerCase()))
+            )
         }
         if (rubroSeleccionado) {
             filtered = filtered.filter(o => o.rubro === rubroSeleccionado)
@@ -569,7 +577,7 @@ export default function DirectorioOfertasTrabajo(props) {
                                         <img 
                                             src={o.logoEmpresa} 
                                             style={{ width: "48px", height: "48px", borderRadius: "14px", objectFit: "cover", flexShrink: 0 }} 
-                                            alt={o.empresaRazonSocial || "Empresa"} 
+                                            alt={o.empresaRazonSocial || o.proveedorNombre || "Empresa"} 
                                         />
                                     ) : (
                                         <div style={initialsCircleBox(primaryColor)}>
@@ -586,7 +594,7 @@ export default function DirectorioOfertasTrabajo(props) {
                                         </div>
                                         <h3 style={jobTitleText}>{o.titulo}</h3>
                                         <div style={companyVerifiedRow}>
-                                            <span style={companyLabelText}>{o.empresaRazonSocial || "Empresa Reclutadora"}</span>
+                                            <span style={companyLabelText}>{o.empresaRazonSocial || o.proveedorNombre || "Empresa Reclutadora"}</span>
                                             <IconVerifiedBlue />
                                         </div>
                                         <span style={salaryBoldText}>{formatSalary(o.salarioMin || 800000, o.salarioMax || 1200000)}</span>
@@ -612,8 +620,9 @@ export default function DirectorioOfertasTrabajo(props) {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                if (o.empresaId) {
-                                                    window.location.href = `${perfilEmpresaUrl}?id=${o.empresaId}`
+                                                const targetId = o.empresaId || o.proveedorId
+                                                if (targetId) {
+                                                    window.location.href = `${perfilEmpresaUrl}?id=${targetId}`
                                                 }
                                             }}
                                             style={verPerfilBtnStyle}

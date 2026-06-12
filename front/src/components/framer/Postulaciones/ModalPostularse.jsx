@@ -236,7 +236,16 @@ export default function ModalPostularse(props) {
     const formatSalary = (min, max) => {
         if (!min && !max) return "A convenir"
         const formatNum = (val) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(val)
-        return `${formatNum(min)} - ${formatNum(max)} / mes`
+        if (min && max) {
+            return `${formatNum(min)} - ${formatNum(max)} / mes`
+        }
+        if (min) {
+            return `Desde ${formatNum(min)} / mes`
+        }
+        if (max) {
+            return `Hasta ${formatNum(max)} / mes`
+        }
+        return "A convenir"
     }
 
     return (

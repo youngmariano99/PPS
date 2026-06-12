@@ -320,8 +320,18 @@ export default function DirectorioOfertasTrabajo(props) {
     }
 
     const formatSalary = (min, max) => {
+        if (!min && !max) return "A convenir"
         const fmt = (val) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(val)
-        return `${fmt(min)} - ${fmt(max)} / mes`
+        if (min && max) {
+            return `${fmt(min)} - ${fmt(max)} / mes`
+        }
+        if (min) {
+            return `Desde ${fmt(min)} / mes`
+        }
+        if (max) {
+            return `Hasta ${fmt(max)} / mes`
+        }
+        return "A convenir"
     }
 
     return (
@@ -597,7 +607,7 @@ export default function DirectorioOfertasTrabajo(props) {
                                             <span style={companyLabelText}>{o.empresaRazonSocial || o.proveedorNombre || "Empresa Reclutadora"}</span>
                                             <IconVerifiedBlue />
                                         </div>
-                                        <span style={salaryBoldText}>{formatSalary(o.salarioMin || 800000, o.salarioMax || 1200000)}</span>
+                                        <span style={salaryBoldText}>{formatSalary(o.salarioMin, o.salarioMax)}</span>
                                         <p style={descriptionText}>{o.descripcion}</p>
                                         
                                         <div style={skillsChipsRow}>

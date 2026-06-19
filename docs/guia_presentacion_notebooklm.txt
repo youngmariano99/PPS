@@ -1,0 +1,174 @@
+# Guía de Presentación del Proyecto: CHAMBA (Marketplace de Servicios & Empleo)
+
+Este documento ha sido estructurado didácticamente con descripciones paso a paso y flujos de información claros para ser consumido de manera óptima por **NotebookLM** y otras inteligencias artificiales. Sirve de base para generar mapas mentales, presentaciones visuales, guiones de pitch e infografías sobre el proyecto CHAMBA.
+
+---
+
+## 1. Visión General del Proyecto
+**CHAMBA** es una plataforma web *mobile-first* diseñada bajo los principios de **fricción cero**, **geolocalización precisa en tiempo real** y **transparencia laboral**. Su propósito principal es unir la oferta y demanda de servicios locales independientes ("Chambas" u oficios) y empleos formales en un ecosistema seguro, eliminando el "agujero negro" de incertidumbre que sufren los candidatos durante sus postulaciones y previniendo el spam en la reputación de los profesionales.
+
+---
+
+## 2. Flujo de Usuarios y Alcance de Perfiles (Para el Mapa Mental)
+
+El sistema soporta tres arquetipos de usuario que operan sobre la misma plataforma, diferenciándose por sus permisos relacionales y estado de suscripción.
+
+### A. Usuario Común (Cliente)
+*   **Propósito:** Buscar soluciones inmediatas para el hogar o la oficina de forma geolocalizada.
+*   **Flujo de Usuario:**
+    1.  **Ingreso:** Accede a la plataforma y acepta compartir su geolocalización (o ingresa una dirección de búsqueda manual).
+    2.  **Descubrimiento:** Explora el mapa interactivo (filtrado por rubro y distancia máxima de 50 km) o utiliza el buscador global textual.
+    3.  **Contacto:** Hace clic en el botón "Contactar" de un perfil. Esto dispara la revelación de datos personales ocultos (Secure Reveal) y registra su intención de contacto en la base de datos.
+    4.  **Calificación:** Después del servicio, deja una única reseña calificando al profesional mediante estrellas y comentario.
+*   **Alcance/Límites:**
+    *   No puede registrar un portafolio de trabajos.
+    *   No puede calificar dos veces al mismo proveedor (restricción única de base de datos) ni evadir el cooldown de 24 horas.
+    *   No puede publicar ofertas de empleo formales.
+
+### B. Proveedor Independiente (Profesional)
+*   **Propósito:** Ofrecer sus servicios locales y postularse a empleos formales.
+*   **Flujo de Usuario:**
+    1.  **Onboarding:** Completa un registro de 4 pasos (Wizard) donde declara su dirección, rubro (ej. Plomero) y credenciales.
+    2.  **Configuración de Portafolio:** Sube fotos de sus trabajos anteriores (Cloudinary) y configura enlaces a sus videos de redes sociales (YouTube, TikTok, etc.).
+    3.  **Gestión de Leads:** Recibe notificaciones instantáneas (Supabase Realtime) cuando un cliente hace "Secure Reveal" de sus datos.
+    4.  **Bolsa de Empleo:** Busca ofertas en la bolsa y se postula adjuntando su Currículum Nativo (JSONB) y contestando preguntas excluyentes (Knockout Qs).
+*   **Alcance/Límites:**
+    *   **Cuenta Gratuita:** Límite visual de 5 fotos en su portafolio público y ranking estándar.
+    *   **Suscripción Premium/PRO:** Visibilidad de hasta 20 fotos y prioridad absoluta (primeros puestos) en el buscador, ignorando la distancia (dentro del radio de 50 km).
+    *   No puede calificar a otros proveedores (evita astroturfing).
+
+### C. Empresa
+*   **Propósito:** Reclutar personal calificado para vacantes técnicas y operativas.
+*   **Flujo de Usuario:**
+    1.  **Registro Corporativo:** Crea su perfil utilizando razón social y CUIT.
+    2.  **Publicación de Ofertas:** Configura puestos con rango salarial, modalidad (remoto/híbrido/presencial) y habilidades clave.
+    3.  **Creación de Filtros:** Agrega preguntas excluyentes (Knockout Questions) del tipo "SI/NO" para realizar un filtrado automático de candidatos.
+    4.  **Selección Transparente:** Evalúa currículums y respuestas de postulantes.
+    5.  **Gestión de Postulados:** Pasa a los candidatos de estado `ENVIADO` a `VISTO` o `DESCARTADO` (obligatoriamente ingresando un motivo de rechazo).
+*   **Alcance/Límites:**
+    *   No puede postularse a ofertas de empleo.
+    *   No puede rechazar candidatos en silencio (se le exige registrar un código de motivo).
+
+---
+
+## 3. Flujo de las APIs y Servicios Externos (Integración del Sistema)
+
+El backend de Spring Boot actúa como orquestador y validador de las reglas de negocio, delegando tareas específicas a servicios e infraestructura de terceros mediante adaptadores de puerto.
+
+```
+                  ┌──────────────────────────────────────────────┐
+                  │            BACKEND (Spring Boot)             │
+                  └──────────────┬───────────────┬───────────────┘
+                                 │               │
+         ┌───────────────────────┘               └───────────────────────┐
+         ▼                                       ▼                       ▼
+┌─────────────────┐                     ┌─────────────────┐     ┌─────────────────┐
+│  Supabase Auth  │                     │  Mercado Pago   │     │   Cloudinary    │
+│  y Base de Datos│                     │   (Suscrip.)    │     │  (Multimedia)   │
+└─────────────────┘                     └─────────────────┘     └─────────────────┘
+```
+
+### A. Supabase
+1.  **Autenticación (Supabase Auth):** El cliente se loguea en la UI. Supabase valida y emite un token JWT. El frontend envía este token y el header `X-User-Id` al backend. Spring Boot valida el JWT para autenticar de forma segura al usuario.
+2.  **Base de Datos Relacional:** Hospeda las tablas relacionales de la aplicación.
+3.  **WebSockets (Supabase Realtime):** Escucha las inserciones en la tabla `notificaciones` en Postgres y las transmite mediante sockets a los clientes conectados a través del cliente Supabase del frontend.
+
+### B. Mercado Pago (Checkout Pro)
+1.  **Preferencia de Pago:** El profesional selecciona el plan Premium. El backend de Spring Boot genera un intento de pago local en estado `PENDIENTE` y llama a la API de Mercado Pago enviando el ID local como `external_reference`. MP retorna un link de pago (`init_point`).
+2.  **Webhook de Confirmación:** Cuando el pago se procesa, Mercado Pago hace un POST al endpoint de Webhook de Spring Boot. El backend valida la firma HMAC del webhook, consulta el estado a los servidores de MP y, si el pago está aprobado, cambia la suscripción local a `ACTIVA`, otorgando prioridad de ranking en tiempo real.
+
+### C. Leaflet + OpenStreetMap + Nominatim (Discovery)
+1.  **Traducción de Dirección (Geocoding):** Cuando un perfil guarda su dirección física, el backend consume la API de **Nominatim** enviando Calle, Altura y Ciudad. Nominatim retorna la latitud y longitud.
+2.  **Persistencia Geográfica:** Las coordenadas se convierten a un punto geográfico (`Point` de JTS) con SRID 4326 y se persisten en la base de datos PostgreSQL utilizando la extensión espacial **PostGIS** y el dialecto Hibernate Spatial.
+3.  **Renderizado en Mapa:** El frontend recibe las coordenadas de la lista y pinta los marcadores utilizando la librería react-pigeon-maps conectada a los servidores de mapas de **OpenStreetMap**.
+
+### D. Cloudinary (Multimedia)
+1.  **Carga Directa:** Para no sobrecargar la base de datos de Spring Boot con archivos binarios (BLOBs), el frontend sube las imágenes del portafolio directamente a Cloudinary.
+2.  **Guardado de URL:** Cloudinary almacena las imágenes y le retorna al frontend la URL del recurso estático, la cual se persiste en la tabla `portafolios` en base de datos.
+3.  **Visualización Inteligente:** El backend expone las imágenes aplicando filtros dinámicos basados en la suscripción del usuario (máximo 5 imágenes para gratuitos, 20 para premium).
+
+### E. Gmail SMTP (Emails asíncronos)
+1.  **Notificaciones por Correo:** Acciones críticas como la recuperación de contraseñas o notificaciones de postulación disparan eventos internos de Java.
+2.  **Envío Asíncrono:** Spring Mail envía correos utilizando el protocolo SMTP (puerto 587) contra los servidores de Gmail con STARTTLS, sin detener o congelar la respuesta HTTP del usuario en el navegador.
+
+---
+
+## 4. Flujo Recomendado para Mostrar la Demo del Frontend
+
+Para cautivar al jurado evaluador, se sugiere presentar el sistema siguiendo el ciclo de vida del negocio mediante este guion de 5 pasos:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                              PITCH DEMO                                │
+├─────────────────┬────────────────┬────────────────┬────────────────────┤
+│  1. El Wizard   │ 2. El Directorio│ 3. Monetización│ 4. Postulación      │
+│  Registro       │ y Geolocalización│ Premium     │ y Knockout Qs      │
+└─────────────────┴────────────────┴────────────────┴────────────────────┘
+```
+
+1.  **Paso 1: El Onboarding Interactivo (Fricción Cero)**
+    *   *Acción:* Registrar un nuevo proveedor independiente usando el asistente paso a paso (Wizard).
+    *   *Qué destacar:* Las transiciones fluidas de Framer Motion, la autocompletación de direcciones y cómo la API del backend geocodifica la ubicación automáticamente en segundo plano.
+2.  **Paso 2: La Búsqueda Espacial (El Descubrimiento)**
+    *   *Acción:* Entrar como cliente anónimo y buscar profesionales del rubro seleccionado en el mapa de Pigeon Maps.
+    *   *Qué destacar:* La velocidad de carga (<200ms) gracias a los índices GIST de PostGIS y la ausencia de parpadeos en pantalla (gracias a la prevención de consultas N+1 con EntityGraphs en Java).
+3.  **Paso 3: El Secure Reveal (Privacidad y Captura de Leads)**
+    *   *Acción:* Hacer clic en el botón "Contactar" de un profesional.
+    *   *Qué destacar:* Mostrar cómo el teléfono estaba ofuscado originalmente en el DOM (protección anti-bots) y cómo al hacer clic se revela el dato de contacto real y se registra al instante el log de intención de contacto.
+4.  **Paso 4: La Bolsa de Empleo y Preguntas Knockout**
+    *   *Acción:* Iniciar sesión como Empresa, publicar una oferta de empleo formal y configurar preguntas de filtro (excluyentes). Luego, entrar como el Profesional registrado en el Paso 1 y postularse a la oferta respondiendo las preguntas.
+    *   *Qué destacar:* El uso de la columna `JSONB` de PostgreSQL para guardar el CV nativo del usuario de forma flexible. Mostrar que si el candidato no responde lo esperado en las preguntas knockout, su postulación es marcada automáticamente como de baja prioridad.
+5.  **Paso 5: Cierre del Agujero Negro y Tiempo Real (El Clímax)**
+    *   *Acción:* Volver al panel de la Empresa, abrir el currículum del postulante. Al instante, abrir la pantalla del Profesional.
+    *   *Qué destacar:* 
+        *   Cómo en cuanto la empresa abre el CV, la postulación pasa de forma transparente al estado `VISTO` en el panel del candidato.
+        *   Cómo, al descartar al postulante ingresando un motivo de rechazo (ej. expectativa salarial), el candidato recibe una **alerta visual instantánea en su campana de notificaciones** (gracias a la integración de Supabase Realtime con el patrón Adapter) sin tener que recargar la página.
+
+---
+
+## 5. Arquitectura del Stack Tecnológico (Para Infografía)
+
+La comunicación de herramientas está estructurada en 4 capas desacopladas, lo que permite el mantenimiento independiente de cada tecnología:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. CAPA DE PRESENTACIÓN (FRONTEND)                          │
+│    React + Framer + Pigeon Maps                             │
+└──────────────┬──────────────────────────────────────────────┘
+               │ Peticiones HTTPS (CORS) / WebSockets
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. CAPA DE SEGURIDAD Y ACCESO (MIDDLEWARE)                  │
+│    Spring Security + JWT Filter (Supabase Auth API)         │
+└──────────────┬──────────────────────────────────────────────┘
+               │ Contexto de Seguridad Inyectado
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. CAPA DE LÓGICA DE NEGOCIO (BACKEND CORE)                 │
+│    Java 21 + Spring Boot 3.4.4 + Hibernate Spatial          │
+└──────────────┬──────────────────────────────────────────────┘
+               │ JPA ORM / Conexión HikariCP
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. CAPA DE PERSISTENCIA Y SERVICIOS (DATOS/APIS)            │
+│    PostgreSQL (PostGIS) + Cloudinary + Mercado Pago         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Recomendaciones Extras para la Defensa del Proyecto
+
+Para lograr una calificación de excelencia por parte del tribunal universitario, sugerimos destacar los siguientes aspectos de ingeniería de software en la presentación:
+
+> [!TIP]
+> **El Enfoque en Clean Architecture:**
+> Explica que el proyecto fue codificado respetando el principio de inversión de dependencia (DIP). Muestra cómo los servicios de negocio (`UseCaseImpl`) no conocen las APIs de terceros (como Mercado Pago o Supabase), sino que consumen interfaces del dominio. Si Mercado Pago cambia su SDK, el núcleo de la aplicación permanece intacto.
+
+> [!IMPORTANT]
+> **Justificación del Patrón Adapter en Tiempo Real:**
+> Comenta que se implementó el patrón Adapter en el Frontend para las notificaciones. Explica didácticamente que el componente visual no sabe si se conecta a un WebSocket de Java o a Supabase. Esto se hizo para dar **portabilidad y redundancia**, de manera que si un servicio tiene caídas, la conmutación a la otra tecnología es transparente y se hace en 2 segundos mediante una constante.
+
+> [!CAUTION]
+> **Borrado Lógico (Soft Delete):**
+> Enfatiza que en un marketplace real, borrar datos directamente (`DELETE`) rompe el historial financiero y de auditoría. Resalta que tu sistema implementa borrado lógico utilizando la anotación `@SQLRestriction` de Hibernate para excluir registros eliminados de forma automática en todas las consultas de la aplicación.

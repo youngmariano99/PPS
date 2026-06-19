@@ -1,12 +1,139 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
+import { Client as StompClient } from "https://esm.sh/@stomp/stompjs@7.0.0"
 
 const SUPABASE_URL = "https://qlciljbuexklxjzxgitk.supabase.co"
 const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY2lsamJ1ZXhrbHhqenhnaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjQsImV4cCI6MjA5MDQ0ODE2NH0.NX038_uwLWXupT21IOUygQlLQwRuT_iSDuti8d1frps"
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+// ==========================================
+// CONFIGURACIÓN DE TIEMPO REAL
+// ==========================================
+const PROVIDER_TYPE = 'SUPABASE'; // Opciones: 'SUPABASE' | 'SPRING_BOOT'
+
+// ==========================================
+// PATRÓN ADAPTER PARA REAL-TIME
+// ==========================================
+
+class IRealtimeAdapter {
+    /**
+     * @param {string} userId
+     * @param {function} onNotificationReceived
+     */
+    connect(userId, onNotificationReceived) {
+        throw new Error("Método 'connect' debe ser implementado.");
+    }
+    disconnect() {
+        throw new Error("Método 'disconnect' debe ser implementado.");
+    }
+}
+
+class SupabaseRealtimeAdapter extends IRealtimeAdapter {
+    constructor() {
+        super();
+        this.channel = null;
+    }
+    connect(userId, onNotificationReceived) {
+        if (this.channel) return;
+        console.log("WebSocket: Conectando Supabase Realtime para usuario:", userId);
+        this.channel = supabase
+            .channel(`noti-realtime-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notificaciones',
+                    filter: `usuario_id=eq.${userId}`
+                },
+                (payload) => {
+                    console.log("WebSocket: Notificación recibida en Supabase:", payload.new);
+                    const dto = {
+                        id: payload.new.id,
+                        tipoNotificacion: payload.new.tipo_notificacion,
+                        mensaje: payload.new.mensaje,
+                        entidadReferenciaId: payload.new.entidad_referencia_id,
+                        leida: payload.new.leida,
+                        fechaCreacion: payload.new.created_at
+                    };
+                    onNotificationReceived(dto);
+                }
+            )
+            .subscribe((status) => {
+                console.log(`WebSocket: Estado del canal Supabase: ${status}`);
+            });
+    }
+    disconnect() {
+        if (this.channel) {
+            console.log("WebSocket: Desconectando Supabase Realtime...");
+            supabase.removeChannel(this.channel);
+            this.channel = null;
+        }
+    }
+}
+
+class SpringBootRealtimeAdapter extends IRealtimeAdapter {
+    constructor(apiUrl) {
+        super();
+        this.apiUrl = apiUrl;
+        this.stompClient = null;
+    }
+    connect(userId, onNotificationReceived) {
+        if (this.stompClient) return;
+        const wsUrl = this.apiUrl.replace("http", "ws").replace("/api/v1", "/ws");
+        console.log("WebSocket: Conectando Spring Boot WebSockets STOMP a:", wsUrl);
+        this.stompClient = new StompClient({
+            brokerURL: wsUrl,
+            reconnectDelay: 5000,
+            onConnect: () => {
+                console.log("WebSocket: Conexión STOMP establecida");
+                this.stompClient.subscribe(`/user/${userId}/queue/notifications`, (message) => {
+                    console.log("WebSocket: Mensaje STOMP recibido:", message.body);
+                    const data = JSON.parse(message.body);
+                    onNotificationReceived(data);
+                });
+            },
+            onStompError: (frame) => {
+                console.error("WebSocket: Error STOMP:", frame);
+            }
+        });
+        this.stompClient.activate();
+    }
+    disconnect() {
+        if (this.stompClient) {
+            console.log("WebSocket: Desconectando STOMP...");
+            this.stompClient.deactivate();
+            this.stompClient = null;
+        }
+    }
+}
+
+// Custom Hook que maneja el ciclo de vida de la conexión
+function useRealtimeNotifications(userId, apiUrl, onNotificationReceived) {
+    const adapterRef = useRef(null);
+    useEffect(() => {
+        if (!userId) return;
+        console.log(`WebSocket: Inicializando con proveedor: ${PROVIDER_TYPE}`);
+        if (PROVIDER_TYPE === 'SUPABASE') {
+            adapterRef.current = new SupabaseRealtimeAdapter();
+        } else {
+            adapterRef.current = new SpringBootRealtimeAdapter(apiUrl);
+        }
+        adapterRef.current.connect(userId, onNotificationReceived);
+        return () => {
+            if (adapterRef.current) {
+                adapterRef.current.disconnect();
+            }
+        };
+    }, [userId, apiUrl, onNotificationReceived]);
+}
+
+// ==========================================
+// COMPONENTE PRINCIPAL (CAMPANA)
+// ==========================================
 
 export default function CampanaNotificaciones(props) {
     const { apiUrl = "http://localhost:8080/api/v1", primaryColor = "#A01EED", verTodasUrl = "/notificaciones" } = props
@@ -16,6 +143,35 @@ export default function CampanaNotificaciones(props) {
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const dropdownRef = useRef(null)
+    const [userId, setUserId] = useState(null)
+
+    // Obtener el usuario activo de Supabase al montar
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    setUserId(user.id)
+                }
+            } catch (err) {
+                console.error("Error al obtener usuario de Supabase:", err)
+            }
+        }
+        fetchUser()
+    }, [])
+
+    // Callback memoizado para procesar nuevas notificaciones del adapter
+    const handleNuevaNotificacion = useCallback((nuevaNoti) => {
+        setNotificaciones(prev => {
+            if (prev.some(n => n.id === nuevaNoti.id)) return prev;
+            const actualizadas = [nuevaNoti, ...prev];
+            setUnreadCount(actualizadas.filter(n => !n.leida).length);
+            return actualizadas.slice(0, 5);
+        });
+    }, []);
+
+    // Conexión en tiempo real desacoplada mediante Adapter
+    useRealtimeNotifications(userId, apiUrl, handleNuevaNotificacion);
 
     // Load Google Fonts & Native Hover Styles
     useEffect(() => {
@@ -98,7 +254,7 @@ export default function CampanaNotificaciones(props) {
 
     useEffect(() => {
         cargarNotificaciones()
-        // Polling cada 30 segundos
+        // Polling cada 30 segundos como fallback secundario
         const interval = setInterval(cargarNotificaciones, 30000)
         return () => clearInterval(interval)
     }, [apiUrl])

@@ -340,6 +340,9 @@ CREATE TABLE IF NOT EXISTS public.respuestas_candidato (
 -- [2026-05-25] Sistema de Notificaciones Internas (Fase 3)
 -- Propósito: Utilizar la tabla notificaciones mapeada en JPA para registrar las alertas de transiciones de postulaciones laborales.
 
+-- [2026-06-12] Habilitación de Tiempo Real (Supabase Realtime / WebSockets)
+-- Propósito: Habilitar la replicación en tiempo real de Supabase en la tabla notificaciones, permitiendo la comunicación push bidireccional mediante WebSockets a la Campana de Notificaciones de Framer.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notificaciones;
 
 ### 12. Extensión Multimedia (Consolidada + Degradación Suave)
 La gestión de multimedia se ha unificado en la tabla existente `portafolios` para evitar redundancias. Implementa "Graceful Downgrade": los recursos se preservan siempre, pero su visibilidad pública se filtra mediante la columna `visible` basándose en el plan activo.
